@@ -1,0 +1,103 @@
+{
+  "features": [
+    {
+      "id": 1,
+      "name": "authentication",
+      "description": "Email+password login, 2FA via email OTP, JWT session",
+      "status": "pending",
+      "sdd": true,
+      "priority": "P0",
+      "depends_on": []
+    },
+    {
+      "id": 2,
+      "name": "create_order",
+      "description": "Public form + manual creation, active orders table, internal notes",
+      "status": "spec_ready",
+      "sdd": true,
+      "priority": "P0",
+      "depends_on": ["authentication"]
+    },
+    {
+      "id": 3,
+      "name": "order_status",
+      "description": "Status transitions, audit history, cancellation with stock reversal",
+      "status": "pending",
+      "sdd": true,
+      "priority": "P0",
+      "depends_on": ["create_order"]
+    },
+    {
+      "id": 4,
+      "name": "generate_budget",
+      "description": "Automatic price calculation (filament+electricity+amortization+margin), PDF, email delivery",
+      "status": "pending",
+      "sdd": true,
+      "priority": "P0",
+      "depends_on": ["create_order"]
+    },
+    {
+      "id": 5,
+      "name": "region_parameters",
+      "description": "Editable configuration of $/kg, kWh, watts, lifespan, margins per region",
+      "status": "pending",
+      "sdd": true,
+      "priority": "P0",
+      "depends_on": []
+    },
+    {
+      "id": 6,
+      "name": "stock_management",
+      "description": "CRUD for filaments and supplies, automatic deduction, movement log, low-stock alerts",
+      "status": "pending",
+      "sdd": true,
+      "priority": "P0",
+      "depends_on": ["order_status"]
+    },
+    {
+      "id": 7,
+      "name": "arquiminis",
+      "description": "Fixed product with price matrix (style/scale/pack), dynamic form, manual discounts",
+      "status": "pending",
+      "sdd": true,
+      "priority": "P0",
+      "depends_on": ["create_order"]
+    },
+    {
+      "id": 8,
+      "name": "email_notifications",
+      "description": "7 automatic email triggers to client on status changes",
+      "status": "pending",
+      "sdd": true,
+      "priority": "P0",
+      "depends_on": ["order_status"]
+    },
+    {
+      "id": 9,
+      "name": "printer_profiles",
+      "description": "Printer CRUD, consumption parameters, per-axle maintenance with alerts",
+      "status": "pending",
+      "sdd": true,
+      "priority": "P1",
+      "depends_on": []
+    },
+    {
+      "id": 10,
+      "name": "dashboard",
+      "description": "Summary widgets, revenue and material usage charts",
+      "status": "pending",
+      "sdd": true,
+      "priority": "P1",
+      "depends_on": ["stock_management", "generate_budget"]
+    },
+    {
+      "id": 11,
+      "name": "reports",
+      "description": "Sales and stock reports, CSV export",
+      "status": "pending",
+      "sdd": true,
+      "priority": "P2",
+      "depends_on": ["dashboard"]
+    }
+  ]
+}

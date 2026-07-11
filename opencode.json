@@ -1,0 +1,38 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "provider": {
+    "lmstudio": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "LM Studio (Local)",
+      "options": { "baseURL": "http://localhost:1234/v1" },
+      "models": {
+        "unsloth/qwen3.5-27b": { "name": "Qwen 3.5 27B Q3 (local)" }
+      }
+    }
+  },
+  "agent": {
+    "leader": {
+      "mode": "primary",
+      "model": "lmstudio/unsloth/qwen3.5-27b",
+      "temperature": 0.1
+    },
+    "implementer": {
+      "mode": "subagent",
+      "model": "lmstudio/unsloth/qwen3.5-27b",
+      "temperature": 0.2,
+      "tools": { "write": true, "edit": true, "bash": true }
+    },
+    "spec_author": {
+      "mode": "subagent",
+      "model": "openrouter/deepseek/deepseek-v4-flash:free",
+      "temperature": 0.3,
+      "tools": { "write": true, "edit": true, "bash": false }
+    },
+    "reviewer": {
+      "mode": "subagent",
+      "model": "openrouter/deepseek/deepseek-v4-flash:free",
+      "temperature": 0.1,
+      "tools": { "write": true, "edit": false, "bash": true }
+    }
+  }
+}
