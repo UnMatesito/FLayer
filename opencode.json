@@ -19,18 +19,18 @@
     "implementer": {
       "mode": "subagent",
       "model": "lmstudio/unsloth/qwen3.5-27b",
-      "temperature": 0.2,
+      "temperature": 0.1,
       "tools": { "write": true, "edit": true, "bash": true }
     },
     "spec_author": {
       "mode": "subagent",
-      "model": "openrouter/deepseek/deepseek-v4-flash:free",
+      "model": "opencode/deepseek-v4-flash-free",
       "temperature": 0.3,
       "tools": { "write": true, "edit": true, "bash": false }
     },
     "reviewer": {
       "mode": "subagent",
-      "model": "openrouter/deepseek/deepseek-v4-flash:free",
+      "model": "opencode/deepseek-v4-flash-free",
       "temperature": 0.1,
       "tools": { "write": true, "edit": false, "bash": true }
     }
