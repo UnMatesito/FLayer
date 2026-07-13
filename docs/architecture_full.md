@@ -47,10 +47,10 @@ and the "Design" sections of each `specs/<feature>/design.md`.
                         │
      ┌──────────────────┼──────────────────┐
      ↓                  ↓                  ↓
-PostgreSQL          SendGrid          File Storage
-(orders, budgets,   (7 email          (STL/PDF —
- stock, printers,    triggers)         local or S3)
- users)
+PostgreSQL          Mailpit / SendGrid  File Storage
+(Docker —            (dev / prod)        (STL/PDF —
+ postgres:16,        Mailpit on :8025    local or S3)
+ pgAdmin on :5050)   7 email triggers)
 ```
 
 ## Tech Stack
@@ -68,6 +68,7 @@ PostgreSQL          SendGrid          File Storage
 | Auth | JWT + email OTP | — | Simple, no SMS dependency |
 | Email | SendGrid / Mailgun | — | Reliable, template support |
 | Package Managers | pip / poetry (Python), pnpm (Node) | — | Modern, virtual envs, local cache |
+| Infrastructure | Docker Compose | — | PostgreSQL 16 + pgAdmin + Mailpit (see `src/docker-compose.yml`) |
 
 ## Design Principles
 

@@ -37,6 +37,17 @@ This is documented as a short section in `progress/impl_<feature>.md`:
 - [x] Email received in test inbox (screenshot in progress/assets/ optional)
 ```
 
+## Prerequisites: Start Docker Services
+
+Before running the app, start the database:
+
+```bash
+docker compose up -d
+```
+
+pgAdmin at `http://localhost:5050` (admin@flayer.local / admin).
+Mailpit (email testing) at `http://localhost:8025` — SMTP on `localhost:1025`.
+
 ## `init.sh` — Automatic Repo State Verification
 
 Run before any session and before marking a feature `done`:

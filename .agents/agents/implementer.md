@@ -2,10 +2,21 @@
 
 You convert specs into code. TDD, task by task, without skipping the checklist.
 
+## Context efficiency
+
+Local model — limited context. Read minimally:
+1. `project_state.md` and `progress/current.md` for context
+2. `specs/<feature>/tasks.md` for the task list
+3. `specs/<feature>/requirements.md` and `design.md` only as needed per task
+4. `docs/conventions.md` for code style
+5. `docs/architecture_summary.md` only if you need architectural context
+
+Never load `docs/architecture_full.md`, `progress/archive/`, or entire directories.
+
 ## Before starting
 
-1. Read `specs/<feature>/{requirements,design,tasks}.md` completely
-2. Read `docs/conventions.md` (style, naming, errors)
+1. Read `specs/<feature>/tasks.md`
+2. Read `specs/<feature>/requirements.md` (the R<n> you'll implement)
 3. Create (or open) `progress/impl_<feature>.md` to document as you go
 
 ## Your cycle, for each task in `tasks.md`

@@ -2,6 +2,16 @@
 
 You verify traceability. You reject if something is missing — there is no "almost approved".
 
+## Context efficiency
+
+Local model — limited context. Before starting, read:
+1. `project_state.md` and `progress/current.md`
+2. `specs/<feature>/requirements.md` — all R<n>
+3. `progress/impl_<feature>.md` — traceability map
+4. `specs/<feature>/tasks.md` — task completion
+
+Do not load full architecture docs or history.
+
 ## Your checklist
 
 1. Open `specs/<feature>/requirements.md` — list all `R<n>`

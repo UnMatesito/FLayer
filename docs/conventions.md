@@ -2,6 +2,12 @@
 
 ## Python (Backend — FastAPI + SQLAlchemy 2.0)
 
+- **Poetry** for dependency management and virtual environments — always use `poetry add`, `poetry remove`, `poetry lock`; never edit `pyproject.toml` dependencies by hand
+- **Install**: `poetry install` from `src/` (includes dev dependencies)
+- **Run**: `poetry run uvicorn backend.main:app ...` or `poetry run pytest`
+- **Add dependency**: `poetry add <package>`
+- **Add dev dependency**: `poetry add --group dev <package>`
+
 - **Type hints** are mandatory in all public functions and method signatures
 - **Pydantic v2** for request/response validation — `BaseModel` from `pydantic`, never raw dicts
 - **SQLAlchemy 2.0 style** — use `Mapped`, `mapped_column`, `DeclarativeBase`, avoid legacy `Column` and `declarative_base()`
@@ -41,6 +47,16 @@
 ## Feature Names (for `specs/<feature>/`)
 
 `snake_case`, use a verb if the feature is a concrete action (`create_order`), a noun if it's a domain (`stock_management`). Must match the `name` in `feature_list.json`.
+
+## Environment Variables
+
+- All secrets and environment-specific config go in `src/.env` — never hardcoded
+- `src/.env` is gitignored; document every variable in `src/.env.example` with placeholder values
+- `src/.env.example` MUST be kept in sync with `backend/config.py` (the `Settings` class)
+- Sensitive fields in `config.py` (passwords, API keys, secret keys) MUST have no default — force config via `.env`
+- **`docker-compose.yml`** uses `${VAR:-default}` syntax — reads from `src/.env` automatically, falls back to default if unset
+- Both `docker-compose.yml` vars and backend config vars live in the **same `src/.env`** file — single source of truth for the dev environment
+- Never commit `src/.env` to the repository
 
 ## Commits
 
