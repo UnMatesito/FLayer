@@ -1,0 +1,37 @@
+[project]
+name = "flayer"
+version = "0.1.0"
+description = "3D printing order management system"
+requires-python = ">=3.11,<4.0"
+dependencies = [
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.30.0",
+    "sqlalchemy[asyncio]>=2.0.30",
+    "asyncpg>=0.29.0",
+    "alembic>=1.13.0",
+    "pydantic[email]>=2.5.0",
+    "pydantic-settings>=2.1.0",
+    "python-jose[cryptography]>=3.3.0",
+    "passlib[bcrypt]>=1.7.4",
+    "python-multipart>=0.0.9",
+]
+
+[tool.poetry]
+packages = [{include = "backend"}]
+
+[tool.poetry.group.dev.dependencies]
+pytest = ">=8.0.0"
+pytest-cov = ">=4.1.0"
+ruff = ">=0.5.0"
+mypy = ">=1.10.0"
+psycopg2-binary = ">=2.9.0"
+factory-boy = ">=3.3.0"
+faker = ">=22.0.0"
+httpx2 = "^2.5.0"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"

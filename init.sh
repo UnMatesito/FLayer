@@ -10,12 +10,12 @@ if [ "$IN_PROGRESS" -gt 1 ]; then
   exit 1
 fi
 
-# 2. Every feature with sdd:true and status != pending must have complete specs
+# 2. Every non-pending feature must have complete specs
 FEATURES=$(python3 -c "
 import json
 data = json.load(open('feature_list.json'))
 for f in data['features']:
-    if f.get('sdd') and f['status'] != 'pending':
+    if f['status'] != 'pending':
         print(f['name'])
 ")
 
@@ -46,9 +46,9 @@ for feature in $INPROGRESS_FEATURES; do
 done
 
 # 4. Run tests if they exist
-if [ -d "tests" ] && command -v pytest &> /dev/null; then
+if [ -d "src/tests" ] && command -v pytest &> /dev/null; then
   echo "🧪 Running tests..."
-  pytest tests/ -q || { echo "❌ Tests failed"; exit 1; }
+  (cd src && pytest tests/ -q) || { echo "❌ Tests failed"; exit 1; }
 fi
 
 # 5. Load local models

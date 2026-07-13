@@ -1,2 +1,15 @@
-.opencode
-opencode.json
+# Cache files
+.pytest_cache
+.ruff_cache
+*__pycache__
+
+/src/flayer.egg-info
+/src/frontend/.next
+/src/frontend/node_modules
+/src/.venv
+
+/src/.mypy_cache/
+
+# Environment (secrets)
+/src/.env
+

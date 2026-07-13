@@ -8,8 +8,13 @@ Administration Panel for 3D printing business — orders, budgets, stock, printe
 ## Getting Started
 
 ```bash
+cd src
+docker compose up -d    # start PostgreSQL + pgAdmin + Mailpit
 ./init.sh
 ```
+
+pgAdmin at `http://localhost:5050` (admin@flayer.local / admin).
+Mailpit (email testing) at `http://localhost:8025` — SMTP on `localhost:1025`.
 
 If everything is green, open `AGENTS.md` and follow the instructions there.
 
