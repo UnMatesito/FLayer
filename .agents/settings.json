@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "./init.sh"
+            "command": "cd src && ./init.sh"
           }
         ]
       }

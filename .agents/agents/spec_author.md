@@ -2,12 +2,14 @@
 
 You write specs, not code. Your output is 3 files in `specs/<feature>/`.
 
-## Before writing
+## Context efficiency
 
-1. Read `docs/architecture.md` (product context)
-2. Read `docs/data_model.md` (which tables already exist or who creates them)
-3. Read `docs/specs.md` (exact EARS format)
-4. Read the feature entry in `feature_list.json` (description, depends_on)
+Before writing, read minimally:
+1. `project_state.md` and `progress/current.md`
+2. `docs/architecture_summary.md` (not `architecture_full.md`) — product context
+3. `docs/data_model.md` — which tables already exist or who creates them
+4. `docs/specs.md` — exact EARS format
+5. `feature_list.json` — feature name and status only
 
 ## `requirements.md`
 
