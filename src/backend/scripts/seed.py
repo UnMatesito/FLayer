@@ -4,7 +4,10 @@ import bcrypt
 from faker import Faker
 from sqlalchemy import select
 
-from backend.database import async_session, engine
+from backend.database import get_async_session, get_engine
+
+engine = get_engine()
+async_session = get_async_session()
 from backend.models import Customer, Order, OrderNote, User
 
 fake = Faker("es-MX")

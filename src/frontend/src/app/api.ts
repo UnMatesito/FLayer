@@ -35,6 +35,72 @@ export interface Order {
   updated_at: string;
 }
 
+export interface User {
+  id: string;
+  email: string;
+  name: string;
+}
+
+export interface LoginResponse {
+  user: User;
+  otp_required: boolean;
+}
+
+export async function login(email: string, password: string): Promise<LoginResponse> {
+  const res = await fetch(`${API_BASE}/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password }),
+    credentials: 'include',
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Login failed');
+  }
+  return res.json();
+}
+
+export async function verifyOtp(code: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/auth/otp/verify`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ code }),
+    credentials: 'include',
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'OTP verification failed');
+  }
+}
+
+export async function sendOtp(): Promise<void> {
+  const res = await fetch(`${API_BASE}/auth/otp/send`, {
+    method: 'POST',
+    credentials: 'include',
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Failed to send OTP');
+  }
+}
+
+export async function fetchMe(): Promise<User> {
+  const res = await fetch(`${API_BASE}/auth/me`, {
+    credentials: 'include',
+  });
+  if (!res.ok) {
+    throw new Error('Not authenticated');
+  }
+  return res.json();
+}
+
+export async function logout(): Promise<void> {
+  await fetch(`${API_BASE}/auth/logout`, {
+    method: 'POST',
+    credentials: 'include',
+  });
+}
+
 export async function createPublicOrder(
   payload: OrderPayload
 ): Promise<Order> {
@@ -52,15 +118,12 @@ export async function createPublicOrder(
 
 export async function createInternalOrder(
   payload: InternalOrderPayload,
-  token: string
 ): Promise<Order> {
   const res = await fetch(`${API_BASE}/orders`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
+    credentials: 'include',
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
@@ -69,11 +132,9 @@ export async function createInternalOrder(
   return res.json();
 }
 
-export async function fetchActiveOrders(
-  token: string
-): Promise<Order[]> {
+export async function fetchActiveOrders(): Promise<Order[]> {
   const res = await fetch(`${API_BASE}/orders?status=active`, {
-    headers: { Authorization: `Bearer ${token}` },
+    credentials: 'include',
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));

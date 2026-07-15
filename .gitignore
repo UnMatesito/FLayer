@@ -13,3 +13,4 @@
 # Environment (secrets)
 /src/.env
 
+src/.coverage

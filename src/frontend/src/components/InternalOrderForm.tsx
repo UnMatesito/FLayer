@@ -18,7 +18,7 @@ import {
 } from '@mui/material';
 import type { SxProps, Theme } from '@mui/material';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { createInternalOrder } from '@/app/api';
+import { createInternalOrder, type InternalOrderPayload } from '@/app/api';
 
 const styles: Record<string, SxProps<Theme>> = {
   container: {
@@ -30,11 +30,10 @@ const styles: Record<string, SxProps<Theme>> = {
 };
 
 interface Props {
-  token: string;
   onSuccess?: () => void;
 }
 
-export default function InternalOrderForm({ token, onSuccess }: Props) {
+export default function InternalOrderForm({ onSuccess }: Props) {
   const queryClient = useQueryClient();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -44,8 +43,8 @@ export default function InternalOrderForm({ token, onSuccess }: Props) {
   const [skipNotification, setSkipNotification] = useState(false);
 
   const mutation = useMutation({
-    mutationFn: (data: Parameters<typeof createInternalOrder>[0]) =>
-      createInternalOrder(data, token),
+    mutationFn: (data: InternalOrderPayload) =>
+      createInternalOrder(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['active-orders'] });
       onSuccess?.();

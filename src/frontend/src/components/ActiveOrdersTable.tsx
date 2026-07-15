@@ -16,10 +16,6 @@ import {
 import { useQuery } from '@tanstack/react-query';
 import { fetchActiveOrders, type Order } from '@/app/api';
 
-interface Props {
-  token: string;
-}
-
 function statusColor(status: string) {
   switch (status) {
     case 'new':
@@ -35,10 +31,10 @@ function statusColor(status: string) {
   }
 }
 
-export default function ActiveOrdersTable({ token }: Props) {
+export default function ActiveOrdersTable() {
   const { data: orders, isLoading, error } = useQuery<Order[]>({
     queryKey: ['active-orders'],
-    queryFn: () => fetchActiveOrders(token),
+    queryFn: () => fetchActiveOrders(),
     refetchInterval: 30_000,
   });
 

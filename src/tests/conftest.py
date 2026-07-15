@@ -21,9 +21,6 @@ pytest_plugins = [
 test_engine = create_engine(TEST_DATABASE_URL, echo=False)
 TestSession = sessionmaker(bind=test_engine)
 
-_tables_initialized = False
-
-
 class AsyncSessionWrapper:
     """Wraps a sync SQLAlchemy Session so async routes can use it via await."""
 
@@ -46,12 +43,10 @@ class AsyncSessionWrapper:
         self._session.refresh(instance)
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="session", autouse=True)
 def db_engine():
-    global _tables_initialized
-    if not _tables_initialized:
-        Base.metadata.create_all(bind=test_engine)
-        _tables_initialized = True
+    Base.metadata.drop_all(bind=test_engine)
+    Base.metadata.create_all(bind=test_engine)
     yield test_engine
 
 

@@ -1,6 +1,6 @@
 {
   "features": [
-    { "name": "authentication",     "status": "pending",    "depends_on": [] },
+    { "name": "authentication",     "status": "done", "depends_on": [] },
     { "name": "create_order",       "status": "done", "depends_on": ["authentication"] },
     { "name": "order_status",       "status": "pending",    "depends_on": ["create_order"] },
     { "name": "generate_budget",    "status": "pending",    "depends_on": ["create_order"] },
