@@ -68,6 +68,7 @@ export default function InternalOrderForm({ onSuccess }: Props) {
     setWorkType('impresion_3d');
     setDescription('');
     setSkipNotification(false);
+    mutation.reset();
   };
 
   if (mutation.isSuccess) {

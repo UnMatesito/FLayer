@@ -71,6 +71,7 @@ export default function OrderForm() {
     setDescription('');
     setFileUrl('');
     setFileName('');
+    mutation.reset();
   };
 
   if (mutation.isSuccess) {
