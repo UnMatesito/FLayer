@@ -8,12 +8,12 @@ from backend.database import get_async_session, get_engine
 
 engine = get_engine()
 async_session = get_async_session()
-from backend.models import Customer, Order, OrderNote, User
+from backend.models import Customer, Order, OrderNote, OrderStatus, User
 
 fake = Faker("es-MX")
 
 WORK_TYPES = ["impresion_3d", "diseno_3d"]
-STATUSES = ["new", "in_progress", "completed", "cancelled"]
+STATUSES = ["new", "in_progress", "ready", "delivered", "cancelled"]
 
 
 async def seed() -> None:
@@ -22,6 +22,12 @@ async def seed() -> None:
         if result.scalar_one_or_none():
             print("Database already seeded. Skipping.")
             return
+
+        for name in STATUSES:
+            existing = await session.execute(select(OrderStatus).where(OrderStatus.name == name))
+            if not existing.scalar_one_or_none():
+                session.add(OrderStatus(name=name))
+        await session.flush()
 
         admin = User(
             email="admin@flayer.com",

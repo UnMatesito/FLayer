@@ -46,7 +46,7 @@ export default function InternalOrderForm({ onSuccess }: Props) {
     mutationFn: (data: InternalOrderPayload) =>
       createInternalOrder(data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['active-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
       onSuccess?.();
     },
   });

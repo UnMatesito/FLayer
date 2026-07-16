@@ -22,7 +22,7 @@ async def create_public_order(
 ) -> Order:
     if not body.work_type:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="work_type is required",
         )
 

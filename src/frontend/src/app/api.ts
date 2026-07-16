@@ -132,13 +132,67 @@ export async function createInternalOrder(
   return res.json();
 }
 
-export async function fetchActiveOrders(): Promise<Order[]> {
-  const res = await fetch(`${API_BASE}/orders?status=active`, {
+export async function fetchAllOrders(): Promise<Order[]> {
+  const res = await fetch(`${API_BASE}/orders`, {
     credentials: 'include',
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error(err.detail || 'Failed to fetch orders');
+  }
+  return res.json();
+}
+
+export interface OrderDetail extends Order {
+  customer_name: string;
+  customer_email: string;
+}
+
+export interface StatusChangeResponse {
+  id: string;
+  status: string;
+}
+
+export interface OrderStatus {
+  id: string;
+  name: string;
+}
+
+export async function fetchOrderDetail(orderId: string): Promise<OrderDetail> {
+  const res = await fetch(`${API_BASE}/orders/${orderId}`, {
+    credentials: 'include',
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Failed to fetch order detail');
+  }
+  return res.json();
+}
+
+export async function updateOrderStatus(
+  orderId: string,
+  status: string,
+): Promise<StatusChangeResponse> {
+  const res = await fetch(`${API_BASE}/orders/${orderId}/status`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status }),
+    credentials: 'include',
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Failed to update order status');
+  }
+  return res.json();
+}
+
+export async function fetchOrderStatuses(): Promise<OrderStatus[]> {
+  const res = await fetch(`${API_BASE}/order-statuses`, {
+    credentials: 'include',
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Failed to fetch order statuses');
   }
   return res.json();
 }

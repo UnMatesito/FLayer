@@ -117,10 +117,10 @@ class TestOtpVerify:
             algorithm=settings.jwt_algorithm,
         )
 
+        client.cookies.set("access_token", token)
         resp = client.post(
             "/api/auth/otp/verify",
             json={"code": "123456"},
-            cookies={"access_token": token},
         )
         assert resp.status_code == 200
         data = resp.json()
@@ -157,10 +157,10 @@ class TestOtpVerify:
             algorithm=settings.jwt_algorithm,
         )
 
+        client.cookies.set("access_token", token)
         resp = client.post(
             "/api/auth/otp/verify",
             json={"code": "999999"},
-            cookies={"access_token": token},
         )
         assert resp.status_code == 401
 
@@ -187,10 +187,10 @@ class TestOtpVerify:
             algorithm=settings.jwt_algorithm,
         )
 
+        client.cookies.set("access_token", token)
         resp = client.post(
             "/api/auth/otp/verify",
             json={"code": "123456"},
-            cookies={"access_token": token},
         )
         assert resp.status_code == 401
 
@@ -211,9 +211,9 @@ class TestMe:
             algorithm=settings.jwt_algorithm,
         )
 
+        client.cookies.set("access_token", token)
         resp = client.get(
             "/api/auth/me",
-            cookies={"access_token": token},
         )
         assert resp.status_code == 200
         data = resp.json()
@@ -239,9 +239,9 @@ class TestMe:
             algorithm=settings.jwt_algorithm,
         )
 
+        client.cookies.set("access_token", token)
         resp = client.get(
             "/api/auth/me",
-            cookies={"access_token": token},
         )
         assert resp.status_code == 401
 
@@ -262,6 +262,7 @@ class TestRegister:
             algorithm=settings.jwt_algorithm,
         )
 
+        client.cookies.set("access_token", admin_token)
         resp = client.post(
             "/api/auth/register",
             json={
@@ -269,7 +270,6 @@ class TestRegister:
                 "name": "New User",
                 "password": "securepass123",
             },
-            cookies={"access_token": admin_token},
         )
         assert resp.status_code == 201
         data = resp.json()
@@ -307,6 +307,7 @@ class TestRegister:
             algorithm=settings.jwt_algorithm,
         )
 
+        client.cookies.set("access_token", admin_token)
         resp = client.post(
             "/api/auth/register",
             json={
@@ -314,7 +315,6 @@ class TestRegister:
                 "name": "Duplicate",
                 "password": "pass123",
             },
-            cookies={"access_token": admin_token},
         )
         assert resp.status_code == 422
 
@@ -335,9 +335,9 @@ class TestLogout:
             algorithm=settings.jwt_algorithm,
         )
 
+        client.cookies.set("access_token", token)
         resp = client.post(
             "/api/auth/logout",
-            cookies={"access_token": token},
         )
         assert resp.status_code == 200
 

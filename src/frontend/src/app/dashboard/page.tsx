@@ -8,7 +8,7 @@ import {
   Paper,
   Stack,
 } from '@mui/material';
-import ActiveOrdersTable from '@/components/ActiveOrdersTable';
+import OrdersTable from '@/components/OrdersTable';
 import InternalOrderForm from '@/components/InternalOrderForm';
 import ProtectedRoute from '../protected-route';
 import { useAuth } from '../auth-context';
@@ -42,9 +42,9 @@ export default function DashboardPage() {
 
           <Paper sx={{ p: 3 }}>
             <Typography variant="h6" gutterBottom fontWeight={600}>
-              Pedidos Activos
+              Pedidos
             </Typography>
-            <ActiveOrdersTable />
+            <OrdersTable />
           </Paper>
         </Stack>
       </Container>

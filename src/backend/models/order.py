@@ -18,7 +18,7 @@ class Order(Base):
     work_type: Mapped[str] = mapped_column(String(50), nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=False)
     files: Mapped[list[dict[str, Any]] | None] = mapped_column(JSON, default=None)
-    status: Mapped[str] = mapped_column(String(50), nullable=False, default="new")
+    status: Mapped[str] = mapped_column(String(50), ForeignKey("order_statuses.name"), nullable=False, default="new")
     client_notified: Mapped[bool] = mapped_column(default=False)
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(server_default=func.now(), onupdate=func.now())

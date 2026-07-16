@@ -1,7 +1,13 @@
 import os
 
-TEST_DATABASE_URL = "postgresql://postgres:postgres@localhost:5433/flayer_test"
-os.environ["DATABASE_URL"] = TEST_DATABASE_URL
+os.environ["APP_ENV"] = "test"
+
+if "DATABASE_URL" not in os.environ:
+    user = os.getenv("POSTGRES_TEST_USER", "postgres")
+    password = os.getenv("POSTGRES_TEST_PASSWORD", "postgres")
+    port = os.getenv("POSTGRES_TEST_PORT", "5433")
+    db = os.getenv("POSTGRES_TEST_DB", "flayer_test")
+    os.environ["DATABASE_URL"] = f"postgresql://{user}:{password}@localhost:{port}/{db}"
 
 import pytest  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
@@ -18,7 +24,7 @@ pytest_plugins = [
     "tests.fixtures.orders",
 ]
 
-test_engine = create_engine(TEST_DATABASE_URL, echo=False)
+test_engine = create_engine(os.environ["DATABASE_URL"], echo=False)
 TestSession = sessionmaker(bind=test_engine)
 
 class AsyncSessionWrapper:
@@ -43,10 +49,19 @@ class AsyncSessionWrapper:
         self._session.refresh(instance)
 
 
+SEED_STATUSES = ["new", "in_progress", "ready", "delivered", "cancelled"]
+
+
 @pytest.fixture(scope="session", autouse=True)
 def db_engine():
     Base.metadata.drop_all(bind=test_engine)
     Base.metadata.create_all(bind=test_engine)
+    session = TestSession()
+    from backend.models.order_status import OrderStatus
+    for name in SEED_STATUSES:
+        session.add(OrderStatus(name=name))
+    session.commit()
+    session.close()
     yield test_engine
 
 

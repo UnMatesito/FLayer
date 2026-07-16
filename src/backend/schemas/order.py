@@ -63,6 +63,11 @@ class OrderResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class OrderDetailResponse(OrderResponse):
+    customer_name: str
+    customer_email: str
+
+
 class PublicOrderCreate(OrderCreate):
     skip_client_notification: bool = False
 

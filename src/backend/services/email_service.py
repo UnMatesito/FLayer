@@ -15,6 +15,10 @@ class EmailService(ABC):
     async def send_otp(self, to: str, code: str) -> None:
         ...
 
+    @abstractmethod
+    async def send_order_status_change(self, order: Order, new_status: str, to: str) -> None:
+        ...
+
 
 class SmtpEmailService(EmailService):
     def __init__(self) -> None:
@@ -46,6 +50,21 @@ class SmtpEmailService(EmailService):
         msg.set_content(
             f"Your verification code is: {code}\n\n"
             f"This code expires in 10 minutes.\n\n"
+            f"— Flayer Team"
+        )
+        with smtplib.SMTP(self._host, self._port) as server:
+            server.send_message(msg)
+
+    async def send_order_status_change(self, order: Order, new_status: str, to: str) -> None:
+        msg = EmailMessage()
+        msg["Subject"] = f"Order {order.id} — Status Update"
+        msg["From"] = self._from_email
+        msg["To"] = to
+        msg.set_content(
+            f"Hi,\n\n"
+            f"Your order {order.id} has been updated.\n"
+            f"New status: {new_status}\n\n"
+            f"Thank you,\n"
             f"— Flayer Team"
         )
         with smtplib.SMTP(self._host, self._port) as server:
