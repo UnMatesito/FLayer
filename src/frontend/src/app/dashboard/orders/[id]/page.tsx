@@ -1,73 +1,57 @@
 'use client';
 
+import { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import {
-  Container,
-  Typography,
-  Button,
-  Box,
-  Paper,
-  Stack,
-  Chip,
-  CircularProgress,
-  Alert,
-  Divider,
-  Table,
-  TableBody,
-  TableCell,
-  TableRow,
+  Container, Typography, Button, Box, Paper, Stack, Chip,
+  CircularProgress, Alert, Table, TableBody, TableCell, TableRow,
+  Dialog, DialogTitle, DialogContent, DialogActions,
+  FormControl, InputLabel, Select, MenuItem, TextField,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import WarningAmberIcon from '@mui/icons-material/WarningAmber';
+import type { SxProps, Theme } from '@mui/material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import ProtectedRoute from '@/app/protected-route';
 import {
-  fetchOrderDetail,
-  updateOrderStatus,
-  type OrderDetail,
+  fetchOrderDetail, updateOrderStatus, fetchFilaments,
+  type OrderDetail, type Filament,
 } from '@/app/api';
+import { FilamentIcon } from '@/components/FilamentIcon';
+
+const styles: Record<string, SxProps<Theme>> = {
+  filamentInfo: {
+    display: 'flex', alignItems: 'center', gap: 1,
+  },
+};
 
 function statusColor(status: string) {
   switch (status) {
-    case 'new':
-      return 'info';
-    case 'in_progress':
-      return 'warning';
-    case 'ready':
-      return 'success';
-    case 'delivered':
-      return 'success';
-    case 'cancelled':
-      return 'error';
-    default:
-      return 'default';
+    case 'new': return 'info';
+    case 'in_progress': return 'warning';
+    case 'ready': return 'success';
+    case 'delivered': return 'success';
+    case 'cancelled': return 'error';
+    default: return 'default';
   }
 }
 
 function statusLabel(status: string) {
   switch (status) {
-    case 'new':
-      return 'Nuevo';
-    case 'in_progress':
-      return 'En Progreso';
-    case 'ready':
-      return 'Listo';
-    case 'delivered':
-      return 'Entregado';
-    case 'cancelled':
-      return 'Cancelado';
-    default:
-      return status;
+    case 'new': return 'Nuevo';
+    case 'in_progress': return 'En Progreso';
+    case 'ready': return 'Listo';
+    case 'delivered': return 'Entregado';
+    case 'cancelled': return 'Cancelado';
+    default: return status;
   }
 }
 
 function workTypeLabel(workType: string) {
   switch (workType) {
-    case 'impresion_3d':
-      return 'Impresión 3D';
-    case 'diseno_3d':
-      return 'Diseño 3D';
-    default:
-      return workType;
+    case 'impresion_3d': return 'Impresión 3D';
+    case 'diseno_3d': return 'Diseño 3D';
+    default: return workType;
   }
 }
 
@@ -94,15 +78,121 @@ const STATUS_ACTIONS: Record<string, Action[]> = {
   cancelled: [],
 };
 
+function ReadyDialog({
+  open, onClose, filaments, orderId,
+}: {
+  open: boolean; onClose: () => void; filaments: Filament[]; orderId: string;
+}) {
+  const queryClient = useQueryClient();
+  const [filamentId, setFilamentId] = useState('');
+  const [grams, setGrams] = useState('');
+  const [showLowStockWarning, setShowLowStockWarning] = useState(false);
+
+  const selectedFilament = filaments.find((f) => f.id === filamentId);
+  const gramsNum = Number(grams);
+
+  const mutation = useMutation({
+    mutationFn: () => updateOrderStatus(orderId, 'ready', filamentId || undefined, gramsNum || undefined),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['order', orderId] });
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      queryClient.invalidateQueries({ queryKey: ['filaments'] });
+      queryClient.invalidateQueries({ queryKey: ['filament', filamentId] });
+      queryClient.invalidateQueries({ queryKey: ['low-stock'] });
+      queryClient.invalidateQueries({ queryKey: ['stock-movements'] });
+      onClose();
+    },
+  });
+
+  const handleConfirm = () => {
+    if (selectedFilament && gramsNum > 0 && gramsNum > selectedFilament.weight_grams) {
+      setShowLowStockWarning(true);
+      return;
+    }
+    mutation.mutate();
+  };
+
+  return (
+    <>
+      <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+        <DialogTitle>Marcar como Listo</DialogTitle>
+        <DialogContent>
+          <Stack spacing={2} sx={{ mt: 1 }}>
+            <FormControl fullWidth required>
+              <InputLabel>Filamento</InputLabel>
+              <Select value={filamentId} label="Filamento" onChange={(e) => setFilamentId(e.target.value)}>
+                {filaments.map((f) => (
+                  <MenuItem key={f.id} value={f.id}>
+                    <Box sx={styles.filamentInfo}>
+                      <FilamentIcon color={f.color_hex} size={16} />
+                      {f.color_name} — {f.filament_type} ({f.weight_grams.toFixed(0)}g disp.)
+                    </Box>
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <TextField
+              label="Gramos estimados"
+              type="number"
+              value={grams}
+              onChange={(e) => setGrams(e.target.value)}
+              fullWidth
+              required
+              helperText="Peso estimado del filamento usado en este pedido"
+            />
+            {selectedFilament && gramsNum > 0 && gramsNum > selectedFilament.weight_grams && (
+              <Alert severity="warning" icon={<WarningAmberIcon />}>
+                Este pedido requiere {gramsNum}g pero solo hay {selectedFilament.weight_grams.toFixed(1)}g disponibles.
+                Se permitirá el descuento igualmente (stock negativo).
+              </Alert>
+            )}
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={onClose}>Cancelar</Button>
+          <Button onClick={handleConfirm} variant="contained" color="success"
+            disabled={!filamentId || !grams || mutation.isPending}>
+            {mutation.isPending ? 'Procesando...' : 'Confirmar'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={showLowStockWarning} onClose={() => setShowLowStockWarning(false)} maxWidth="xs">
+        <DialogTitle>Stock Insuficiente</DialogTitle>
+        <DialogContent>
+          <Alert severity="warning" sx={{ mb: 2 }}>
+            Stock insuficiente para {selectedFilament?.color_name}: requiere {gramsNum}g, disponible {selectedFilament?.weight_grams.toFixed(1)}g.
+          </Alert>
+          <Typography variant="body2" color="text.secondary">
+            ¿Deseas continuar igualmente? El stock quedará en negativo.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowLowStockWarning(false)}>Cancelar</Button>
+          <Button onClick={() => { setShowLowStockWarning(false); mutation.mutate(); }} variant="contained" color="warning">
+            Continuar de todos modos
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </>
+  );
+}
+
 export default function OrderDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const queryClient = useQueryClient();
+  const [readyDialog, setReadyDialog] = useState(false);
 
   const { data: order, isLoading, error } = useQuery<OrderDetail>({
     queryKey: ['order', id],
     queryFn: () => fetchOrderDetail(id),
     enabled: !!id,
+  });
+
+  const { data: filaments } = useQuery<Filament[]>({
+    queryKey: ['filaments-ready'],
+    queryFn: () => fetchFilaments(),
   });
 
   const statusMutation = useMutation({
@@ -117,9 +207,7 @@ export default function OrderDetailPage() {
     return (
       <ProtectedRoute>
         <Container maxWidth="md" sx={{ py: 4 }}>
-          <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
-            <CircularProgress />
-          </Box>
+          <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}><CircularProgress /></Box>
         </Container>
       </ProtectedRoute>
     );
@@ -129,12 +217,8 @@ export default function OrderDetailPage() {
     return (
       <ProtectedRoute>
         <Container maxWidth="md" sx={{ py: 4 }}>
-          <Alert severity="error">
-            {error instanceof Error ? error.message : 'Order not found'}
-          </Alert>
-          <Button startIcon={<ArrowBackIcon />} onClick={() => router.push('/dashboard')} sx={{ mt: 2 }}>
-            Volver al Dashboard
-          </Button>
+          <Alert severity="error">{error instanceof Error ? error.message : 'Order not found'}</Alert>
+          <Button startIcon={<ArrowBackIcon />} onClick={() => router.push('/dashboard')} sx={{ mt: 2 }}>Volver al Dashboard</Button>
         </Container>
       </ProtectedRoute>
     );
@@ -146,24 +230,14 @@ export default function OrderDetailPage() {
   return (
     <ProtectedRoute>
       <Container maxWidth="md" sx={{ py: 4 }}>
-        <Button
-          startIcon={<ArrowBackIcon />}
-          onClick={() => router.push('/dashboard')}
-          sx={{ mb: 2 }}
-        >
+        <Button startIcon={<ArrowBackIcon />} onClick={() => router.push('/dashboard')} sx={{ mb: 2 }}>
           Volver al Dashboard
         </Button>
 
         <Paper sx={{ p: 3, mb: 3 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-            <Typography variant="h5" fontWeight={600}>
-              Pedido
-            </Typography>
-            <Chip
-              label={statusLabel(order.status)}
-              color={statusColor(order.status) as any}
-              size="medium"
-            />
+            <Typography variant="h5" fontWeight={600}>Pedido</Typography>
+            <Chip label={statusLabel(order.status)} color={statusColor(order.status) as any} size="medium" />
           </Box>
 
           <Table size="small">
@@ -189,6 +263,16 @@ export default function OrderDetailPage() {
                 <TableCell sx={{ whiteSpace: 'pre-wrap' }}>{order.description}</TableCell>
               </TableRow>
               <TableRow>
+                <TableCell sx={{ fontWeight: 600 }}>Filamento</TableCell>
+                <TableCell>
+                  {order.filament_id ? (
+                    <Chip label={`Filamento asignado (${order.grams_estimated ?? '?'}g estimados)`} size="small" color="info" variant="outlined" />
+                  ) : (
+                    <Typography variant="body2" color="text.secondary">No asignado</Typography>
+                  )}
+                </TableCell>
+              </TableRow>
+              <TableRow>
                 <TableCell sx={{ fontWeight: 600 }}>Fecha de Creación</TableCell>
                 <TableCell>{new Date(order.created_at).toLocaleDateString()}</TableCell>
               </TableRow>
@@ -197,9 +281,7 @@ export default function OrderDetailPage() {
                   <TableCell sx={{ fontWeight: 600 }}>Archivos</TableCell>
                   <TableCell>
                     {order.files.map((f, i) => (
-                      <Typography key={i} variant="body2">
-                        {f.filename}: {f.url}
-                      </Typography>
+                      <Typography key={i} variant="body2">{f.filename}: {f.url}</Typography>
                     ))}
                   </TableCell>
                 </TableRow>
@@ -210,16 +292,20 @@ export default function OrderDetailPage() {
 
         {actions.length > 0 && (
           <Paper sx={{ p: 3 }}>
-            <Typography variant="h6" gutterBottom fontWeight={600}>
-              Acciones
-            </Typography>
+            <Typography variant="h6" gutterBottom fontWeight={600}>Acciones</Typography>
             <Stack direction="row" spacing={2}>
               {actions.map((action) => (
                 <Button
                   key={action.targetStatus}
                   variant="contained"
                   color={action.color}
-                  onClick={() => statusMutation.mutate(action.targetStatus)}
+                  onClick={() => {
+                    if (action.targetStatus === 'ready') {
+                      setReadyDialog(true);
+                    } else {
+                      statusMutation.mutate(action.targetStatus);
+                    }
+                  }}
                   disabled={isMutationPending}
                 >
                   {action.label}
@@ -228,14 +314,16 @@ export default function OrderDetailPage() {
             </Stack>
             {statusMutation.isError && (
               <Alert severity="error" sx={{ mt: 2 }}>
-                {statusMutation.error instanceof Error
-                  ? statusMutation.error.message
-                  : 'Error al actualizar el estado'}
+                {statusMutation.error instanceof Error ? statusMutation.error.message : 'Error al actualizar el estado'}
               </Alert>
             )}
           </Paper>
         )}
       </Container>
+
+      {readyDialog && filaments && (
+        <ReadyDialog open={readyDialog} onClose={() => setReadyDialog(false)} filaments={filaments} orderId={id} />
+      )}
     </ProtectedRoute>
   );
 }
