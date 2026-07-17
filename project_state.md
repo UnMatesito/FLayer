@@ -1,7 +1,7 @@
 # Project State
 
-**Current feature:** create_order
-**Status:** code_ready — awaiting manual verification
+**Current feature:** *none*
+**Status:** idle
 **Active tasks:** none
 
 ## Architecture

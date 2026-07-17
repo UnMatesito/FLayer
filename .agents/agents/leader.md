@@ -21,7 +21,11 @@ Do not load full specs or history unless necessary.
    - If `progress/impl_<feature>.md` exists without `progress/review_<feature>.md` → launch `reviewer`
 4. Update `feature_list.json` accordingly
 5. Update `progress/current.md` with the state before ending your turn
-6. When closing a feature (`done`), compact info and archive old history to `progress/archive/`
+6. When closing a feature (`done`):
+   - Mark all tasks [x] in `specs/<feature>/tasks.md`
+   - Create `progress/impl_<feature>.md` if missing (from existing code)
+   - Append entry to `progress/archive/history.md` (date, feature, transition, summary)
+   - Update `feature_list.json` status
 
 ## Hard rules
 
