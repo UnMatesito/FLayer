@@ -60,4 +60,15 @@
 
 ## Commits
 
-`<feature>: <action>` — e.g., `create_order: add email validation to public form`
+Format: `<type>: <feature> - <scope>:` followed by bullet-point body.
+
+Types: `feat` (feature), `fix`, `chore` (meta/maintenance), `docs`, `refactor`, `test`.
+
+First line: `feat: stock_management - frontend and backend:`
+Body: blank line then bullet points describing what was done:
+```
+feat: stock_management - frontend and backend:
+- Created the filament and supplies table
+- Created and passed all 29 tests
+- New views in the dashboard with filament management with slicer settings
+```
