@@ -1,7 +1,7 @@
 # Project State
 
-**Current feature:** *none*
-**Status:** idle
+**Current feature:** *stock_management*
+**Status:** done
 **Active tasks:** none
 
 ## Architecture

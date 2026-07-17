@@ -4,7 +4,7 @@
 
 - `customers` (new for this feature)
 - `orders` (new for this feature — only columns used up to `status='new'`)
-- `order_notes` (new, though not used until Mateo adds a note)
+- `order_notes` (new, though not used until the operator adds a note)
 
 `order_status_history` is not created here — that belongs to `order_status`. However,
 the `orders.status` column does exist from this feature (default `'new'`).

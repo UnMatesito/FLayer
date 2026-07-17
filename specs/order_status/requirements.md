@@ -3,31 +3,31 @@
 ## R1. Status transitions — Happy path
 
 GIVEN an order exists with status `new`
-WHEN Mateo clicks "Start"
+WHEN the operator clicks "Start"
 THEN the status changes to `in_progress`
 
 GIVEN an order has status `in_progress`
-WHEN Mateo clicks "Mark as Ready"
+WHEN the operator clicks "Mark as Ready"
 THEN the status changes to `ready`
 
 GIVEN an order has status `ready`
-WHEN Mateo clicks "Mark as Delivered"
+WHEN the operator clicks "Mark as Delivered"
 THEN the status changes to `delivered`
 
 ## R2. Status transitions — Cancellation
 
 GIVEN an order has status `new`, `in_progress`, or `ready`
-WHEN Mateo clicks "Cancel Order"
+WHEN the operator clicks "Cancel Order"
 THEN the status changes to `cancelled`
 
 ## R3. Invalid transitions — Rejected
 
 GIVEN an order has status `new`
-WHEN Mateo tries to change it to `delivered`
+WHEN the operator tries to change it to `delivered`
 THEN the API rejects the transition with 409 Conflict
 
 GIVEN an order has status `delivered` or `cancelled`
-WHEN Mateo tries to change it to any other status
+WHEN the operator tries to change it to any other status
 THEN the API rejects with 409 Conflict
 
 ## R4. Statuses are stored in a lookup table
@@ -44,14 +44,14 @@ AND the email includes the new status and a brief message
 
 ## R6. Order detail page — Current status
 
-GIVEN Mateo opens the order detail page
+GIVEN the operator opens the order detail page
 THEN he sees the order info (customer, work type, description, files) and the current status
 AND available action buttons based on the current status
 AND muted/disabled buttons for unavailable transitions
 
 ## R7. Order navigation — From active orders table
 
-GIVEN Mateo sees the active orders table
+GIVEN the operator sees the active orders table
 WHEN he clicks on an order row
 THEN it navigates to `/dashboard/orders/{id}`
 

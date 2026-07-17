@@ -57,6 +57,8 @@ class OrderResponse(BaseModel):
     files: list[dict[str, Any]] | None
     status: str
     client_notified: bool
+    filament_id: UUID | None = None
+    grams_estimated: float | None = None
     created_at: datetime
     updated_at: datetime
 

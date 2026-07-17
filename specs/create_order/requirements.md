@@ -33,7 +33,7 @@ AND the order is not created until the issue is resolved
 
 ## R5. Manual creation by the operator
 
-GIVEN Mateo (authenticated) is on the dashboard
+GIVEN the operator (authenticated) is on the dashboard
 WHEN he completes the internal "new order" form with the same
      fields as the public form
 THEN an order is created just as if the customer had created it
@@ -43,7 +43,7 @@ AND the "Order Received" email is NOT sent twice if the customer
 ## R6. Immediate dashboard visibility
 
 GIVEN an order was created (by either of the two paths above)
-WHEN Mateo opens the "Active Orders" table
+WHEN the operator opens the "Active Orders" table
 THEN the new order appears with: ID, customer, work type, status
      "new", creation date
 AND it is sorted by creation date descending by default

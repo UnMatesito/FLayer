@@ -180,7 +180,7 @@ Discarded alternative: multiple machine profiles (multiple printers with differe
 A budget always belongs to an order. Discarded alternative: budgets could be independent of orders (for "quick quotes"). Chosen: MVP owns the order → budget flow; standalone quotes are future.
 
 **Manual price override preserves auto-calculation.**
-The breakdown (filament_cost, electricity_cost, etc.) is always recalculated from inputs. If `manual_price` is set, `final_price` shows the manual value but the calculated price is still visible in the breakdown. This lets Mateo adjust for market conditions without losing the cost basis.
+The breakdown (filament_cost, electricity_cost, etc.) is always recalculated from inputs. If `manual_price` is set, `final_price` shows the manual value but the calculated price is still visible in the breakdown. This lets the operator adjust for market conditions without losing the cost basis.
 
 **Status `draft → sent → approved|rejected` flow.**
 Discarded alternative: allow direct `draft → approved`. Chosen: sending to the client is always an explicit step, matching real business practice even when the conversation happens outside the system.

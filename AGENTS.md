@@ -60,4 +60,4 @@ return a reference:
 ✓ implemented → progress/impl_generate_budget.md
 ```
 
-The human (Mateo) reads the files directly in their editor.
+The human reads the files directly in their editor.

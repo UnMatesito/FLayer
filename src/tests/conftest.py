@@ -22,6 +22,7 @@ pytest_plugins = [
     "tests.fixtures.users",
     "tests.fixtures.customers",
     "tests.fixtures.orders",
+    "tests.fixtures.stock",
 ]
 
 test_engine = create_engine(os.environ["DATABASE_URL"], echo=False)

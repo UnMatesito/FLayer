@@ -13,6 +13,8 @@ VALID_TRANSITIONS: dict[str, set[str]] = {
 
 class StatusUpdateRequest(BaseModel):
     status: str
+    filament_id: UUID | None = None
+    grams: float | None = None
 
     @field_validator("status")
     @classmethod

@@ -67,3 +67,21 @@ Output: marked `done` in `feature_list.json`.
 **Transition:** `code_ready` → `done`
 
 Human confirmed finished. Project moved to idle. Next: `generate_budget`.
+
+## Session 6 — 2026-07-17
+
+**Feature:** `stock_management`
+**Transition:** `spec_ready` → `done`
+
+`implementer` wrote:
+- Backend: Filament model with brand + settings (JSONB), Pydantic schemas, CRUD endpoints, stock movement/tracking, consumption/reversal logic
+- Frontend: filament list with create dialog (brand + all print settings), filament detail page with settings editor, order detail page with filament selector for ready marking, archived filaments toggle view
+- DB: 3 Alembic migrations (stock tables, brand/settings columns, unique constraint on user_id+color_name+brand)
+- Tests: 31 stock tests (creation, duplicate detection with brand+name, weight adjust, stock movements, low stock, oversell, reversal)
+- Skills: MUI v7 patterns, filament icon component, color picker input type
+- Verification: backend — 62 total tests pass (1.17s), frontend — `next build` compiles 10 routes
+
+`reviewer` (human):
+- Manual verification: CRUD filaments ✅, stock adjustments ✅, movement history ✅, settings save/display ✅, archived view toggle ✅
+
+Output: marked `done` in `feature_list.json`.
