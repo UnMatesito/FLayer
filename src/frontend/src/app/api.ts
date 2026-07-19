@@ -431,3 +431,116 @@ export async function fetchOrderStatuses(): Promise<OrderStatus[]> {
   }
   return res.json();
 }
+
+// Budget types
+export interface FilamentItemInput {
+  product_id?: string | null;
+  product_name?: string | null;
+  grams: number;
+}
+
+export interface FilamentItemResponse {
+  product_id: string | null;
+  product_name: string;
+  sku: string;
+  grams: number;
+  price_per_kg: number;
+  cost: number;
+}
+
+export interface BudgetCreate {
+  currency: 'ARS' | 'USD';
+  filament_items: FilamentItemInput[];
+  manual_filament_cost?: number | null;
+  manual_grams?: number | null;
+  hours: number;
+  minutes: number;
+  margin_type: 'wholesale' | 'retail' | 'keychain';
+  extra_costs?: number;
+  manual_price?: number | null;
+  notes?: string;
+}
+
+export interface BudgetUpdate {
+  currency?: 'ARS' | 'USD';
+  filament_items?: FilamentItemInput[];
+  manual_filament_cost?: number | null;
+  manual_grams?: number | null;
+  hours?: number;
+  minutes?: number;
+  margin_type?: 'wholesale' | 'retail' | 'keychain';
+  extra_costs?: number;
+  manual_price?: number | null;
+  notes?: string;
+}
+
+export interface BudgetResponse {
+  id: string;
+  order_id: string;
+  version: number;
+  currency: 'ARS' | 'USD';
+  filament_items: FilamentItemResponse[];
+  manual_filament_cost: number | null;
+  manual_grams: number | null;
+  hours: number;
+  minutes: number;
+  margin_type: 'wholesale' | 'retail' | 'keychain';
+  extra_costs: number;
+  error_margin_percent: number;
+  margin_multiplier: number;
+  final_price: number;
+  manual_price: number | null;
+  ml_price: number;
+  filament_total: number;
+  electricity_cost: number;
+  amortization_cost: number;
+  subtotal: number;
+  subtotal_with_error: number;
+  total_before_margin: number;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+async function handleResponse<T>(res: Response): Promise<T> {
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Request failed');
+  }
+  return res.json();
+}
+
+export async function fetchBudget(orderId: string): Promise<BudgetResponse> {
+  const res = await fetch(`${API_BASE}/orders/${orderId}/budget`, { credentials: 'include' });
+  return handleResponse<BudgetResponse>(res);
+}
+
+export async function createBudget(orderId: string, data: BudgetCreate): Promise<BudgetResponse> {
+  const res = await fetch(`${API_BASE}/orders/${orderId}/budget`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  return handleResponse<BudgetResponse>(res);
+}
+
+export async function updateBudget(orderId: string, data: BudgetUpdate): Promise<BudgetResponse> {
+  const res = await fetch(`${API_BASE}/orders/${orderId}/budget`, {
+    method: 'PUT',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  return handleResponse<BudgetResponse>(res);
+}
+
+export async function previewBudget(orderId: string, data: BudgetCreate): Promise<BudgetResponse> {
+  const res = await fetch(`${API_BASE}/orders/${orderId}/budget/preview`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  return handleResponse<BudgetResponse>(res);
+}

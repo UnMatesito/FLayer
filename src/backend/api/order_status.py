@@ -76,7 +76,7 @@ async def update_order_status(
                    f"Valid targets: {', '.join(sorted(allowed)) if allowed else 'none (terminal state)'}",
         )
 
-    if new_status == "ready":
+    if new_status == "printing":
         filament_id = body.filament_id or order.filament_id
         grams = body.grams or order.grams_estimated
 
@@ -114,7 +114,7 @@ async def update_order_status(
             )
 
     if new_status == "cancelled":
-        if current_status == "ready":
+        if current_status == "printing":
             await stock_service.reverse(
                 db=db,
                 order_id=order_id,

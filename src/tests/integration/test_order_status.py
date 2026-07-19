@@ -45,7 +45,7 @@ class TestOrderDetail:
 
 
 class TestUpdateStatus:
-    def test_new_to_in_progress(
+    def test_new_to_quoting(
         self, client, db_session, auth_headers, test_user
     ):
         customer = CustomerFactory.create(session=db_session, user_id=test_user.id)
@@ -55,23 +55,39 @@ class TestUpdateStatus:
 
         resp = client.patch(
             f"/api/orders/{order.id}/status",
-            json={"status": "in_progress"},
+            json={"status": "quoting"},
             headers=auth_headers,
         )
         assert resp.status_code == 200
         data = resp.json()
-        assert data["status"] == "in_progress"
+        assert data["status"] == "quoting"
 
         result = db_session.execute(select(Order).where(Order.id == order.id))
         updated = result.scalar_one()
-        assert updated.status == "in_progress"
+        assert updated.status == "quoting"
 
-    def test_in_progress_to_ready(
+    def test_quoting_to_printing(
         self, client, db_session, auth_headers, test_user
     ):
         customer = CustomerFactory.create(session=db_session, user_id=test_user.id)
         order = OrderFactory.create(
-            session=db_session, user_id=test_user.id, customer_id=customer.id, status="in_progress"
+            session=db_session, user_id=test_user.id, customer_id=customer.id, status="quoting"
+        )
+
+        resp = client.patch(
+            f"/api/orders/{order.id}/status",
+            json={"status": "printing"},
+            headers=auth_headers,
+        )
+        assert resp.status_code == 200
+        assert resp.json()["status"] == "printing"
+
+    def test_printing_to_ready(
+        self, client, db_session, auth_headers, test_user
+    ):
+        customer = CustomerFactory.create(session=db_session, user_id=test_user.id)
+        order = OrderFactory.create(
+            session=db_session, user_id=test_user.id, customer_id=customer.id, status="printing"
         )
 
         resp = client.patch(
@@ -139,7 +155,7 @@ class TestUpdateStatus:
 
         resp = client.patch(
             f"/api/orders/{order.id}/status",
-            json={"status": "in_progress"},
+            json={"status": "quoting"},
             headers=auth_headers,
         )
         assert resp.status_code == 409
@@ -154,7 +170,7 @@ class TestUpdateStatus:
 
         resp = client.patch(
             f"/api/orders/{order.id}/status",
-            json={"status": "in_progress"},
+            json={"status": "quoting"},
             headers=auth_headers,
         )
         assert resp.status_code == 409
@@ -173,12 +189,12 @@ class TestUpdateStatus:
 
         resp = client.patch(
             f"/api/orders/{order.id}/status",
-            json={"status": "in_progress"},
+            json={"status": "quoting"},
             headers=auth_headers,
         )
         assert resp.status_code == 200
         email_service.send_order_status_change.assert_awaited_once_with(
-            order, "in_progress", "client@example.com"
+            order, "quoting", "client@example.com"
         )
 
 
@@ -190,4 +206,4 @@ class TestListOrderStatuses:
         assert resp.status_code == 200
         data = resp.json()
         names = {s["name"] for s in data}
-        assert names == {"new", "in_progress", "ready", "delivered", "cancelled"}
+        assert names == {"new", "quoting", "printing", "ready", "delivered", "cancelled"}

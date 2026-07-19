@@ -50,7 +50,7 @@ class AsyncSessionWrapper:
         self._session.refresh(instance)
 
 
-SEED_STATUSES = ["new", "in_progress", "ready", "delivered", "cancelled"]
+SEED_STATUSES = ["new", "quoting", "printing", "ready", "delivered", "cancelled"]
 
 
 @pytest.fixture(scope="session", autouse=True)

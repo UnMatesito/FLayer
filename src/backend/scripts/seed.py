@@ -13,7 +13,7 @@ from backend.models import Customer, Order, OrderNote, OrderStatus, User
 fake = Faker("es-MX")
 
 WORK_TYPES = ["impresion_3d", "diseno_3d"]
-STATUSES = ["new", "in_progress", "ready", "delivered", "cancelled"]
+STATUSES = ["new", "quoting", "printing", "ready", "delivered", "cancelled"]
 
 
 async def seed() -> None:

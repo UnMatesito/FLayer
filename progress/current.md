@@ -1,9 +1,6 @@
 # Current
 
-**Feature:** `stock_management`
-**Status:** complete
-**Next:** ready for review
-**Verification:**
-- Backend: `pytest tests/` → 57 passed (26 new stock tests)
-- Frontend: `next build` → 10 routes compiled successfully
-- Complete R1–R12 traceability
+**Feature:** `generate_budget`
+**Status:** done
+**Review:** approved — `progress/review_generate_budget.md`
+**Next:** pick next feature from `feature_list.json`

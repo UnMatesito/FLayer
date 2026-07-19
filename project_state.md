@@ -1,6 +1,6 @@
 # Project State
 
-**Current feature:** *stock_management*
+**Current feature:** *generate_budget*
 **Status:** done
 **Active tasks:** none
 

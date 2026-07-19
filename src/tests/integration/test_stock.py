@@ -185,7 +185,7 @@ def test_update_supply_quantity(client, auth_headers, test_supply):
     assert float(data["quantity"]) == 10.0
 
 
-def test_stock_deduction_on_ready(client, auth_headers, test_filament, test_user, db_session):
+def test_stock_deduction_on_printing(client, auth_headers, test_filament, test_user, db_session):
     from tests.factories.customer_factory import CustomerFactory
     from tests.factories.order_factory import OrderFactory
 
@@ -194,7 +194,7 @@ def test_stock_deduction_on_ready(client, auth_headers, test_filament, test_user
         session=db_session,
         user_id=test_user.id,
         customer_id=customer.id,
-        status="in_progress",
+        status="quoting",
         filament_id=test_filament.id,
         grams_estimated=200.00,
     )
@@ -202,7 +202,7 @@ def test_stock_deduction_on_ready(client, auth_headers, test_filament, test_user
     response = client.patch(
         f"/api/orders/{order.id}/status",
         json={
-            "status": "ready",
+            "status": "printing",
             "filament_id": str(test_filament.id),
             "grams": 200.00,
         },
@@ -232,13 +232,13 @@ def test_stock_deduction_oversell_allowed(client, auth_headers, test_filament, t
         session=db_session,
         user_id=test_user.id,
         customer_id=customer.id,
-        status="in_progress",
+        status="quoting",
     )
 
     response = client.patch(
         f"/api/orders/{order.id}/status",
         json={
-            "status": "ready",
+            "status": "printing",
             "filament_id": str(test_filament.id),
             "grams": 99999.00,
         },
@@ -253,7 +253,7 @@ def test_stock_deduction_oversell_allowed(client, auth_headers, test_filament, t
     assert float(get_response.json()["weight_grams"]) < 0
 
 
-def test_stock_reversal_on_ready_to_cancelled(client, auth_headers, test_filament, test_user, db_session):
+def test_stock_reversal_on_printing_to_cancelled(client, auth_headers, test_filament, test_user, db_session):
     from tests.factories.customer_factory import CustomerFactory
     from tests.factories.order_factory import OrderFactory
 
@@ -262,7 +262,7 @@ def test_stock_reversal_on_ready_to_cancelled(client, auth_headers, test_filamen
         session=db_session,
         user_id=test_user.id,
         customer_id=customer.id,
-        status="in_progress",
+        status="quoting",
     )
 
     original_weight = float(test_filament.weight_grams)
@@ -270,7 +270,7 @@ def test_stock_reversal_on_ready_to_cancelled(client, auth_headers, test_filamen
     client.patch(
         f"/api/orders/{order.id}/status",
         json={
-            "status": "ready",
+            "status": "printing",
             "filament_id": str(test_filament.id),
             "grams": 200.00,
         },
@@ -483,7 +483,7 @@ def test_ready_transition_without_filament_id(client, auth_headers, test_user, d
         session=db_session,
         user_id=test_user.id,
         customer_id=customer.id,
-        status="in_progress",
+        status="printing",
     )
 
     response = client.patch(
@@ -504,13 +504,13 @@ def test_status_change_request_body_extended_fields(client, auth_headers, test_f
         session=db_session,
         user_id=test_user.id,
         customer_id=customer.id,
-        status="in_progress",
+        status="quoting",
     )
 
     response = client.patch(
         f"/api/orders/{order.id}/status",
         json={
-            "status": "ready",
+            "status": "printing",
             "filament_id": str(test_filament.id),
             "grams": 150.00,
         },

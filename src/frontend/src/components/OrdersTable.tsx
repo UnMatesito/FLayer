@@ -17,15 +17,17 @@ import {
   CircularProgress,
   Box,
   IconButton,
+  Button,
 } from '@mui/material';
 import CheckIcon from '@mui/icons-material/Check';
 import CloseIcon from '@mui/icons-material/Close';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { fetchAllOrders, updateOrderStatus, type Order } from '@/app/api';
+import { fetchAllOrders, updateOrderStatus, fetchBudget, type Order, type BudgetResponse } from '@/app/api';
 
 const VALID_TRANSITIONS: Record<string, string[]> = {
-  new: ['in_progress', 'cancelled'],
-  in_progress: ['ready', 'cancelled'],
+  new: ['quoting', 'cancelled'],
+  quoting: ['printing', 'cancelled'],
+  printing: ['ready', 'cancelled'],
   ready: ['delivered', 'cancelled'],
   delivered: [],
   cancelled: [],
@@ -35,8 +37,10 @@ function statusColor(status: string) {
   switch (status) {
     case 'new':
       return 'info';
-    case 'in_progress':
+    case 'quoting':
       return 'warning';
+    case 'printing':
+      return 'info';
     case 'ready':
       return 'success';
     case 'delivered':
@@ -52,8 +56,10 @@ function statusLabel(status: string) {
   switch (status) {
     case 'new':
       return 'Nuevo';
-    case 'in_progress':
-      return 'En Progreso';
+    case 'quoting':
+      return 'Presupuestando';
+    case 'printing':
+      return 'Imprimiendo';
     case 'ready':
       return 'Listo';
     case 'delivered':
@@ -67,6 +73,41 @@ function statusLabel(status: string) {
 
 interface StatusCellProps {
   order: Order;
+}
+
+function BudgetCell({ orderId, orderStatus }: { orderId: string; orderStatus: string }) {
+  const router = useRouter();
+  const { data: budget, isLoading } = useQuery<BudgetResponse>({
+    queryKey: ['budget', orderId],
+    queryFn: () => fetchBudget(orderId),
+    retry: false,
+    staleTime: 30_000,
+  });
+
+  if (orderStatus !== 'quoting') {
+    return <Typography variant="body2" color="text.disabled">—</Typography>;
+  }
+
+  if (isLoading) {
+    return <CircularProgress size={14} />;
+  }
+
+  if (!budget) {
+    return (
+      <Button
+        size="small"
+        variant="outlined"
+        onClick={(e) => {
+          e.stopPropagation();
+          router.push(`/dashboard/orders/${orderId}`);
+        }}
+      >
+        Presupuestar
+      </Button>
+    );
+  }
+
+  return <Chip label="Presupuestado" color="success" size="small" />;
 }
 
 function StatusCell({ order }: StatusCellProps) {
@@ -200,6 +241,7 @@ export default function OrdersTable() {
             <TableCell>Cliente</TableCell>
             <TableCell>Tipo</TableCell>
             <TableCell>Estado</TableCell>
+            <TableCell>Presupuesto</TableCell>
             <TableCell>Fecha</TableCell>
           </TableRow>
         </TableHead>
@@ -222,6 +264,9 @@ export default function OrdersTable() {
               </TableCell>
               <TableCell onClick={(e) => e.stopPropagation()}>
                 <StatusCell order={order} />
+              </TableCell>
+              <TableCell onClick={(e) => e.stopPropagation()}>
+                <BudgetCell orderId={order.id} orderStatus={order.status} />
               </TableCell>
               <TableCell>
                 {new Date(order.created_at).toLocaleDateString()}

@@ -3,8 +3,9 @@ from uuid import UUID
 from pydantic import BaseModel, field_validator
 
 VALID_TRANSITIONS: dict[str, set[str]] = {
-    "new": {"in_progress", "cancelled"},
-    "in_progress": {"ready", "cancelled"},
+    "new": {"quoting", "cancelled"},
+    "quoting": {"printing", "cancelled"},
+    "printing": {"ready", "cancelled"},
     "ready": {"delivered", "cancelled"},
     "delivered": set(),
     "cancelled": set(),

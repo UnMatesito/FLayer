@@ -10,14 +10,18 @@ import {
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
+import AddIcon from '@mui/icons-material/Add';
+import EditIcon from '@mui/icons-material/Edit';
 import type { SxProps, Theme } from '@mui/material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import ProtectedRoute from '@/app/protected-route';
 import {
-  fetchOrderDetail, updateOrderStatus, fetchFilaments,
-  type OrderDetail, type Filament,
+  fetchOrderDetail, updateOrderStatus, fetchFilaments, fetchBudget,
+  type OrderDetail, type Filament, type BudgetResponse,
 } from '@/app/api';
 import { FilamentIcon } from '@/components/FilamentIcon';
+import BudgetForm from '@/components/BudgetForm';
+import BudgetBreakdown from '@/components/BudgetBreakdown';
 
 const styles: Record<string, SxProps<Theme>> = {
   filamentInfo: {
@@ -28,7 +32,8 @@ const styles: Record<string, SxProps<Theme>> = {
 function statusColor(status: string) {
   switch (status) {
     case 'new': return 'info';
-    case 'in_progress': return 'warning';
+    case 'quoting': return 'warning';
+    case 'printing': return 'info';
     case 'ready': return 'success';
     case 'delivered': return 'success';
     case 'cancelled': return 'error';
@@ -39,7 +44,8 @@ function statusColor(status: string) {
 function statusLabel(status: string) {
   switch (status) {
     case 'new': return 'Nuevo';
-    case 'in_progress': return 'En Progreso';
+    case 'quoting': return 'Presupuestando';
+    case 'printing': return 'Imprimiendo';
     case 'ready': return 'Listo';
     case 'delivered': return 'Entregado';
     case 'cancelled': return 'Cancelado';
@@ -63,10 +69,14 @@ interface Action {
 
 const STATUS_ACTIONS: Record<string, Action[]> = {
   new: [
-    { label: 'Iniciar', targetStatus: 'in_progress', color: 'primary' },
+    { label: 'Presupuestar', targetStatus: 'quoting', color: 'primary' },
     { label: 'Cancelar', targetStatus: 'cancelled', color: 'error' },
   ],
-  in_progress: [
+  quoting: [
+    { label: 'Iniciar impresión', targetStatus: 'printing', color: 'primary' },
+    { label: 'Cancelar', targetStatus: 'cancelled', color: 'error' },
+  ],
+  printing: [
     { label: 'Marcar como Listo', targetStatus: 'ready', color: 'success' },
     { label: 'Cancelar', targetStatus: 'cancelled', color: 'error' },
   ],
@@ -92,7 +102,7 @@ function ReadyDialog({
   const gramsNum = Number(grams);
 
   const mutation = useMutation({
-    mutationFn: () => updateOrderStatus(orderId, 'ready', filamentId || undefined, gramsNum || undefined),
+    mutationFn: () => updateOrderStatus(orderId, 'printing', filamentId || undefined, gramsNum || undefined),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['order', orderId] });
       queryClient.invalidateQueries({ queryKey: ['orders'] });
@@ -115,7 +125,7 @@ function ReadyDialog({
   return (
     <>
       <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-        <DialogTitle>Marcar como Listo</DialogTitle>
+        <DialogTitle>Iniciar impresión</DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
             <FormControl fullWidth required>
@@ -183,6 +193,7 @@ export default function OrderDetailPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [readyDialog, setReadyDialog] = useState(false);
+  const [budgetFormOpen, setBudgetFormOpen] = useState(false);
 
   const { data: order, isLoading, error } = useQuery<OrderDetail>({
     queryKey: ['order', id],
@@ -195,11 +206,24 @@ export default function OrderDetailPage() {
     queryFn: () => fetchFilaments(),
   });
 
+  const {
+    data: budget,
+    isLoading: budgetLoading,
+  } = useQuery<BudgetResponse>({
+    queryKey: ['budget', id],
+    queryFn: () => fetchBudget(id),
+    enabled: !!id,
+    retry: false,
+  });
+
   const statusMutation = useMutation({
     mutationFn: (newStatus: string) => updateOrderStatus(id, newStatus),
-    onSuccess: () => {
+    onSuccess: (_data, newStatus) => {
       queryClient.invalidateQueries({ queryKey: ['order', id] });
       queryClient.invalidateQueries({ queryKey: ['orders'] });
+      if (newStatus === 'quoting') {
+        setBudgetFormOpen(true);
+      }
     },
   });
 
@@ -300,8 +324,10 @@ export default function OrderDetailPage() {
                   variant="contained"
                   color={action.color}
                   onClick={() => {
-                    if (action.targetStatus === 'ready') {
+                    if (action.targetStatus === 'printing') {
                       setReadyDialog(true);
+                    } else if (action.targetStatus === 'quoting') {
+                      statusMutation.mutate('quoting');
                     } else {
                       statusMutation.mutate(action.targetStatus);
                     }
@@ -319,11 +345,61 @@ export default function OrderDetailPage() {
             )}
           </Paper>
         )}
+
+        <Paper sx={{ p: 3, mt: 3 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+            <Typography variant="h6" fontWeight={600}>Presupuesto</Typography>
+            {budget && order.status === 'quoting' && (
+              <Button
+                variant="outlined"
+                size="small"
+                startIcon={<EditIcon />}
+                onClick={() => setBudgetFormOpen(true)}
+              >
+                Editar Presupuesto
+              </Button>
+            )}
+          </Box>
+
+          {budgetLoading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+              <CircularProgress size={24} />
+            </Box>
+          ) : budget ? (
+            <BudgetBreakdown budget={budget} orderId={id} />
+          ) : order.status === 'quoting' ? (
+            <Box sx={{ textAlign: 'center', py: 3 }}>
+              <Typography color="text.secondary" sx={{ mb: 2 }}>
+                No hay presupuesto para este pedido.
+              </Typography>
+              <Button
+                variant="contained"
+                startIcon={<AddIcon />}
+                onClick={() => setBudgetFormOpen(true)}
+              >
+                Generar Presupuesto
+              </Button>
+            </Box>
+          ) : (
+            <Box sx={{ textAlign: 'center', py: 3 }}>
+              <Typography color="text.secondary">
+                No hay presupuesto para este pedido.
+              </Typography>
+            </Box>
+          )}
+        </Paper>
       </Container>
 
       {readyDialog && filaments && (
         <ReadyDialog open={readyDialog} onClose={() => setReadyDialog(false)} filaments={filaments} orderId={id} />
       )}
+
+      <BudgetForm
+        open={budgetFormOpen}
+        onClose={() => setBudgetFormOpen(false)}
+        orderId={id}
+        existingBudget={budget ?? null}
+      />
     </ProtectedRoute>
   );
 }

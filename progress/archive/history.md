@@ -85,3 +85,27 @@ Human confirmed finished. Project moved to idle. Next: `generate_budget`.
 - Manual verification: CRUD filaments ✅, stock adjustments ✅, movement history ✅, settings save/display ✅, archived view toggle ✅
 
 Output: marked `done` in `feature_list.json`.
+
+## Session 7 — 2026-07-18
+
+**Feature:** `generate_budget`
+**Transition:** `spec_ready` → `done`
+
+`spec_author` wrote:
+- Spec redesign: merged `region_parameters` into `generate_budget`
+- Removed `budget_parameters` table, added `filament_items` JSONB, `manual_filament_cost`
+- Multi-filament selection from product catalog with price snapshots
+- Hardcoded defaults in service (ARS/USD), intermediates computed on read
+- Currency selector (ARS/USD) in form
+
+`implementer` wrote:
+- Backend: Budget model, Pydantic schemas, BudgetCalculator service, 5 endpoints (POST/GET/PUT/PATCH/preview), status transitions (draft→sent→approved|rejected), Alembic migration
+- Frontend: budget types + 5 API functions in api.ts, BudgetForm dialog (currency selector, multi-filament rows, manual cost toggle, live preview), BudgetBreakdown display, order detail page budget section, OrdersTable budget column with Presupuestar action
+- Tests: 19 budget integration tests covering all R1–R10
+- Coverage: 90%
+
+`reviewer`:
+- Full traceability check R1–R10 ✅
+- All 38 tasks complete ✅
+- pytest 81 passed, coverage 90% ✅
+- Verdict: APPROVED

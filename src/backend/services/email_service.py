@@ -1,6 +1,7 @@
 import smtplib
 from abc import ABC, abstractmethod
 from email.message import EmailMessage
+from typing import Any
 
 from backend.config import settings
 from backend.models.order import Order
@@ -17,6 +18,10 @@ class EmailService(ABC):
 
     @abstractmethod
     async def send_order_status_change(self, order: Order, new_status: str, to: str) -> None:
+        ...
+
+    @abstractmethod
+    async def send_budget_provided(self, order: Order, budget: Any, to: str | None) -> None:
         ...
 
 
@@ -69,6 +74,10 @@ class SmtpEmailService(EmailService):
         )
         with smtplib.SMTP(self._host, self._port) as server:
             server.send_message(msg)
+
+    async def send_budget_provided(self, order: Order, budget: Any, to: str | None) -> None:
+        logger = __import__("logging").getLogger(__name__)
+        logger.info("Budget %s provided for order %s (stub)", budget.id, order.id)
 
 
 email_service: EmailService = SmtpEmailService()
