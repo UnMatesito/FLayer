@@ -22,6 +22,7 @@ DB: PostgreSQL · ORM: SQLAlchemy 2.0 (async) · Migrations: Alembic
 | `supplies` | `stock_management` | `users` |
 | `arquiminis_orders` | `arquiminis` | `orders` |
 | `fixed_products` | `product_management` | `users` |
+| `uploads` (SeaweedFS) | `product_management` | — |
 | `printers`, `printer_maintenance` | `printer_profiles` | `users` |
 
 ## Schema Conventions

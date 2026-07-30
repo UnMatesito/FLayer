@@ -51,6 +51,24 @@ services:
       - "${MAILPIT_UI_PORT:-8025}:8025"
     restart: unless-stopped
 
+  seaweedfs:
+    image: chrislusf/seaweedfs:3.85
+    container_name: flayer-s3
+    command: server -master.volumeSizeLimitMB=1024 -volume.port=8080 -filer.port=8888 -s3
+    ports:
+      - "${SEAWEEDFS_MASTER_PORT:-9333}:9333"
+      - "${SEAWEEDFS_VOLUME_PORT:-8080}:8080"
+      - "${SEAWEEDFS_FILER_PORT:-8888}:8888"
+      - "${SEAWEEDFS_S3_PORT:-8333}:8333"
+    volumes:
+      - seaweedfs_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9333/cluster/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
 volumes:
   pgdata:
+  seaweedfs_data:
 

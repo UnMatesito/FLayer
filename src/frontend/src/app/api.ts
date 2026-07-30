@@ -138,16 +138,28 @@ export interface CustomerData {
   phone?: string;
 }
 
+export type WorkType = 'impresion_3d' | 'diseno_3d' | 'product';
+
+export interface LineItem {
+  product_id: string;
+  name: string;
+  quantity: number;
+  unit_price: number;
+}
+
 export interface OrderPayload {
   customer: CustomerData;
-  work_type: 'impresion_3d' | 'diseno_3d';
+  work_type: WorkType;
   description: string;
   files?: FileInfo[];
+  line_items?: LineItem[];
 }
 
 export interface InternalOrderPayload extends OrderPayload {
   skip_client_notification?: boolean;
   status?: string;
+  fixed_product_id?: string;
+  total?: number;
 }
 
 export interface Order {
@@ -160,6 +172,9 @@ export interface Order {
   client_notified: boolean;
   filament_id?: string | null;
   grams_estimated?: number | null;
+  fixed_product_id?: string | null;
+  line_items?: LineItem[] | null;
+  total?: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -432,6 +447,132 @@ export async function fetchOrderStatuses(): Promise<OrderStatus[]> {
   return res.json();
 }
 
+// Product types
+export interface Product {
+  id: string;
+  user_id: string;
+  name: string;
+  description: string | null;
+  price: number;
+  stock_quantity: number;
+  image_url: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProductCreate {
+  name: string;
+  price: number;
+  description?: string | null;
+  stock_quantity?: number;
+}
+
+export interface ProductUpdate {
+  name?: string;
+  price?: number;
+  description?: string | null;
+  stock_quantity?: number;
+  is_active?: boolean;
+}
+
+export interface ProductStockMovement {
+  id: string;
+  product_id: string;
+  movement_type: string;
+  quantity: number;
+  order_id: string | null;
+  notes: string | null;
+  created_at: string;
+}
+
+export interface ProductStockAdjust {
+  delta_quantity: number;
+  notes?: string | null;
+}
+
+export interface ProductStockAdjustResponse {
+  id: string;
+  stock_quantity: number;
+  movement_id: string;
+}
+
+export async function fetchProducts(showInactive = false): Promise<Product[]> {
+  const res = await fetch(`${API_BASE}/products?show_inactive=${showInactive}`, {
+    credentials: 'include',
+  });
+  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail || 'Failed to fetch products');
+  return res.json();
+}
+
+export async function fetchProduct(id: string): Promise<Product> {
+  const res = await fetch(`${API_BASE}/products/${id}`, { credentials: 'include' });
+  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail || 'Failed to fetch product');
+  return res.json();
+}
+
+export async function createProduct(payload: ProductCreate): Promise<Product> {
+  const res = await fetch(`${API_BASE}/products`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+    credentials: 'include',
+  });
+  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail || 'Failed to create product');
+  return res.json();
+}
+
+export async function updateProduct(id: string, payload: ProductUpdate): Promise<Product> {
+  const res = await fetch(`${API_BASE}/products/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+    credentials: 'include',
+  });
+  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail || 'Failed to update product');
+  return res.json();
+}
+
+export async function uploadProductImage(id: string, file: File): Promise<Product> {
+  const formData = new FormData();
+  formData.append('file', file);
+  const res = await fetch(`${API_BASE}/products/${id}/image`, {
+    method: 'POST',
+    body: formData,
+    credentials: 'include',
+  });
+  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail || 'Failed to upload image');
+  return res.json();
+}
+
+export async function fetchProductStockMovements(id: string): Promise<ProductStockMovement[]> {
+  const res = await fetch(`${API_BASE}/products/${id}/stock-movements`, {
+    credentials: 'include',
+  });
+  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail || 'Failed to fetch stock movements');
+  return res.json();
+}
+
+export async function adjustProductStock(id: string, payload: ProductStockAdjust): Promise<ProductStockAdjustResponse> {
+  const res = await fetch(`${API_BASE}/products/${id}/adjust`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+    credentials: 'include',
+  });
+  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail || 'Failed to adjust stock');
+  return res.json();
+}
+
+export async function deleteProduct(id: string): Promise<Product> {
+  const res = await fetch(`${API_BASE}/products/${id}`, {
+    method: 'DELETE',
+    credentials: 'include',
+  });
+  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail || 'Failed to delete product');
+  return res.json();
+}
+
 // Budget types
 export interface FilamentItemInput {
   product_id?: string | null;
@@ -543,4 +684,13 @@ export async function previewBudget(orderId: string, data: BudgetCreate): Promis
     body: JSON.stringify(data),
   });
   return handleResponse<BudgetResponse>(res);
+}
+
+export async function fetchPublicProducts(): Promise<Product[]> {
+  const res = await fetch(`${API_BASE}/public/products`);
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Failed to fetch products');
+  }
+  return res.json();
 }

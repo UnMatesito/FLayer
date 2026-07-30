@@ -260,6 +260,8 @@ export default function OrdersTable() {
               <TableCell>
                 {order.work_type === 'impresion_3d'
                   ? 'Impresión 3D'
+                  : order.work_type === 'product'
+                  ? 'Producto'
                   : 'Diseño 3D'}
               </TableCell>
               <TableCell onClick={(e) => e.stopPropagation()}>

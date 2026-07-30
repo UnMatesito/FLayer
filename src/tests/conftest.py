@@ -22,6 +22,7 @@ pytest_plugins = [
     "tests.fixtures.users",
     "tests.fixtures.customers",
     "tests.fixtures.orders",
+    "tests.fixtures.products",
     "tests.fixtures.stock",
 ]
 

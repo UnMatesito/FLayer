@@ -8,6 +8,7 @@ from backend.api.deps import get_current_user
 from backend.database import get_db
 from backend.models.customer import Customer
 from backend.models.order import Order
+from backend.models.product import FixedProduct
 from backend.models.user import User
 from backend.schemas.order import OrderCreate, OrderResponse, PublicOrderCreate
 from backend.services.email_service import email_service
@@ -57,6 +58,56 @@ async def create_public_order(
         db.add(customer)
         await db.flush()
 
+    total = body.total
+    line_items_data = [item.model_dump() for item in body.line_items] if body.line_items else None
+
+    if line_items_data:
+        calculated = 0.0
+        for item in line_items_data:
+            result = await db.execute(
+                select(FixedProduct).where(
+                    FixedProduct.id == UUID(item["product_id"]),
+                    FixedProduct.is_active == True,
+                )
+            )
+            product = result.scalar_one_or_none()
+            if product is None:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"Product '{item['name']}' not found",
+                )
+            if float(product.stock_quantity) < item["quantity"]:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail=f"Product '{product.name}' has insufficient stock "
+                           f"(requested {item['quantity']}, available {float(product.stock_quantity)})",
+                )
+            item["unit_price"] = float(product.price)
+            calculated += item["quantity"] * float(product.price)
+        if total is None:
+            total = calculated
+
+    if body.fixed_product_id is not None and not line_items_data:
+        result = await db.execute(
+            select(FixedProduct).where(
+                FixedProduct.id == body.fixed_product_id,
+                FixedProduct.is_active == True,
+            )
+        )
+        product = result.scalar_one_or_none()
+        if product is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Fixed product not found or inactive",
+            )
+        if float(product.stock_quantity) < 1:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"Product '{product.name}' is out of stock",
+            )
+        if total is None:
+            total = float(product.price)
+
     files_data = [f.model_dump() for f in body.files] if body.files else None
 
     order = Order(
@@ -67,6 +118,9 @@ async def create_public_order(
         files=files_data,
         status="new",
         client_notified=not body.skip_client_notification,
+        fixed_product_id=body.fixed_product_id,
+        line_items=line_items_data,
+        total=total,
     )
     db.add(order)
     await db.commit()
@@ -102,6 +156,57 @@ async def create_internal_order(
         await db.flush()
 
     files_data = [f.model_dump() for f in body.files] if body.files else None
+    line_items_data = [item.model_dump() for item in body.line_items] if body.line_items else None
+
+    total = body.total
+    if line_items_data:
+        calculated = 0.0
+        for item in line_items_data:
+            result = await db.execute(
+                select(FixedProduct).where(
+                    FixedProduct.id == UUID(item["product_id"]),
+                    FixedProduct.user_id == current_user.id,
+                    FixedProduct.is_active == True,
+                )
+            )
+            product = result.scalar_one_or_none()
+            if product is None:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"Product '{item['name']}' not found",
+                )
+            if float(product.stock_quantity) < item["quantity"]:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail=f"Product '{product.name}' has insufficient stock "
+                           f"(requested {item['quantity']}, available {float(product.stock_quantity)})",
+                )
+            item["unit_price"] = float(product.price)
+            calculated += item["quantity"] * float(product.price)
+        if total is None:
+            total = calculated
+
+    if body.fixed_product_id is not None and not line_items_data:
+        result = await db.execute(
+            select(FixedProduct).where(
+                FixedProduct.id == body.fixed_product_id,
+                FixedProduct.user_id == current_user.id,
+                FixedProduct.is_active == True,
+            )
+        )
+        product = result.scalar_one_or_none()
+        if product is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Fixed product not found or inactive",
+            )
+        if float(product.stock_quantity) < 1:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"Product '{product.name}' is out of stock",
+            )
+        if total is None:
+            total = float(product.price)
 
     status_val = body.status if body.status else "new"
 
@@ -113,6 +218,9 @@ async def create_internal_order(
         files=files_data,
         status=status_val,
         client_notified=not body.skip_client_notification,
+        fixed_product_id=body.fixed_product_id,
+        line_items=line_items_data,
+        total=total,
     )
     db.add(order)
     await db.commit()

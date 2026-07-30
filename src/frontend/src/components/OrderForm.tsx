@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import {
   Box,
   TextField,
@@ -14,52 +14,102 @@ import {
   CircularProgress,
   FormControl,
   FormLabel,
+  Card,
+  CardContent,
+  CardMedia,
+  Chip,
+  IconButton,
+  InputAdornment,
 } from '@mui/material';
+import AddIcon from '@mui/icons-material/Add';
+import RemoveIcon from '@mui/icons-material/Remove';
+import DeleteIcon from '@mui/icons-material/Delete';
 import type { SxProps, Theme } from '@mui/material';
-import { useMutation } from '@tanstack/react-query';
-import { createPublicOrder, type FileInfo } from '@/app/api';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { createPublicOrder, fetchPublicProducts, type FileInfo, type LineItem } from '@/app/api';
 
 const styles: Record<string, SxProps<Theme>> = {
-  container: {
-    maxWidth: 600,
-    mx: 'auto',
-    p: 4,
-  },
-  field: {
-    width: '100%',
-  },
+  container: { maxWidth: 900, mx: 'auto', p: 4 },
+  field: { width: '100%' },
 };
 
 export default function OrderForm() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
-  const [workType, setWorkType] = useState<'impresion_3d' | 'diseno_3d'>('impresion_3d');
+  const [workType, setWorkType] = useState<'impresion_3d' | 'diseno_3d' | 'product'>('impresion_3d');
   const [description, setDescription] = useState('');
   const [fileUrl, setFileUrl] = useState('');
   const [fileName, setFileName] = useState('');
+  const [lineItems, setLineItems] = useState<LineItem[]>([]);
+
+  const productsQuery = useQuery({
+    queryKey: ['public-products'],
+    queryFn: fetchPublicProducts,
+    enabled: workType === 'product',
+  });
+
+  const descriptionText = useMemo(() => {
+    if (workType === 'product') {
+      if (lineItems.length === 0) return '';
+      const items = lineItems.map((item) => `${item.quantity}x ${item.name}`).join(', ');
+      const desc = description.trim();
+      return desc ? `${items} — ${desc}` : items;
+    }
+    return description.trim();
+  }, [workType, lineItems, description]);
+
+  const addProduct = (product: { id: string; name: string; price: number; stock_quantity: number }) => {
+    setLineItems((prev) => {
+      const existing = prev.find((item) => item.product_id === product.id);
+      if (existing) {
+        return prev.map((item) =>
+          item.product_id === product.id
+            ? { ...item, quantity: Math.min(item.quantity + 1, product.stock_quantity) }
+            : item
+        );
+      }
+      return [...prev, { product_id: product.id, name: product.name, quantity: 1, unit_price: product.price }];
+    });
+  };
+
+  const updateQuantity = (productId: string, quantity: number, maxStock: number) => {
+    setLineItems((prev) =>
+      prev.map((item) =>
+        item.product_id === productId
+          ? { ...item, quantity: Math.max(1, Math.min(quantity, maxStock)) }
+          : item
+      ).filter((item) => item.quantity > 0)
+    );
+  };
+
+  const removeProduct = (productId: string) => {
+    setLineItems((prev) => prev.filter((item) => item.product_id !== productId));
+  };
+
+  const selectedIds = new Set(lineItems.map((item) => item.product_id));
 
   const mutation = useMutation({
     mutationFn: (data: {
       customer: { name: string; email: string; phone: string };
-      work_type: 'impresion_3d' | 'diseno_3d';
+      work_type: 'impresion_3d' | 'diseno_3d' | 'product';
       description: string;
       files?: FileInfo[];
+      line_items?: LineItem[];
     }) => createPublicOrder(data),
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const files: FileInfo[] | undefined =
-      fileUrl && fileName
-        ? [{ filename: fileName, url: fileUrl }]
-        : undefined;
+      fileUrl && fileName ? [{ filename: fileName, url: fileUrl }] : undefined;
 
     mutation.mutate({
       customer: { name: name.trim(), email, phone },
       work_type: workType,
-      description: description.trim(),
+      description: descriptionText,
       files,
+      line_items: lineItems.length > 0 ? lineItems : undefined,
     });
   };
 
@@ -71,8 +121,14 @@ export default function OrderForm() {
     setDescription('');
     setFileUrl('');
     setFileName('');
+    setLineItems([]);
     mutation.reset();
   };
+
+  const totalAmount = useMemo(
+    () => lineItems.reduce((sum, item) => sum + item.quantity * item.unit_price, 0),
+    [lineItems]
+  );
 
   if (mutation.isSuccess) {
     return (
@@ -80,9 +136,7 @@ export default function OrderForm() {
         <Alert severity="success" sx={{ mb: 2 }}>
           ¡Pedido recibido! Te contactaremos pronto.
         </Alert>
-        <Button variant="outlined" onClick={resetForm}>
-          Nuevo Pedido
-        </Button>
+        <Button variant="outlined" onClick={resetForm}>Nuevo Pedido</Button>
       </Box>
     );
   }
@@ -94,94 +148,171 @@ export default function OrderForm() {
       </Typography>
 
       <Stack spacing={3}>
-        <TextField
-          label="Nombre"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          required
-          sx={styles.field}
-        />
-        <TextField
-          label="Email"
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-          sx={styles.field}
-        />
-        <TextField
-          label="Teléfono"
-          value={phone}
-          onChange={(e) => setPhone(e.target.value)}
-          sx={styles.field}
-        />
+        <TextField label="Nombre" value={name} onChange={(e) => setName(e.target.value)} required sx={styles.field} />
+        <TextField label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required sx={styles.field} />
+        <TextField label="Teléfono" value={phone} onChange={(e) => setPhone(e.target.value)} sx={styles.field} />
 
         <FormControl>
           <FormLabel>Tipo de trabajo</FormLabel>
-          <RadioGroup
-            value={workType}
-            onChange={(e) =>
-              setWorkType(e.target.value as 'impresion_3d' | 'diseno_3d')
-            }
-          >
-            <FormControlLabel
-              value="impresion_3d"
-              control={<Radio />}
-              label="Impresión 3D"
-            />
-            <FormControlLabel
-              value="diseno_3d"
-              control={<Radio />}
-              label="Diseño 3D"
-            />
+          <RadioGroup value={workType} onChange={(e) => {
+            setWorkType(e.target.value as 'impresion_3d' | 'diseno_3d' | 'product');
+            setLineItems([]);
+          }}>
+            <FormControlLabel value="impresion_3d" control={<Radio />} label="Impresión 3D" />
+            <FormControlLabel value="diseno_3d" control={<Radio />} label="Diseño 3D" />
+            <FormControlLabel value="product" control={<Radio />} label="Producto" />
           </RadioGroup>
         </FormControl>
 
-        <TextField
-          label="Descripción"
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          required
-          multiline
-          rows={4}
-          sx={styles.field}
-        />
+        {workType === 'product' ? (
+          <>
+            {productsQuery.isLoading ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+                <CircularProgress />
+              </Box>
+            ) : productsQuery.isError ? (
+              <Alert severity="error">Error al cargar productos. Intenta de nuevo.</Alert>
+            ) : productsQuery.data && productsQuery.data.length > 0 ? (
+              <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: 2 }}>
+                {productsQuery.data.map((product) => {
+                  const inCart = selectedIds.has(product.id);
+                  const cartItem = lineItems.find((item) => item.product_id === product.id);
+                  const outOfStock = product.stock_quantity < 1;
+                  return (
+                    <Card key={product.id} variant="outlined" sx={{
+                      opacity: outOfStock ? 0.5 : 1,
+                      border: inCart ? '2px solid' : undefined,
+                      borderColor: inCart ? 'primary.main' : undefined,
+                    }}>
+                      <CardMedia
+                        component="img"
+                        height="140"
+                        image={product.image_url || '/placeholder.svg'}
+                        alt={product.name}
+                        sx={{ objectFit: 'cover' }}
+                      />
+                      <CardContent sx={{ pb: 1 }}>
+                        <Typography variant="subtitle1" fontWeight={600} noWrap>
+                          {product.name}
+                        </Typography>
+                        <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 0.5 }}>
+                          <Typography variant="h6" color="primary" fontWeight={700}>
+                            ${Number(product.price).toFixed(2)}
+                          </Typography>
+                          <Chip
+                            label={outOfStock ? 'Sin stock' : `${product.stock_quantity} en stock`}
+                            size="small"
+                            color={product.stock_quantity <= 3 ? 'warning' : 'default'}
+                          />
+                        </Stack>
+                        {outOfStock ? (
+                          <Button variant="outlined" disabled size="small" sx={{ mt: 1 }} fullWidth>
+                            Sin stock
+                          </Button>
+                        ) : inCart && cartItem ? (
+                          <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 1 }}>
+                            <IconButton
+                              size="small"
+                              onClick={() => updateQuantity(product.id, cartItem.quantity - 1, product.stock_quantity)}
+                            >
+                              <RemoveIcon fontSize="small" />
+                            </IconButton>
+                            <TextField
+                              type="number"
+                              size="small"
+                              value={cartItem.quantity}
+                              onChange={(e) => {
+                                const val = parseInt(e.target.value, 10);
+                                if (!isNaN(val)) updateQuantity(product.id, val, product.stock_quantity);
+                              }}
+                              slotProps={{
+                                input: {
+                                  sx: { width: 60, textAlign: 'center' },
+                                  startAdornment: <InputAdornment position="start">×</InputAdornment>,
+                                },
+                              }}
+                              sx={{ '& .MuiInputBase-input': { textAlign: 'center' } }}
+                            />
+                            <IconButton
+                              size="small"
+                              color="error"
+                              onClick={() => removeProduct(product.id)}
+                            >
+                              <DeleteIcon fontSize="small" />
+                            </IconButton>
+                          </Stack>
+                        ) : (
+                          <Button
+                            variant="contained"
+                            size="small"
+                            startIcon={<AddIcon />}
+                            onClick={() => addProduct(product)}
+                            sx={{ mt: 1 }}
+                            fullWidth
+                          >
+                            Agregar
+                          </Button>
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </Box>
+            ) : (
+              <Alert severity="info">No hay productos disponibles en este momento.</Alert>
+            )}
+
+            {lineItems.length > 0 && (
+              <Alert severity="info" icon={false}>
+                <Typography variant="body2" fontWeight={600}>Resumen del pedido:</Typography>
+                {lineItems.map((item) => (
+                  <Typography key={item.product_id} variant="body2">
+                    {item.quantity}× {item.name} — ${(item.quantity * item.unit_price).toFixed(2)}
+                  </Typography>
+                ))}
+                <Typography variant="body2" fontWeight={700} sx={{ mt: 0.5 }}>
+                  Total: ${totalAmount.toFixed(2)}
+                </Typography>
+              </Alert>
+            )}
+
+            <TextField
+              label="Notas adicionales"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              multiline
+              rows={2}
+              sx={styles.field}
+            />
+          </>
+        ) : (
+          <TextField
+            label="Descripción"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            required
+            multiline
+            rows={4}
+            sx={styles.field}
+          />
+        )}
 
         <Typography variant="subtitle2" color="text.secondary">
           Archivo (opcional) — Enlace a Drive, WeTransfer, etc.
         </Typography>
         <Stack direction="row" spacing={2}>
-          <TextField
-            label="Nombre del archivo"
-            value={fileName}
-            onChange={(e) => setFileName(e.target.value)}
-            size="small"
-            sx={{ flex: 1 }}
-          />
-          <TextField
-            label="URL del archivo"
-            value={fileUrl}
-            onChange={(e) => setFileUrl(e.target.value)}
-            size="small"
-            sx={{ flex: 2 }}
-          />
+          <TextField label="Nombre del archivo" value={fileName} onChange={(e) => setFileName(e.target.value)} size="small" sx={{ flex: 1 }} />
+          <TextField label="URL del archivo" value={fileUrl} onChange={(e) => setFileUrl(e.target.value)} size="small" sx={{ flex: 2 }} />
         </Stack>
 
         {mutation.isError && (
           <Alert severity="error">
-            {mutation.error instanceof Error
-              ? mutation.error.message
-              : 'Error al crear el pedido'}
+            {mutation.error instanceof Error ? mutation.error.message : 'Error al crear el pedido'}
           </Alert>
         )}
 
-        <Button
-          type="submit"
-          variant="contained"
-          size="large"
-          disabled={mutation.isPending}
-          startIcon={mutation.isPending ? <CircularProgress size={20} /> : undefined}
-        >
+        <Button type="submit" variant="contained" size="large" disabled={mutation.isPending}
+          startIcon={mutation.isPending ? <CircularProgress size={20} /> : undefined}>
           {mutation.isPending ? 'Enviando...' : 'Enviar Pedido'}
         </Button>
       </Stack>

@@ -6,7 +6,7 @@ Flayer is a centralized web admin panel for 3D printing businesses: orders, budg
 
 **Stack:** FastAPI (Python) + Next.js 16 + PostgreSQL + MUI v7 + TanStack Query v5.
 
-**Infrastructure:** Docker Compose for PostgreSQL 16 + pgAdmin + Mailpit (see `src/docker-compose.yml`).
+**Infrastructure:** Docker Compose for PostgreSQL 16 + pgAdmin + Mailpit + SeaweedFS (see `src/docker-compose.yml`).
 
 **Auth:** JWT + email OTP (2FA). No SMS/TOTP in MVP.
 
@@ -14,10 +14,11 @@ Flayer is a centralized web admin panel for 3D printing businesses: orders, budg
 
 ```
 FastAPI backend  ←→  PostgreSQL
+      ↕           ↕
+Next.js frontend  SeaweedFS (images, files)
+   (MUI v7)
       ↕
-Next.js frontend (MUI v7)
-      ↕
-SendGrid (email) + File Storage (STL/PDF)
+SendGrid (email)
 ```
 
 ## Design Principles

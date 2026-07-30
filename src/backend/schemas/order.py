@@ -24,6 +24,13 @@ class FileInfo(BaseModel):
     url: str
 
 
+class LineItem(BaseModel):
+    product_id: str
+    name: str
+    quantity: int
+    unit_price: float
+
+
 class OrderCreate(BaseModel):
     customer: CustomerCreate
     work_type: str
@@ -31,11 +38,14 @@ class OrderCreate(BaseModel):
     files: list[FileInfo] | None = None
     skip_client_notification: bool = False
     status: str | None = None
+    fixed_product_id: UUID | None = None
+    line_items: list[LineItem] | None = None
+    total: float | None = None
 
     @field_validator("work_type")
     @classmethod
-    def valid_work_type(cls, v: str) -> str:
-        allowed = {"impresion_3d", "diseno_3d"}
+    def valid_work_type(cls, v: str, info) -> str:
+        allowed = {"impresion_3d", "diseno_3d", "product"}
         if v not in allowed:
             raise ValueError(f"work_type must be one of: {', '.join(allowed)}")
         return v
@@ -59,6 +69,9 @@ class OrderResponse(BaseModel):
     client_notified: bool
     filament_id: UUID | None = None
     grams_estimated: float | None = None
+    fixed_product_id: UUID | None = None
+    line_items: list[dict[str, Any]] | None = None
+    total: float | None = None
     created_at: datetime
     updated_at: datetime
 

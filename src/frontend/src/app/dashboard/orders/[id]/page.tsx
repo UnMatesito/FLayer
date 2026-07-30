@@ -5,29 +5,19 @@ import { useParams, useRouter } from 'next/navigation';
 import {
   Container, Typography, Button, Box, Paper, Stack, Chip,
   CircularProgress, Alert, Table, TableBody, TableCell, TableRow,
-  Dialog, DialogTitle, DialogContent, DialogActions,
-  FormControl, InputLabel, Select, MenuItem, TextField,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import type { SxProps, Theme } from '@mui/material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import ProtectedRoute from '@/app/protected-route';
 import {
-  fetchOrderDetail, updateOrderStatus, fetchFilaments, fetchBudget,
-  type OrderDetail, type Filament, type BudgetResponse,
+  fetchOrderDetail, updateOrderStatus, fetchBudget,
+  type OrderDetail, type BudgetResponse,
 } from '@/app/api';
-import { FilamentIcon } from '@/components/FilamentIcon';
 import BudgetForm from '@/components/BudgetForm';
 import BudgetBreakdown from '@/components/BudgetBreakdown';
-
-const styles: Record<string, SxProps<Theme>> = {
-  filamentInfo: {
-    display: 'flex', alignItems: 'center', gap: 1,
-  },
-};
 
 function statusColor(status: string) {
   switch (status) {
@@ -88,122 +78,16 @@ const STATUS_ACTIONS: Record<string, Action[]> = {
   cancelled: [],
 };
 
-function ReadyDialog({
-  open, onClose, filaments, orderId,
-}: {
-  open: boolean; onClose: () => void; filaments: Filament[]; orderId: string;
-}) {
-  const queryClient = useQueryClient();
-  const [filamentId, setFilamentId] = useState('');
-  const [grams, setGrams] = useState('');
-  const [showLowStockWarning, setShowLowStockWarning] = useState(false);
-
-  const selectedFilament = filaments.find((f) => f.id === filamentId);
-  const gramsNum = Number(grams);
-
-  const mutation = useMutation({
-    mutationFn: () => updateOrderStatus(orderId, 'printing', filamentId || undefined, gramsNum || undefined),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['order', orderId] });
-      queryClient.invalidateQueries({ queryKey: ['orders'] });
-      queryClient.invalidateQueries({ queryKey: ['filaments'] });
-      queryClient.invalidateQueries({ queryKey: ['filament', filamentId] });
-      queryClient.invalidateQueries({ queryKey: ['low-stock'] });
-      queryClient.invalidateQueries({ queryKey: ['stock-movements'] });
-      onClose();
-    },
-  });
-
-  const handleConfirm = () => {
-    if (selectedFilament && gramsNum > 0 && gramsNum > selectedFilament.weight_grams) {
-      setShowLowStockWarning(true);
-      return;
-    }
-    mutation.mutate();
-  };
-
-  return (
-    <>
-      <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-        <DialogTitle>Iniciar impresión</DialogTitle>
-        <DialogContent>
-          <Stack spacing={2} sx={{ mt: 1 }}>
-            <FormControl fullWidth required>
-              <InputLabel>Filamento</InputLabel>
-              <Select value={filamentId} label="Filamento" onChange={(e) => setFilamentId(e.target.value)}>
-                {filaments.map((f) => (
-                  <MenuItem key={f.id} value={f.id}>
-                    <Box sx={styles.filamentInfo}>
-                      <FilamentIcon color={f.color_hex} size={16} />
-                      {f.color_name} — {f.filament_type} ({f.weight_grams.toFixed(0)}g disp.)
-                    </Box>
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-            <TextField
-              label="Gramos estimados"
-              type="number"
-              value={grams}
-              onChange={(e) => setGrams(e.target.value)}
-              fullWidth
-              required
-              helperText="Peso estimado del filamento usado en este pedido"
-            />
-            {selectedFilament && gramsNum > 0 && gramsNum > selectedFilament.weight_grams && (
-              <Alert severity="warning" icon={<WarningAmberIcon />}>
-                Este pedido requiere {gramsNum}g pero solo hay {selectedFilament.weight_grams.toFixed(1)}g disponibles.
-                Se permitirá el descuento igualmente (stock negativo).
-              </Alert>
-            )}
-          </Stack>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={onClose}>Cancelar</Button>
-          <Button onClick={handleConfirm} variant="contained" color="success"
-            disabled={!filamentId || !grams || mutation.isPending}>
-            {mutation.isPending ? 'Procesando...' : 'Confirmar'}
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      <Dialog open={showLowStockWarning} onClose={() => setShowLowStockWarning(false)} maxWidth="xs">
-        <DialogTitle>Stock Insuficiente</DialogTitle>
-        <DialogContent>
-          <Alert severity="warning" sx={{ mb: 2 }}>
-            Stock insuficiente para {selectedFilament?.color_name}: requiere {gramsNum}g, disponible {selectedFilament?.weight_grams.toFixed(1)}g.
-          </Alert>
-          <Typography variant="body2" color="text.secondary">
-            ¿Deseas continuar igualmente? El stock quedará en negativo.
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setShowLowStockWarning(false)}>Cancelar</Button>
-          <Button onClick={() => { setShowLowStockWarning(false); mutation.mutate(); }} variant="contained" color="warning">
-            Continuar de todos modos
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </>
-  );
-}
-
 export default function OrderDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const queryClient = useQueryClient();
-  const [readyDialog, setReadyDialog] = useState(false);
   const [budgetFormOpen, setBudgetFormOpen] = useState(false);
 
   const { data: order, isLoading, error } = useQuery<OrderDetail>({
     queryKey: ['order', id],
     queryFn: () => fetchOrderDetail(id),
     enabled: !!id,
-  });
-
-  const { data: filaments } = useQuery<Filament[]>({
-    queryKey: ['filaments-ready'],
-    queryFn: () => fetchFilaments(),
   });
 
   const {
@@ -325,7 +209,7 @@ export default function OrderDetailPage() {
                   color={action.color}
                   onClick={() => {
                     if (action.targetStatus === 'printing') {
-                      setReadyDialog(true);
+                      statusMutation.mutate('printing');
                     } else if (action.targetStatus === 'quoting') {
                       statusMutation.mutate('quoting');
                     } else {
@@ -389,10 +273,6 @@ export default function OrderDetailPage() {
           )}
         </Paper>
       </Container>
-
-      {readyDialog && filaments && (
-        <ReadyDialog open={readyDialog} onClose={() => setReadyDialog(false)} filaments={filaments} orderId={id} />
-      )}
 
       <BudgetForm
         open={budgetFormOpen}

@@ -50,6 +50,12 @@ See `docs/context_policy.md` for the full context budget rules.
 - Avoid carrying historical information in the conversation.
 - Summarize frequently.
 
+## Mandatory full‑stack rule
+
+Every feature MUST impact both backend and frontend. A feature is not complete
+until it has a working UI. If a feature is purely backend (e.g., a library
+refactor), document why in the spec.
+
 ## Anti-telephone-game rule
 
 Don't copy specs, code, or long results into the chat. Write to disk and

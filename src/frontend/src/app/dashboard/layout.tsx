@@ -19,6 +19,7 @@ import {
 } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import DashboardIcon from '@mui/icons-material/Dashboard';
+import RedeemIcon from '@mui/icons-material/Redeem';
 import InventoryIcon from '@mui/icons-material/Inventory';
 import BuildIcon from '@mui/icons-material/Build';
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
@@ -86,7 +87,8 @@ const styles: Record<string, SxProps<Theme>> = {
 
 const navItems = [
   { label: 'Dashboard', path: '/dashboard', icon: <DashboardIcon />, section: 'General' },
-  { label: 'Filamentos', path: '/dashboard/stock/filaments', icon: <InventoryIcon />, section: 'Stock' },
+  { label: 'Productos', path: '/dashboard/products', icon: <RedeemIcon />, section: 'Catálogo' },
+  { label: 'Filamentos', path: '/dashboard/stock/filaments', icon: <BuildIcon />, section: 'Stock' },
   { label: 'Insumos', path: '/dashboard/stock/supplies', icon: <BuildIcon />, section: 'Stock' },
   { label: 'Movimientos', path: '/dashboard/stock/movements', icon: <SwapHorizIcon />, section: 'Stock' },
 ];

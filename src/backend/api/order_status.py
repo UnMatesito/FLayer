@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.api.deps import get_current_user
 from backend.database import get_db
+from backend.models.budget import Budget
 from backend.models.customer import Customer
 from backend.models.filament import Filament
 from backend.models.order import Order
@@ -21,6 +22,7 @@ from backend.schemas.order_status import (
     VALID_TRANSITIONS,
 )
 from backend.services.email_service import email_service
+from backend.services.product_stock_service import product_stock_service
 from backend.services.stock_service import stock_service
 
 logger = logging.getLogger(__name__)
@@ -80,6 +82,28 @@ async def update_order_status(
         filament_id = body.filament_id or order.filament_id
         grams = body.grams or order.grams_estimated
 
+        if grams is None and order.status == "quoting":
+            budget_result = await db.execute(
+                select(Budget)
+                .where(Budget.order_id == order_id)
+                .order_by(Budget.version.desc())
+                .limit(1)
+            )
+            budget = budget_result.scalar_one_or_none()
+            if budget is not None:
+                if budget.manual_grams is not None:
+                    grams = float(budget.manual_grams)
+                elif budget.filament_items:
+                    grams = sum(
+                        float(item.get("grams", 0))
+                        for item in budget.filament_items
+                    )
+                if grams and not filament_id and budget.filament_items:
+                    first = budget.filament_items[0]
+                    pid = first.get("product_id")
+                    if pid:
+                        filament_id = UUID(pid)
+
         if filament_id is not None and grams is not None:
             filament_result = await db.execute(
                 select(Filament).where(
@@ -113,9 +137,40 @@ async def update_order_status(
                 user_id=current_user.id,
             )
 
+    if new_status == "ready":
+        if order.line_items:
+            for item in order.line_items:
+                try:
+                    await product_stock_service.deduct(
+                        db=db,
+                        order_id=order_id,
+                        product_id=UUID(item["product_id"]),
+                        quantity=item["quantity"],
+                        user_id=current_user.id,
+                    )
+                except ValueError as e:
+                    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+        elif order.fixed_product_id is not None:
+            try:
+                await product_stock_service.deduct(
+                    db=db,
+                    order_id=order_id,
+                    product_id=order.fixed_product_id,
+                    quantity=1,
+                    user_id=current_user.id,
+                )
+            except ValueError as e:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
     if new_status == "cancelled":
         if current_status == "printing":
             await stock_service.reverse(
+                db=db,
+                order_id=order_id,
+                user_id=current_user.id,
+            )
+        if current_status == "ready" and (order.line_items or order.fixed_product_id is not None):
+            await product_stock_service.reverse(
                 db=db,
                 order_id=order_id,
                 user_id=current_user.id,

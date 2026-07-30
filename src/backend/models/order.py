@@ -27,6 +27,13 @@ class Order(Base):
     grams_estimated: Mapped[float | None] = mapped_column(
         Numeric(10, 2), nullable=True
     )
+    fixed_product_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID, ForeignKey("fixed_products.id"), nullable=True
+    )
+    line_items: Mapped[list[dict[str, Any]] | None] = mapped_column(JSON, default=None)
+    total: Mapped[float | None] = mapped_column(
+        Numeric(12, 2), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(server_default=func.now(), onupdate=func.now())
 

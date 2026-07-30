@@ -1,6 +1,7 @@
 # Current
 
-**Feature:** `generate_budget`
+**Feature:** `product_management`
 **Status:** done
-**Review:** approved — `progress/review_generate_budget.md`
-**Next:** pick next feature from `feature_list.json`
+**Next:** review implementation? Or pick next feature (`arquiminis` now unblocked)
+
+See `progress/impl_product_management.md` for full details. All 16 tests pass. 93 total tests pass (no regressions).
