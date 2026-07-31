@@ -41,4 +41,5 @@ class PublicOrderCreateFactory(factory.Factory):
     customer = factory.SubFactory(CustomerCreateFactory)
     description = Faker("sentence")
     files = None
+    token = None
     skip_client_notification = False

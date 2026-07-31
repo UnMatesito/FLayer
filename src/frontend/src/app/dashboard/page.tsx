@@ -10,6 +10,7 @@ import {
 } from '@mui/material';
 import OrdersTable from '@/components/OrdersTable';
 import InternalOrderForm from '@/components/InternalOrderForm';
+import StoreLink from '@/components/StoreLink';
 import ProtectedRoute from '../protected-route';
 import { useAuth } from '../auth-context';
 
@@ -36,6 +37,8 @@ export default function DashboardPage() {
         </Box>
 
         <Stack spacing={4}>
+          <StoreLink />
+
           <Paper sx={{ p: 3 }}>
             <InternalOrderForm />
           </Paper>

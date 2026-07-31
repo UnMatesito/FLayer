@@ -12,6 +12,7 @@ from backend.api.order_status import router as order_status_router
 from backend.api.orders import router as orders_router
 from backend.api.products import router as products_router
 from backend.api.stock import router as stock_router
+from backend.api.store_token import router as store_token_router
 from backend.config import settings
 from backend.database import Base
 
@@ -50,3 +51,4 @@ app.include_router(orders_router)
 app.include_router(order_status_router)
 app.include_router(products_router)
 app.include_router(stock_router)
+app.include_router(store_token_router)

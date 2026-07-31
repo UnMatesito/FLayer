@@ -99,9 +99,11 @@ function AdjustStockDialog({ open, onClose, product }: { open: boolean; onClose:
   const queryClient = useQueryClient();
   const [delta, setDelta] = useState('');
   const [notes, setNotes] = useState('');
+  const [error, setError] = useState('');
 
   const mutation = useMutation({
-    mutationFn: () => adjustProductStock(product.id, { delta_quantity: Number(delta), notes: notes || null }),
+    mutationFn: (vars: { delta: number; notes: string | null }) =>
+      adjustProductStock(product.id, { delta_quantity: vars.delta, notes: vars.notes }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['product', product.id] });
       queryClient.invalidateQueries({ queryKey: ['products'] });
@@ -109,7 +111,9 @@ function AdjustStockDialog({ open, onClose, product }: { open: boolean; onClose:
       onClose();
       setDelta('');
       setNotes('');
+      setError('');
     },
+    onError: (err: Error) => setError(err.message),
   });
 
   return (
@@ -117,13 +121,14 @@ function AdjustStockDialog({ open, onClose, product }: { open: boolean; onClose:
       <DialogTitle>Ajustar Stock</DialogTitle>
       <DialogContent>
         <Stack spacing={2} sx={{ mt: 1 }}>
+          {error && <Alert severity="error">{error}</Alert>}
           <TextField
             label="Delta"
             type="number"
             value={delta}
             onChange={(e) => setDelta(e.target.value)}
             fullWidth required
-            helperText="Positivo para agregar, negativo para restar. Stock actual: {product.stock_quantity}"
+            helperText={`Positivo para agregar, negativo para restar. Stock actual: ${product.stock_quantity}`}
           />
           <TextField
             label="Notas (opcional)"
@@ -135,7 +140,8 @@ function AdjustStockDialog({ open, onClose, product }: { open: boolean; onClose:
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Cancelar</Button>
-        <Button onClick={() => mutation.mutate()} variant="contained" disabled={!delta || mutation.isPending}>
+        <Button onClick={() => mutation.mutate({ delta: Number(delta), notes: notes || null })}
+          variant="contained" disabled={!delta || mutation.isPending}>
           {mutation.isPending ? 'Ajustando...' : 'Ajustar'}
         </Button>
       </DialogActions>
@@ -263,12 +269,12 @@ export default function ProductDetailPage() {
           </Box>
           <Box>
             <Typography sx={styles.fieldLabel}>Stock</Typography>
-            <Typography sx={styles.fieldValue}>
+            <Box sx={styles.fieldValue}>
               {product.stock_quantity}
               {product.stock_quantity < 1 && (
                 <Chip label="Sin stock" size="small" color="warning" sx={{ ml: 1 }} />
               )}
-            </Typography>
+            </Box>
           </Box>
           <Box>
             <Typography sx={styles.fieldLabel}>Estado</Typography>

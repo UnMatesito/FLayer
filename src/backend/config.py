@@ -10,6 +10,8 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     jwt_expire_minutes: int = 1440
 
+    frontend_url: str = "http://localhost:3000"
+
     smtp_host: str = "localhost"
     smtp_port: int = 1025
     smtp_from_email: str

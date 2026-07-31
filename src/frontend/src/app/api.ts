@@ -151,6 +151,7 @@ export interface OrderPayload {
   customer: CustomerData;
   work_type: WorkType;
   description: string;
+  token?: string;
   files?: FileInfo[];
   line_items?: LineItem[];
 }
@@ -687,11 +688,33 @@ export async function previewBudget(orderId: string, data: BudgetCreate): Promis
   return handleResponse<BudgetResponse>(res);
 }
 
-export async function fetchPublicProducts(): Promise<Product[]> {
-  const res = await fetch(`${API_BASE}/public/products`);
+export async function fetchPublicProducts(token?: string): Promise<Product[]> {
+  const params = token ? `?token=${encodeURIComponent(token)}` : '';
+  const res = await fetch(`${API_BASE}/public/products${params}`);
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error(err.detail || 'Failed to fetch products');
+  }
+  return res.json();
+}
+
+export async function fetchStoreToken(): Promise<{ token: string; url: string }> {
+  const res = await fetch(`${API_BASE}/store-token`, { credentials: 'include' });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Failed to fetch store token');
+  }
+  return res.json();
+}
+
+export async function regenerateStoreToken(): Promise<{ token: string; url: string }> {
+  const res = await fetch(`${API_BASE}/store-token/regenerate`, {
+    method: 'POST',
+    credentials: 'include',
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Failed to regenerate store token');
   }
   return res.json();
 }

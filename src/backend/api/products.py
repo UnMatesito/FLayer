@@ -6,6 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.api.deps import get_current_user
+from backend.api.public_store import resolve_user_id_from_token
 from backend.database import get_db
 from backend.models.product import FixedProduct
 from backend.models.product_stock_movement import ProductStockMovement
@@ -22,9 +23,10 @@ router = APIRouter()
 
 @router.get("/api/public/products", response_model=list[ProductResponse])
 async def list_public_products(
+    token: str | None = Query(None),
     db: AsyncSession = Depends(get_db),
 ) -> list[FixedProduct]:
-    user_id = UUID("00000000-0000-0000-0000-000000000001")
+    user_id = await resolve_user_id_from_token(token, db)
     query = select(FixedProduct).where(
         FixedProduct.user_id == user_id,
         FixedProduct.is_active == True,
@@ -203,4 +205,5 @@ async def adjust_product_stock(
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
+    await db.commit()
     return {"id": product_id, "stock_quantity": new_stock, "movement_id": movement_id}
