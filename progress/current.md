@@ -1,7 +1,12 @@
 # Current
 
-**Feature:** `product_management`
-**Status:** done
-**Next:** review implementation? Or pick next feature (`arquiminis` now unblocked)
+**Feature:** `printer_profiles`
+**Status:** spec_ready
+**Next:** human approval of `specs/printer_profiles/{requirements,design,tasks}.md` → implementer
 
-See `progress/impl_product_management.md` for full details. All 16 tests pass. 93 total tests pass (no regressions).
+Note: `arquiminis` cancelled by human decision (2026-07-31) — feature no longer needed.
+
+## Recent commits
+
+- `92d122c` feat: public store link — shareable order form with token-based access
+- `e7b2e5d` refactor: orders — fix React hooks violation and extract shared order logic

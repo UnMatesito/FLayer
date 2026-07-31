@@ -7,9 +7,9 @@
     { "name": "region_parameters",  "status": "pending",    "depends_on": [] },
     { "name": "stock_management",   "status": "done", "depends_on": ["order_status"] },
     { "name": "product_management", "status": "done",    "depends_on": ["create_order"] },
-    { "name": "arquiminis",         "status": "pending",    "depends_on": ["product_management"] },
+    { "name": "arquiminis",         "status": "cancelled",    "depends_on": ["product_management"] },
     { "name": "email_notifications","status": "pending",    "depends_on": ["order_status"] },
-    { "name": "printer_profiles",   "status": "pending",    "depends_on": [] },
+    { "name": "printer_profiles",   "status": "spec_ready",    "depends_on": [] },
     { "name": "dashboard",          "status": "pending",    "depends_on": ["stock_management", "generate_budget"] },
     { "name": "reports",            "status": "pending",    "depends_on": ["dashboard"] }
   ]
