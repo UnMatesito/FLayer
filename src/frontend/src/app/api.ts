@@ -175,6 +175,7 @@ export interface Order {
   fixed_product_id?: string | null;
   line_items?: LineItem[] | null;
   total?: number | null;
+  has_budget?: boolean;
   created_at: string;
   updated_at: string;
 }

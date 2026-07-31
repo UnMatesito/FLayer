@@ -22,98 +22,48 @@ import {
 import CheckIcon from '@mui/icons-material/Check';
 import CloseIcon from '@mui/icons-material/Close';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { fetchAllOrders, updateOrderStatus, fetchBudget, type Order, type BudgetResponse } from '@/app/api';
-
-const VALID_TRANSITIONS: Record<string, string[]> = {
-  new: ['quoting', 'cancelled'],
-  quoting: ['printing', 'cancelled'],
-  printing: ['ready', 'cancelled'],
-  ready: ['delivered', 'cancelled'],
-  delivered: [],
-  cancelled: [],
-};
-
-function statusColor(status: string) {
-  switch (status) {
-    case 'new':
-      return 'info';
-    case 'quoting':
-      return 'warning';
-    case 'printing':
-      return 'info';
-    case 'ready':
-      return 'success';
-    case 'delivered':
-      return 'success';
-    case 'cancelled':
-      return 'error';
-    default:
-      return 'default';
-  }
-}
-
-function statusLabel(status: string) {
-  switch (status) {
-    case 'new':
-      return 'Nuevo';
-    case 'quoting':
-      return 'Presupuestando';
-    case 'printing':
-      return 'Imprimiendo';
-    case 'ready':
-      return 'Listo';
-    case 'delivered':
-      return 'Entregado';
-    case 'cancelled':
-      return 'Cancelado';
-    default:
-      return status;
-  }
-}
+import { fetchAllOrders, updateOrderStatus, type Order } from '@/app/api';
+import { getStatusTransitions, statusColor, statusLabel } from '@/utils/order';
 
 interface StatusCellProps {
   order: Order;
+  transitions: Record<string, string[]>;
 }
 
-function BudgetCell({ orderId, orderStatus }: { orderId: string; orderStatus: string }) {
+function BudgetCell({ orderId, orderStatus, workType, hasBudget }: { orderId: string; orderStatus: string; workType: string; hasBudget: boolean }) {
   const router = useRouter();
-  const { data: budget, isLoading } = useQuery<BudgetResponse>({
-    queryKey: ['budget', orderId],
-    queryFn: () => fetchBudget(orderId),
-    retry: false,
-    staleTime: 30_000,
-  });
+
+  if (workType === 'product') {
+    return <Typography variant="body2" color="text.disabled">—</Typography>;
+  }
 
   if (orderStatus !== 'quoting') {
     return <Typography variant="body2" color="text.disabled">—</Typography>;
   }
 
-  if (isLoading) {
-    return <CircularProgress size={14} />;
+  if (hasBudget) {
+    return <Chip label="Presupuestado" color="success" size="small" />;
   }
 
-  if (!budget) {
-    return (
-      <Button
-        size="small"
-        variant="outlined"
-        onClick={(e) => {
-          e.stopPropagation();
-          router.push(`/dashboard/orders/${orderId}`);
-        }}
-      >
-        Presupuestar
-      </Button>
-    );
-  }
-
-  return <Chip label="Presupuestado" color="success" size="small" />;
+  return (
+    <Button
+      size="small"
+      variant="outlined"
+      onClick={(e) => {
+        e.stopPropagation();
+        router.push(`/dashboard/orders/${orderId}`);
+      }}
+    >
+      Presupuestar
+    </Button>
+  );
 }
 
-function StatusCell({ order }: StatusCellProps) {
+function StatusCell({ order, transitions }: StatusCellProps) {
   const queryClient = useQueryClient();
   const [editing, setEditing] = useState(false);
-  const [selected, setSelected] = useState(order.status);
+  const availableTransitions = transitions[order.status] || [];
+  const [selected, setSelected] = useState(availableTransitions[0] || '');
 
   const mutation = useMutation({
     mutationFn: (newStatus: string) => updateOrderStatus(order.id, newStatus),
@@ -124,9 +74,7 @@ function StatusCell({ order }: StatusCellProps) {
     },
   });
 
-  const transitions = VALID_TRANSITIONS[order.status] || [];
-
-  if (transitions.length === 0) {
+  if (availableTransitions.length === 0) {
     return (
       <Chip
         label={statusLabel(order.status)}
@@ -147,7 +95,7 @@ function StatusCell({ order }: StatusCellProps) {
           autoFocus
           onClick={(e) => e.stopPropagation()}
         >
-          {transitions.map((s) => (
+          {availableTransitions.map((s) => (
             <MenuItem key={s} value={s}>
               {statusLabel(s)}
             </MenuItem>
@@ -160,7 +108,7 @@ function StatusCell({ order }: StatusCellProps) {
             e.stopPropagation();
             mutation.mutate(selected);
           }}
-          disabled={mutation.isPending || selected === order.status}
+          disabled={mutation.isPending || !selected || selected === order.status}
         >
           {mutation.isPending ? (
             <CircularProgress size={14} />
@@ -265,10 +213,10 @@ export default function OrdersTable() {
                   : 'Diseño 3D'}
               </TableCell>
               <TableCell onClick={(e) => e.stopPropagation()}>
-                <StatusCell order={order} />
+                <StatusCell order={order} transitions={getStatusTransitions(order.work_type)} />
               </TableCell>
               <TableCell onClick={(e) => e.stopPropagation()}>
-                <BudgetCell orderId={order.id} orderStatus={order.status} />
+                <BudgetCell orderId={order.id} orderStatus={order.status} workType={order.work_type} hasBudget={order.has_budget ?? false} />
               </TableCell>
               <TableCell>
                 {new Date(order.created_at).toLocaleDateString()}

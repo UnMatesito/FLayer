@@ -72,6 +72,7 @@ class OrderResponse(BaseModel):
     fixed_product_id: UUID | None = None
     line_items: list[dict[str, Any]] | None = None
     total: float | None = None
+    has_budget: bool = False
     created_at: datetime
     updated_at: datetime
 
@@ -84,6 +85,7 @@ class OrderDetailResponse(OrderResponse):
 
 
 class PublicOrderCreate(OrderCreate):
+    token: str | None = None
     skip_client_notification: bool = False
 
     @field_validator("files")

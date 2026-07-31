@@ -18,65 +18,7 @@ import {
 } from '@/app/api';
 import BudgetForm from '@/components/BudgetForm';
 import BudgetBreakdown from '@/components/BudgetBreakdown';
-
-function statusColor(status: string) {
-  switch (status) {
-    case 'new': return 'info';
-    case 'quoting': return 'warning';
-    case 'printing': return 'info';
-    case 'ready': return 'success';
-    case 'delivered': return 'success';
-    case 'cancelled': return 'error';
-    default: return 'default';
-  }
-}
-
-function statusLabel(status: string) {
-  switch (status) {
-    case 'new': return 'Nuevo';
-    case 'quoting': return 'Presupuestando';
-    case 'printing': return 'Imprimiendo';
-    case 'ready': return 'Listo';
-    case 'delivered': return 'Entregado';
-    case 'cancelled': return 'Cancelado';
-    default: return status;
-  }
-}
-
-function workTypeLabel(workType: string) {
-  switch (workType) {
-    case 'impresion_3d': return 'Impresión 3D';
-    case 'diseno_3d': return 'Diseño 3D';
-    default: return workType;
-  }
-}
-
-interface Action {
-  label: string;
-  targetStatus: string;
-  color: 'primary' | 'error' | 'success';
-}
-
-const STATUS_ACTIONS: Record<string, Action[]> = {
-  new: [
-    { label: 'Presupuestar', targetStatus: 'quoting', color: 'primary' },
-    { label: 'Cancelar', targetStatus: 'cancelled', color: 'error' },
-  ],
-  quoting: [
-    { label: 'Iniciar impresión', targetStatus: 'printing', color: 'primary' },
-    { label: 'Cancelar', targetStatus: 'cancelled', color: 'error' },
-  ],
-  printing: [
-    { label: 'Marcar como Listo', targetStatus: 'ready', color: 'success' },
-    { label: 'Cancelar', targetStatus: 'cancelled', color: 'error' },
-  ],
-  ready: [
-    { label: 'Marcar como Entregado', targetStatus: 'delivered', color: 'success' },
-    { label: 'Cancelar', targetStatus: 'cancelled', color: 'error' },
-  ],
-  delivered: [],
-  cancelled: [],
-};
+import { statusColor, statusLabel, workTypeLabel, getStatusActions } from '@/utils/order';
 
 export default function OrderDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -111,6 +53,8 @@ export default function OrderDetailPage() {
     },
   });
 
+  const isProduct = order?.work_type === 'product';
+
   if (isLoading) {
     return (
       <ProtectedRoute>
@@ -132,7 +76,7 @@ export default function OrderDetailPage() {
     );
   }
 
-  const actions = STATUS_ACTIONS[order.status] || [];
+  const actions = getStatusActions(order.work_type)[order.status] || [];
   const isMutationPending = statusMutation.isPending;
 
   return (
@@ -170,16 +114,18 @@ export default function OrderDetailPage() {
                 <TableCell sx={{ fontWeight: 600 }}>Descripción</TableCell>
                 <TableCell sx={{ whiteSpace: 'pre-wrap' }}>{order.description}</TableCell>
               </TableRow>
-              <TableRow>
-                <TableCell sx={{ fontWeight: 600 }}>Filamento</TableCell>
-                <TableCell>
-                  {order.filament_id ? (
-                    <Chip label={`Filamento asignado (${order.grams_estimated ?? '?'}g estimados)`} size="small" color="info" variant="outlined" />
-                  ) : (
-                    <Typography variant="body2" color="text.secondary">No asignado</Typography>
-                  )}
-                </TableCell>
-              </TableRow>
+              {!isProduct && (
+                <TableRow>
+                  <TableCell sx={{ fontWeight: 600 }}>Filamento</TableCell>
+                  <TableCell>
+                    {order.filament_id ? (
+                      <Chip label={`Filamento asignado (${order.grams_estimated ?? '?'}g estimados)`} size="small" color="info" variant="outlined" />
+                    ) : (
+                      <Typography variant="body2" color="text.secondary">No asignado</Typography>
+                    )}
+                  </TableCell>
+                </TableRow>
+              )}
               <TableRow>
                 <TableCell sx={{ fontWeight: 600 }}>Fecha de Creación</TableCell>
                 <TableCell>{new Date(order.created_at).toLocaleDateString()}</TableCell>
@@ -207,15 +153,7 @@ export default function OrderDetailPage() {
                   key={action.targetStatus}
                   variant="contained"
                   color={action.color}
-                  onClick={() => {
-                    if (action.targetStatus === 'printing') {
-                      statusMutation.mutate('printing');
-                    } else if (action.targetStatus === 'quoting') {
-                      statusMutation.mutate('quoting');
-                    } else {
-                      statusMutation.mutate(action.targetStatus);
-                    }
-                  }}
+                  onClick={() => statusMutation.mutate(action.targetStatus)}
                   disabled={isMutationPending}
                 >
                   {action.label}
@@ -230,48 +168,50 @@ export default function OrderDetailPage() {
           </Paper>
         )}
 
-        <Paper sx={{ p: 3, mt: 3 }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-            <Typography variant="h6" fontWeight={600}>Presupuesto</Typography>
-            {budget && order.status === 'quoting' && (
-              <Button
-                variant="outlined"
-                size="small"
-                startIcon={<EditIcon />}
-                onClick={() => setBudgetFormOpen(true)}
-              >
-                Editar Presupuesto
-              </Button>
-            )}
-          </Box>
+        {!isProduct && (
+          <Paper sx={{ p: 3, mt: 3 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+              <Typography variant="h6" fontWeight={600}>Presupuesto</Typography>
+              {budget && order.status === 'quoting' && (
+                <Button
+                  variant="outlined"
+                  size="small"
+                  startIcon={<EditIcon />}
+                  onClick={() => setBudgetFormOpen(true)}
+                >
+                  Editar Presupuesto
+                </Button>
+              )}
+            </Box>
 
-          {budgetLoading ? (
-            <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
-              <CircularProgress size={24} />
-            </Box>
-          ) : budget ? (
-            <BudgetBreakdown budget={budget} orderId={id} />
-          ) : order.status === 'quoting' ? (
-            <Box sx={{ textAlign: 'center', py: 3 }}>
-              <Typography color="text.secondary" sx={{ mb: 2 }}>
-                No hay presupuesto para este pedido.
-              </Typography>
-              <Button
-                variant="contained"
-                startIcon={<AddIcon />}
-                onClick={() => setBudgetFormOpen(true)}
-              >
-                Generar Presupuesto
-              </Button>
-            </Box>
-          ) : (
-            <Box sx={{ textAlign: 'center', py: 3 }}>
-              <Typography color="text.secondary">
-                No hay presupuesto para este pedido.
-              </Typography>
-            </Box>
-          )}
-        </Paper>
+            {budgetLoading ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+                <CircularProgress size={24} />
+              </Box>
+            ) : budget ? (
+              <BudgetBreakdown budget={budget} orderId={id} />
+            ) : order.status === 'quoting' ? (
+              <Box sx={{ textAlign: 'center', py: 3 }}>
+                <Typography color="text.secondary" sx={{ mb: 2 }}>
+                  No hay presupuesto para este pedido.
+                </Typography>
+                <Button
+                  variant="contained"
+                  startIcon={<AddIcon />}
+                  onClick={() => setBudgetFormOpen(true)}
+                >
+                  Generar Presupuesto
+                </Button>
+              </Box>
+            ) : (
+              <Box sx={{ textAlign: 'center', py: 3 }}>
+                <Typography color="text.secondary">
+                  No hay presupuesto para este pedido.
+                </Typography>
+              </Box>
+            )}
+          </Paper>
+        )}
       </Container>
 
       <BudgetForm

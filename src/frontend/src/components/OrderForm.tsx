@@ -1,32 +1,16 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import { useSearchParams } from 'next/navigation';
 import {
-  Box,
-  TextField,
-  Button,
-  Typography,
-  RadioGroup,
-  FormControlLabel,
-  Radio,
-  Stack,
-  Alert,
-  CircularProgress,
-  FormControl,
-  FormLabel,
-  Card,
-  CardContent,
-  CardMedia,
-  Chip,
-  IconButton,
-  InputAdornment,
+  Box, TextField, Button, Typography, RadioGroup,
+  FormControlLabel, Radio, Stack, Alert, CircularProgress,
+  FormControl, FormLabel,
 } from '@mui/material';
-import AddIcon from '@mui/icons-material/Add';
-import RemoveIcon from '@mui/icons-material/Remove';
-import DeleteIcon from '@mui/icons-material/Delete';
 import type { SxProps, Theme } from '@mui/material';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { createPublicOrder, fetchPublicProducts, type FileInfo, type LineItem } from '@/app/api';
+import ProductSelector from '@/components/ProductSelector';
 
 const styles: Record<string, SxProps<Theme>> = {
   container: { maxWidth: 900, mx: 'auto', p: 4 },
@@ -34,6 +18,9 @@ const styles: Record<string, SxProps<Theme>> = {
 };
 
 export default function OrderForm() {
+  const searchParams = useSearchParams();
+  const token = searchParams.get('token') || undefined;
+
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -44,8 +31,8 @@ export default function OrderForm() {
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
 
   const productsQuery = useQuery({
-    queryKey: ['public-products'],
-    queryFn: fetchPublicProducts,
+    queryKey: ['public-products', token],
+    queryFn: () => fetchPublicProducts(token),
     enabled: workType === 'product',
   });
 
@@ -94,6 +81,7 @@ export default function OrderForm() {
       customer: { name: string; email: string; phone: string };
       work_type: 'impresion_3d' | 'diseno_3d' | 'product';
       description: string;
+      token?: string;
       files?: FileInfo[];
       line_items?: LineItem[];
     }) => createPublicOrder(data),
@@ -108,6 +96,7 @@ export default function OrderForm() {
       customer: { name: name.trim(), email, phone },
       work_type: workType,
       description: descriptionText,
+      token,
       files,
       line_items: lineItems.length > 0 ? lineItems : undefined,
     });
@@ -173,91 +162,14 @@ export default function OrderForm() {
             ) : productsQuery.isError ? (
               <Alert severity="error">Error al cargar productos. Intenta de nuevo.</Alert>
             ) : productsQuery.data && productsQuery.data.length > 0 ? (
-              <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: 2 }}>
-                {productsQuery.data.map((product) => {
-                  const inCart = selectedIds.has(product.id);
-                  const cartItem = lineItems.find((item) => item.product_id === product.id);
-                  const outOfStock = product.stock_quantity < 1;
-                  return (
-                    <Card key={product.id} variant="outlined" sx={{
-                      opacity: outOfStock ? 0.5 : 1,
-                      border: inCart ? '2px solid' : undefined,
-                      borderColor: inCart ? 'primary.main' : undefined,
-                    }}>
-                      <CardMedia
-                        component="img"
-                        height="140"
-                        image={product.image_url || '/placeholder.svg'}
-                        alt={product.name}
-                        sx={{ objectFit: 'cover' }}
-                      />
-                      <CardContent sx={{ pb: 1 }}>
-                        <Typography variant="subtitle1" fontWeight={600} noWrap>
-                          {product.name}
-                        </Typography>
-                        <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 0.5 }}>
-                          <Typography variant="h6" color="primary" fontWeight={700}>
-                            ${Number(product.price).toFixed(2)}
-                          </Typography>
-                          <Chip
-                            label={outOfStock ? 'Sin stock' : `${product.stock_quantity} en stock`}
-                            size="small"
-                            color={product.stock_quantity <= 3 ? 'warning' : 'default'}
-                          />
-                        </Stack>
-                        {outOfStock ? (
-                          <Button variant="outlined" disabled size="small" sx={{ mt: 1 }} fullWidth>
-                            Sin stock
-                          </Button>
-                        ) : inCart && cartItem ? (
-                          <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 1 }}>
-                            <IconButton
-                              size="small"
-                              onClick={() => updateQuantity(product.id, cartItem.quantity - 1, product.stock_quantity)}
-                            >
-                              <RemoveIcon fontSize="small" />
-                            </IconButton>
-                            <TextField
-                              type="number"
-                              size="small"
-                              value={cartItem.quantity}
-                              onChange={(e) => {
-                                const val = parseInt(e.target.value, 10);
-                                if (!isNaN(val)) updateQuantity(product.id, val, product.stock_quantity);
-                              }}
-                              slotProps={{
-                                input: {
-                                  sx: { width: 60, textAlign: 'center' },
-                                  startAdornment: <InputAdornment position="start">×</InputAdornment>,
-                                },
-                              }}
-                              sx={{ '& .MuiInputBase-input': { textAlign: 'center' } }}
-                            />
-                            <IconButton
-                              size="small"
-                              color="error"
-                              onClick={() => removeProduct(product.id)}
-                            >
-                              <DeleteIcon fontSize="small" />
-                            </IconButton>
-                          </Stack>
-                        ) : (
-                          <Button
-                            variant="contained"
-                            size="small"
-                            startIcon={<AddIcon />}
-                            onClick={() => addProduct(product)}
-                            sx={{ mt: 1 }}
-                            fullWidth
-                          >
-                            Agregar
-                          </Button>
-                        )}
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </Box>
+              <ProductSelector
+                products={productsQuery.data}
+                lineItems={lineItems}
+                selectedIds={selectedIds}
+                onAdd={addProduct}
+                onUpdateQuantity={updateQuantity}
+                onRemove={removeProduct}
+              />
             ) : (
               <Alert severity="info">No hay productos disponibles en este momento.</Alert>
             )}
