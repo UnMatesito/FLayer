@@ -56,6 +56,21 @@ Every feature MUST impact both backend and frontend. A feature is not complete
 until it has a working UI. If a feature is purely backend (e.g., a library
 refactor), document why in the spec.
 
+## Commit rule
+
+Whenever the human asks you to make a commit, do this FIRST:
+
+1. Append a session entry to `progress/archive/history.md` (date, feature,
+   transition, summary of what was implemented/committed) — archive first,
+   commit second.
+2. Then make the commit, following the git rules in your system prompt
+   (inspect status/diff/log, stage only intended files, no secrets, concise
+   message matching repo style).
+3. `history.md` is included in the commit when it changed.
+
+If work spans multiple features or includes pre-existing uncommitted changes,
+split into one commit per logical group.
+
 ## Anti-telephone-game rule
 
 Don't copy specs, code, or long results into the chat. Write to disk and

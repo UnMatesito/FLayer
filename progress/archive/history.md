@@ -109,3 +109,53 @@ Output: marked `done` in `feature_list.json`.
 - All 38 tasks complete ✅
 - pytest 81 passed, coverage 90% ✅
 - Verdict: APPROVED
+
+## Session 8 — 2026-07-29
+
+**Feature:** `product_management`
+**Transition:** `pending` → `done`
+
+`implementer` wrote:
+- Backend: FixedProduct model, schemas, CRUD endpoints, image upload via storage service, `fixed_product_id` + `total` on orders, Alembic migration
+- Frontend: products list page, product detail page with stock adjust dialog and image upload, product card grid in order forms
+- Tests: 16 integration tests covering R1–R10
+- Commit: `ef4fb2c` wip: product management feature
+
+`reviewer` (human):
+- Manual verification: CRUD products ✅, image upload ✅, stock adjust ✅, order with fixed product ✅
+
+Output: marked `done` in `feature_list.json`.
+
+## Session 9 — 2026-07-31
+
+**Feature:** public store link (unplanned, part of product_management leftovers)
+**Transition:** uncommitted → committed
+
+Uncommitted work from previous sessions committed in one go:
+- Backend: StoreToken model, store-token API (get/regenerate), `resolve_user_id_from_token` for public products/orders, FRONTEND_URL setting, allow `new` → `ready` transition for product orders
+- Frontend: StoreLink dashboard component (copy/regenerate link), order-form Suspense fix, product stock adjust fixes (error display, missing commit)
+- Commit: `92d122c` feat: public store link
+
+## Session 10 — 2026-07-31
+
+**Feature:** orders refactor (maintenance)
+**Transition:** uncommitted → committed
+
+- Fixed critical React hooks violation ("Rendered fewer hooks than expected") in `InternalOrderForm` — `useMemo` was called after an early return; also fixed conditional `useQuery` in `BudgetCell`
+- Extracted shared order utilities (`src/frontend/src/utils/order.ts`), shared `ProductSelector` component, backend order creation helpers, `has_budget` flag on order list (eliminates N+1 budget queries)
+- 94 backend tests pass, frontend `tsc --noEmit` clean
+- Commit: `e7b2e5d` refactor: orders
+
+Output: `arquiminis` cancelled by human (feature no longer needed); `printer_profiles` spec written → `spec_ready`.
+
+## Session 11 — 2026-07-31
+
+**Feature:** `printer_profiles` (spec) + agent behavior (docs)
+**Transition:** `spec_ready` → committed; rules updated
+
+- `spec_author` wrote `specs/printer_profiles/{requirements,design,tasks}.md` (R1–R14, 29 tasks)
+- `feature_list.json`: `arquiminis` → `cancelled`, `printer_profiles` → `spec_ready`; `progress/current.md` updated
+- Agent behavior: added "Commit rule" to `AGENTS.md` and `.agents/agents/leader.md` — archive `progress/archive/history.md` BEFORE every commit
+- This entry was archived before the commits were made, per the new rule
+
+Output: waiting for human approval of `printer_profiles` spec.

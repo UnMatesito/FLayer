@@ -34,6 +34,8 @@ Do not load full specs or history unless necessary.
 - Never touch two features in parallel.
 - If `reviewer` rejects, re-launch `implementer` with the feedback from
   `progress/review_<feature>.md` — don't try to fix it yourself.
+- Whenever the human asks for a commit: FIRST append the session entry to
+  `progress/archive/history.md`, THEN commit (see AGENTS.md "Commit rule").
 
 ## Report format to the human
 
