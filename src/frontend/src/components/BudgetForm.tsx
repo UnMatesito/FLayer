@@ -12,8 +12,8 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import type { SxProps, Theme } from '@mui/material';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  fetchFilaments, createBudget, updateBudget, previewBudget,
-  type BudgetResponse, type FilamentItemInput, type Filament,
+  fetchFilaments, createBudget, updateBudget, previewBudget, fetchPrinters,
+  type BudgetResponse, type FilamentItemInput, type Filament, type Printer,
 } from '@/app/api';
 
 interface FilamentItem {
@@ -42,6 +42,7 @@ function itemKey(index: number) {
 export default function BudgetForm({ open, onClose, orderId, existingBudget }: Props) {
   const queryClient = useQueryClient();
   const [currency, setCurrency] = useState<'ARS' | 'USD'>(existingBudget?.currency ?? 'ARS');
+  const [printerId, setPrinterId] = useState(existingBudget?.printer_id ?? '');
   const [items, setItems] = useState<FilamentItem[]>(
     existingBudget?.filament_items?.map((i) => ({
       product_id: i.product_id,
@@ -78,8 +79,14 @@ export default function BudgetForm({ open, onClose, orderId, existingBudget }: P
     queryFn: () => fetchFilaments(),
   });
 
+  const { data: printers } = useQuery<Printer[]>({
+    queryKey: ['printers'],
+    queryFn: () => fetchPrinters(),
+  });
+
   const buildPayload = useCallback((): {
     currency: 'ARS' | 'USD';
+    printer_id: string | null;
     filament_items: FilamentItemInput[];
     manual_filament_cost: number | null;
     manual_grams: number | null;
@@ -99,6 +106,7 @@ export default function BudgetForm({ open, onClose, orderId, existingBudget }: P
         }));
     return {
       currency,
+      printer_id: printerId || null,
       filament_items: filamentItems,
       manual_filament_cost: useManualFilament ? (parseFloat(manualFilamentCost) || null) : null,
       manual_grams: useManualFilament ? (parseFloat(manualGrams) || null) : null,
@@ -109,7 +117,7 @@ export default function BudgetForm({ open, onClose, orderId, existingBudget }: P
       manual_price: manualPrice ? (parseFloat(manualPrice) || null) : null,
       notes: notes || '',
     };
-  }, [currency, items, useManualFilament, manualFilamentCost, manualGrams, hours, minutes, marginType, extraCosts, manualPrice, notes]);
+  }, [currency, printerId, items, useManualFilament, manualFilamentCost, manualGrams, hours, minutes, marginType, extraCosts, manualPrice, notes]);
 
   useEffect(() => {
     if (!open) return;
@@ -183,17 +191,34 @@ export default function BudgetForm({ open, onClose, orderId, existingBudget }: P
       </DialogTitle>
       <DialogContent>
         <Stack spacing={2} sx={{ mt: 1 }}>
-          <FormControl size="small" sx={{ width: 150 }}>
-            <InputLabel>Moneda</InputLabel>
-            <Select<string>
-              value={currency}
-              label="Moneda"
-              onChange={(e) => setCurrency(e.target.value as 'ARS' | 'USD')}
-            >
-              <MenuItem value="ARS">ARS ($)</MenuItem>
-              <MenuItem value="USD">USD (US$)</MenuItem>
-            </Select>
-          </FormControl>
+          <Stack direction="row" spacing={2} alignItems="center">
+            <FormControl size="small" sx={{ width: 150 }}>
+              <InputLabel>Moneda</InputLabel>
+              <Select<string>
+                value={currency}
+                label="Moneda"
+                onChange={(e) => setCurrency(e.target.value as 'ARS' | 'USD')}
+              >
+                <MenuItem value="ARS">ARS ($)</MenuItem>
+                <MenuItem value="USD">USD (US$)</MenuItem>
+              </Select>
+            </FormControl>
+            <FormControl size="small" sx={{ minWidth: 220 }}>
+              <InputLabel>Impresora</InputLabel>
+              <Select<string>
+                value={printerId}
+                label="Impresora"
+                onChange={(e) => setPrinterId(e.target.value)}
+              >
+                <MenuItem value="">Sin impresora (valores por defecto)</MenuItem>
+                {printers?.map((p) => (
+                  <MenuItem key={p.id} value={p.id}>
+                    {p.name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Stack>
 
           {!useManualFilament && (
             <Box>
@@ -336,6 +361,11 @@ export default function BudgetForm({ open, onClose, orderId, existingBudget }: P
             <Box sx={{ bgcolor: 'grey.50', p: 2, borderRadius: 1 }}>
               <Typography variant="subtitle2" gutterBottom fontWeight={600}>
                 Previsualización
+              </Typography>
+              <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1 }}>
+                {preview.printer_name ? `Impresora: ${preview.printer_name}` : 'Parámetros por defecto'}
+                {' — '}{preview.power_watts?.toFixed(0) ?? '120'}W, {preview.lifespan_hours?.toFixed(0) ?? '4320'}h,
+                repuestos {preview.currency === 'USD' ? 'US$' : '$'}{preview.spare_parts_cost?.toFixed(2) ?? '150000.00'}
               </Typography>
               <Table size="small">
                 <TableBody>

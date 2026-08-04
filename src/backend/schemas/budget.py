@@ -32,6 +32,7 @@ class FilamentItemResponse(BaseModel):
 
 class BudgetCreate(BaseModel):
     currency: str = "ARS"
+    printer_id: UUID | None = None
     manual_filament_cost: float | None = None
     manual_grams: float | None = None
     filament_items: list[FilamentItemInput] = []
@@ -112,6 +113,7 @@ class BudgetCreate(BaseModel):
 
 class BudgetUpdate(BaseModel):
     currency: str | None = None
+    printer_id: UUID | None = None
     filament_items: list[FilamentItemInput] | None = None
     manual_filament_cost: float | None = None
     manual_grams: float | None = None
@@ -185,6 +187,7 @@ class BudgetUpdate(BaseModel):
 
 class BudgetPreviewRequest(BaseModel):
     currency: str = "ARS"
+    printer_id: UUID | None = None
     filament_items: list[FilamentItemInput] = []
     manual_filament_cost: float | None = None
     manual_grams: float | None = None
@@ -259,6 +262,11 @@ class BudgetResponse(BaseModel):
     order_id: UUID
     version: int
     currency: str
+    printer_id: UUID | None = None
+    printer_name: str | None = None
+    power_watts: float | None = None
+    lifespan_hours: float | None = None
+    spare_parts_cost: float | None = None
     filament_items: list[dict[str, Any]]
     manual_filament_cost: float | None = None
     manual_grams: float | None = None

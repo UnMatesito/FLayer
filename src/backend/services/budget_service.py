@@ -44,6 +44,35 @@ def _get_margin_multiplier(margin_type: str, defaults: dict[str, Decimal]) -> De
     return defaults[key]
 
 
+def resolve_machine_params(
+    printer: Any | None,
+    currency: str,
+) -> dict[str, Decimal]:
+    """Resolve machine parameters from a printer profile with per-field fallback.
+
+    Each profile field that is NULL (or no printer at all) falls back to the
+    currency default. Returns the resolved values as Decimals.
+    """
+    defaults = _get_defaults(currency)
+    return {
+        "power_watts": (
+            Decimal(str(printer.power_watts))
+            if printer is not None and printer.power_watts is not None
+            else defaults["machine_wattage"]
+        ),
+        "lifespan_hours": (
+            Decimal(str(printer.lifespan_hours))
+            if printer is not None and printer.lifespan_hours is not None
+            else defaults["machine_lifespan_hours"]
+        ),
+        "spare_parts_cost": (
+            Decimal(str(printer.spare_parts_cost))
+            if printer is not None and printer.spare_parts_cost is not None
+            else defaults["machine_cost"]
+        ),
+    }
+
+
 def calculate_breakdown(
     filament_items: list[dict[str, Any]],
     manual_filament_cost: Decimal | None,
@@ -53,6 +82,9 @@ def calculate_breakdown(
     margin_type: str,
     manual_price: Decimal | None,
     currency: str,
+    power_watts: Decimal | None = None,
+    lifespan_hours: Decimal | None = None,
+    spare_parts_cost: Decimal | None = None,
 ) -> dict[str, Any]:
     defaults = _get_defaults(currency)
 
@@ -66,10 +98,10 @@ def calculate_breakdown(
 
     time_hours = Decimal(str(hours)) + Decimal(str(minutes)) / Decimal("60")
 
-    machine_wattage = defaults["machine_wattage"]
+    machine_wattage = power_watts if power_watts is not None else defaults["machine_wattage"]
     electricity_price_kwh = defaults["electricity_price_kwh"]
-    machine_cost = defaults["machine_cost"]
-    machine_lifespan_hours = defaults["machine_lifespan_hours"]
+    machine_cost = spare_parts_cost if spare_parts_cost is not None else defaults["machine_cost"]
+    machine_lifespan_hours = lifespan_hours if lifespan_hours is not None else defaults["machine_lifespan_hours"]
     error_margin_percent = defaults["error_margin_percent"]
 
     electricity_cost = time_hours * (machine_wattage / Decimal("1000")) * electricity_price_kwh
@@ -98,6 +130,9 @@ def calculate_breakdown(
         "ml_price": float(round(ml_price, 2)),
         "margin_multiplier": float(margin_multiplier),
         "error_margin_percent": float(error_margin_percent),
+        "power_watts": float(machine_wattage),
+        "lifespan_hours": float(machine_lifespan_hours),
+        "spare_parts_cost": float(machine_cost),
     }
 
 
@@ -155,6 +190,9 @@ class BudgetCalculator:
         margin_type: str,
         manual_price: float | None,
         currency: str,
+        power_watts: Decimal | None = None,
+        lifespan_hours: Decimal | None = None,
+        spare_parts_cost: Decimal | None = None,
     ) -> dict[str, Any]:
         enriched_items = await self.enrich_filament_items(db, filament_items)
 
@@ -167,6 +205,9 @@ class BudgetCalculator:
             margin_type=margin_type,
             manual_price=Decimal(str(manual_price)) if manual_price is not None else None,
             currency=currency,
+            power_watts=power_watts,
+            lifespan_hours=lifespan_hours,
+            spare_parts_cost=spare_parts_cost,
         )
 
         return {
@@ -184,6 +225,9 @@ class BudgetCalculator:
         margin_type: str,
         manual_price: float | None,
         currency: str,
+        power_watts: Decimal | None = None,
+        lifespan_hours: Decimal | None = None,
+        spare_parts_cost: Decimal | None = None,
     ) -> dict[str, Any]:
         return calculate_breakdown(
             filament_items=filament_items,
@@ -194,6 +238,9 @@ class BudgetCalculator:
             margin_type=margin_type,
             manual_price=Decimal(str(manual_price)) if manual_price is not None else None,
             currency=currency,
+            power_watts=power_watts,
+            lifespan_hours=lifespan_hours,
+            spare_parts_cost=spare_parts_cost,
         )
 
 

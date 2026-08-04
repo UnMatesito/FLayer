@@ -1,9 +1,9 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Integer, Numeric, String, Text, UniqueConstraint, func
+from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Integer, Numeric, String, Text, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from backend.database import Base
 
@@ -47,6 +47,12 @@ class Budget(Base):
     margin_multiplier: Mapped[float] = mapped_column(
         Numeric(5, 2), nullable=False
     )
+    printer_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID, ForeignKey("printers.id"), nullable=True
+    )
+    power_watts: Mapped[float | None] = mapped_column(Numeric(7, 2), nullable=True)
+    lifespan_hours: Mapped[float | None] = mapped_column(Numeric(10, 2), nullable=True)
+    spare_parts_cost: Mapped[float | None] = mapped_column(Numeric(12, 2), nullable=True)
     final_price: Mapped[float] = mapped_column(Numeric(12, 2), nullable=False)
     manual_price: Mapped[float | None] = mapped_column(Numeric(12, 2), nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -57,6 +63,15 @@ class Budget(Base):
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
 
+    printer: Mapped["Printer | None"] = relationship(
+        "Printer",
+        foreign_keys=[printer_id],
+        lazy="noload",
+    )
+
     __table_args__ = (
         UniqueConstraint("order_id", "version", name="uq_budget_order_version"),
+        CheckConstraint("power_watts >= 0", name="ck_budgets_power_watts_non_negative"),
+        CheckConstraint("lifespan_hours >= 0", name="ck_budgets_lifespan_hours_non_negative"),
+        CheckConstraint("spare_parts_cost >= 0", name="ck_budgets_spare_parts_cost_non_negative"),
     )

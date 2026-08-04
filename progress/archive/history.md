@@ -159,3 +159,16 @@ Output: `arquiminis` cancelled by human (feature no longer needed); `printer_pro
 - This entry was archived before the commits were made, per the new rule
 
 Output: waiting for human approval of `printer_profiles` spec.
+
+## Session 12 — 2026-08-04
+
+**Feature:** `printer_profiles` (impl + review) and `generate_budget` R11 (printer select)
+**Transition:** `in_progress` → `done`
+
+- `implementer` implemented `printer_profiles` full-stack: backend (8 tenant-scoped endpoints, `Printer`/`PrinterMaintenance` models, schemas with nozzle/machine-param/image validation, printer catalog constant), 2 Alembic migrations (`012`, `013` — chained on true head `46ac01109cd2`), 41 new tests, frontend (card grid, create/edit dialog with freeSolo brand/model + nozzle presets + image preview, detail page with maintenance table, "Impresoras" nav)
+- `implementer` implemented `generate_budget` R11: printer select in budget form, params/defaults snapshot on create, per-field fallback, foreign/nonexistent printer → 404, PUT re-snapshot path, stale `final_price` fix via `CALC_AFFECTING_FIELDS` gate + regression tests
+- `reviewer` APPROVED both: `progress/review_printer_profiles.md`, `progress/review_budget_r11.md` (R11 had 1 rejection → fixed: missing PUT tests + stale `final_price` bug, re-reviewed APPROVED). Non-blocking notes: nozzle "NaN"/"Infinity" → 500/accepts-invalid; brand/model >100 chars → DB 500 instead of clean 422 (left for future hardening)
+- 147/147 tests pass, `pnpm build` clean, coverage > 70% on touched files; all tasks `[x]` in both task lists
+- Commit subject: `feat: printer_profiles + generate_budget R11 (printer select)` — entered before commit per archive-first rule
+
+Output: `printer_profiles` marked `done` in `feature_list.json`.

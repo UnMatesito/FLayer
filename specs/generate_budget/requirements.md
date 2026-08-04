@@ -24,11 +24,14 @@ THEN the system calculates:
 AND the full breakdown is displayed
 AND MercadoLibre price is shown as a convenience (final_price × 1.30)
 
-Formula (hardcoded, not stored in DB):
+The machine parameters used in the formula come from the selected printer
+profile (R11) when one is chosen, otherwise from the hardcoded defaults.
+
+Formula:
 ```
 filament_total          = sum of filament items OR manual_filament_cost
-electricity_cost       = (hours + min/60) × (machine_wattage / 1000) × electricity_price_kwh
-amortization_cost      = (hours + min/60) × (machine_cost / machine_lifespan_hours)
+electricity_cost       = (hours + min/60) × (power_watts / 1000) × electricity_price_kwh
+amortization_cost      = (hours + min/60) × (spare_parts_cost / lifespan_hours)
 subtotal               = filament_total + electricity_cost + amortization_cost
 subtotal_with_error    = subtotal × (1 + error_margin_percent / 100)
 total_before_margin    = subtotal_with_error + extra_costs
@@ -103,12 +106,28 @@ GIVEN an order has no budget yet
 WHEN the operator views the order detail
 THEN he sees "No budget generated yet" and a button to create one
 
+## R11. Budget — Printer profile machine parameters
+
+GIVEN the operator has one or more active printer profiles (`printer_profiles`)
+WHEN creating or editing a budget (or previewing it)
+THEN a "Printer" select input lists the operator's active printers
+AND selecting a printer loads its machine parameters — `power_watts`,
+    `lifespan_hours`, `spare_parts_cost` — into the calculation
+AND when no printer is selected, the hardcoded defaults are used
+AND the used machine parameters are snapshotted into the budget at save time,
+    so later edits to the printer profile do not alter existing budgets
+AND the breakdown display shows which printer (if any) and which machine
+    parameters were used
+AND a `printer_id` that does not exist or belongs to another user is rejected
+    with 404
+
 ## Future (not in this feature)
 
-- Configurable hardcoded parameters → `printer_profiles` + user settings
+- Configurable `electricity_price_kwh`, `error_margin_percent`, margin
+  multipliers → user settings
 - Client-side budget approval → client portal
 - Email template customization → `email_notifications`
-- Multiple machine profiles → `printer_profiles`
+- Currency conversion for printer spare parts cost (currently used as-is in
+  the budget's currency) → future feature
 - Resin printing costs → future feature
 - PDF generation of budget → future enhancement
-- Configurable defaults per currency → `printer_profiles` + user settings

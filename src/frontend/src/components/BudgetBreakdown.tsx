@@ -28,6 +28,10 @@ function marginLabel(type: string) {
 export default function BudgetBreakdown({ budget }: Props) {
   const sym = currencySymbol(budget.currency);
 
+  const powerWatts = budget.power_watts ?? 120;
+  const lifespanHours = budget.lifespan_hours ?? (budget.currency === 'USD' ? 5000 : 4320);
+  const sparePartsCost = budget.spare_parts_cost ?? (budget.currency === 'USD' ? 400 : 150000);
+
   return (
     <Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
@@ -69,6 +73,18 @@ export default function BudgetBreakdown({ budget }: Props) {
           {budget.manual_grams != null && ` (${budget.manual_grams}g)`}
         </Typography>
       )}
+
+      <Box sx={{ mb: 1, p: 1.5, bgcolor: 'grey.50', borderRadius: 1 }}>
+        <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600 }}>
+          Máquina
+        </Typography>
+        <Typography variant="body2">
+          {budget.printer_name ? `Impresora: ${budget.printer_name}` : 'Impresora: parámetros por defecto'}
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          Potencia: {powerWatts}W · Vida útil: {lifespanHours}h · Repuestos: {sym}{sparePartsCost.toFixed(2)}
+        </Typography>
+      </Box>
 
       <Divider sx={{ my: 1 }} />
 

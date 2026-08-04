@@ -1,12 +1,17 @@
 # Current
 
-**Feature:** `printer_profiles`
-**Status:** spec_ready
-**Next:** human approval of `specs/printer_profiles/{requirements,design,tasks}.md` → implementer
+**Feature:** none active — `printer_profiles` (done) + `generate_budget` R11 (done, approved)
+**Next:** pick next feature from `feature_list.json` (region_parameters, email_notifications, dashboard, reports pending)
+
+- `printer_profiles`: implemented + reviewer APPROVED → `progress/review_printer_profiles.md`; marked `done`
+- `generate_budget` R11 (printer select in budget form): implemented + reviewer APPROVED → `progress/review_budget_r11.md` (1 rejection → fixed: missing PUT tests, stale `final_price` bug)
+- 147/147 tests, build clean
 
 Note: `arquiminis` cancelled by human decision (2026-07-31) — feature no longer needed.
 
-## Recent commits
+## Pending features
 
-- `92d122c` feat: public store link — shareable order form with token-based access
-- `e7b2e5d` refactor: orders — fix React hooks violation and extract shared order logic
+- `region_parameters` (no deps)
+- `email_notifications` (depends on `order_status`)
+- `dashboard` (depends on `stock_management`, `generate_budget`) — both deps done
+- `reports` (depends on `dashboard`)

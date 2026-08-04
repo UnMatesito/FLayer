@@ -593,6 +593,7 @@ export interface FilamentItemResponse {
 
 export interface BudgetCreate {
   currency: 'ARS' | 'USD';
+  printer_id?: string | null;
   filament_items: FilamentItemInput[];
   manual_filament_cost?: number | null;
   manual_grams?: number | null;
@@ -606,6 +607,7 @@ export interface BudgetCreate {
 
 export interface BudgetUpdate {
   currency?: 'ARS' | 'USD';
+  printer_id?: string | null;
   filament_items?: FilamentItemInput[];
   manual_filament_cost?: number | null;
   manual_grams?: number | null;
@@ -622,6 +624,11 @@ export interface BudgetResponse {
   order_id: string;
   version: number;
   currency: 'ARS' | 'USD';
+  printer_id: string | null;
+  printer_name: string | null;
+  power_watts: number | null;
+  lifespan_hours: number | null;
+  spare_parts_cost: number | null;
   filament_items: FilamentItemResponse[];
   manual_filament_cost: number | null;
   manual_grams: number | null;
@@ -716,5 +723,141 @@ export async function regenerateStoreToken(): Promise<{ token: string; url: stri
     const err = await res.json().catch(() => ({}));
     throw new Error(err.detail || 'Failed to regenerate store token');
   }
+  return res.json();
+}
+
+// Printer types
+export interface Printer {
+  id: string;
+  user_id: string;
+  name: string;
+  brand: string | null;
+  model: string | null;
+  nozzle_sizes: string[];
+  power_watts: number | null;
+  lifespan_hours: number | null;
+  spare_parts_cost: number | null;
+  image_url: string | null;
+  notes: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PrinterCreate {
+  name: string;
+  brand?: string | null;
+  model?: string | null;
+  nozzle_sizes?: string[];
+  power_watts?: number | null;
+  lifespan_hours?: number | null;
+  spare_parts_cost?: number | null;
+  image_url?: string | null;
+  notes?: string | null;
+}
+
+export interface PrinterUpdate {
+  name?: string;
+  brand?: string | null;
+  model?: string | null;
+  nozzle_sizes?: string[];
+  power_watts?: number | null;
+  lifespan_hours?: number | null;
+  spare_parts_cost?: number | null;
+  image_url?: string | null;
+  notes?: string | null;
+}
+
+export type MaintenanceType = 'calibration' | 'cleaning' | 'repair';
+
+export interface MaintenanceRecord {
+  id: string;
+  printer_id: string;
+  maintenance_type: MaintenanceType;
+  maintenance_date: string;
+  description: string;
+  cost: number | null;
+  created_at: string;
+}
+
+export interface MaintenanceCreate {
+  maintenance_type: MaintenanceType;
+  maintenance_date: string;
+  description: string;
+  cost?: number | null;
+}
+
+export interface PrinterCatalogBrand {
+  brand: string;
+  models: string[];
+}
+
+export interface PrinterCatalog {
+  brands: PrinterCatalogBrand[];
+}
+
+export async function fetchPrinters(): Promise<Printer[]> {
+  const res = await fetch(`${API_BASE}/printers`, { credentials: 'include' });
+  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail || 'Failed to fetch printers');
+  return res.json();
+}
+
+export async function fetchPrinter(id: string): Promise<Printer> {
+  const res = await fetch(`${API_BASE}/printers/${id}`, { credentials: 'include' });
+  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail || 'Failed to fetch printer');
+  return res.json();
+}
+
+export async function createPrinter(payload: PrinterCreate): Promise<Printer> {
+  const res = await fetch(`${API_BASE}/printers`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+    credentials: 'include',
+  });
+  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail || 'Failed to create printer');
+  return res.json();
+}
+
+export async function updatePrinter(id: string, payload: PrinterUpdate): Promise<Printer> {
+  const res = await fetch(`${API_BASE}/printers/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+    credentials: 'include',
+  });
+  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail || 'Failed to update printer');
+  return res.json();
+}
+
+export async function deletePrinter(id: string): Promise<{ id: string; is_active: boolean }> {
+  const res = await fetch(`${API_BASE}/printers/${id}`, {
+    method: 'DELETE',
+    credentials: 'include',
+  });
+  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail || 'Failed to delete printer');
+  return res.json();
+}
+
+export async function fetchPrinterMaintenance(id: string): Promise<MaintenanceRecord[]> {
+  const res = await fetch(`${API_BASE}/printers/${id}/maintenance`, { credentials: 'include' });
+  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail || 'Failed to fetch maintenance');
+  return res.json();
+}
+
+export async function createPrinterMaintenance(id: string, payload: MaintenanceCreate): Promise<MaintenanceRecord> {
+  const res = await fetch(`${API_BASE}/printers/${id}/maintenance`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+    credentials: 'include',
+  });
+  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail || 'Failed to create maintenance');
+  return res.json();
+}
+
+export async function fetchPrinterCatalog(): Promise<PrinterCatalog> {
+  const res = await fetch(`${API_BASE}/printers/catalog`, { credentials: 'include' });
+  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail || 'Failed to fetch catalog');
   return res.json();
 }
