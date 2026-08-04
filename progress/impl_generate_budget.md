@@ -100,3 +100,12 @@ cd src && poetry run pytest tests/ -v --cov=backend
 ## Blockers
 
 None.
+
+## Reviewer verdict
+
+APPROVED — R11 (printer select) reviewed in `progress/review_budget_r11.md`
+(2026-07-31): 1 rejection (missing PUT re-snapshot tests, stale
+`final_price` on partial PUT) → fixed by implementer → re-reviewed APPROVED.
+Both rejection items resolved; 147 tests at the time, now 151. Review doc
+eliminated 2026-08-04 per the new rule: review docs exist only when they
+contain recommended changes.

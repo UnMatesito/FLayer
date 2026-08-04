@@ -18,7 +18,9 @@ Do not load full specs or history unless necessary.
    - If `pending` → launch `spec_author`
    - If `spec_ready` → wait for explicit human approval ("approved")
    - If `in_progress` without `progress/impl_<feature>.md` → launch `implementer`
-   - If `progress/impl_<feature>.md` exists without `progress/review_<feature>.md` → launch `reviewer`
+   - If `progress/impl_<feature>.md` exists without a record of review outcome
+     (`progress/review_<feature>.md`, or an inline `## Reviewer verdict` in
+     the impl file) → launch `reviewer`
 4. Update `feature_list.json` accordingly
 5. Update `progress/current.md` with the state before ending your turn
 6. When closing a feature (`done`):
@@ -34,6 +36,9 @@ Do not load full specs or history unless necessary.
 - Never touch two features in parallel.
 - If `reviewer` rejects, re-launch `implementer` with the feedback from
   `progress/review_<feature>.md` — don't try to fix it yourself.
+- A review doc exists only when the review had recommended changes. A clean
+  approval is recorded as an inline `## Reviewer verdict` in the impl file —
+  both count as "review done".
 - Whenever the human asks for a commit: FIRST append the session entry to
   `progress/archive/history.md`, THEN commit (see AGENTS.md "Commit rule").
 

@@ -172,3 +172,16 @@ Output: waiting for human approval of `printer_profiles` spec.
 - Commit subject: `feat: printer_profiles + generate_budget R11 (printer select)` — entered before commit per archive-first rule
 
 Output: `printer_profiles` marked `done` in `feature_list.json`.
+
+## Session 13 — 2026-08-04
+
+**Feature:** `printer_profiles` review hardening + process rule (review docs)
+**Transition:** follow-up work → committed; review markdowns eliminated
+
+- Implemented both recommended changes from the printer review: non-finite nozzle sizes (`NaN`/`Infinity`/`-Infinity`) → 422 via `value.is_finite()` (`printer_service.py`); `brand`/`model` >100 chars → 422 in `PrinterCreate`/`PrinterUpdate` (`schemas/printer.py`). 4 new tests → **151/151 pass**, `printer_service.py` 95%, `schemas/printer.py` 93%
+- New rule (docs): `progress/review_<feature>.md` is created only when the review produced recommended changes; clean approvals are recorded as an inline `## Reviewer verdict` in the impl file. Updated `reviewer.md`, `leader.md`, `CHECKPOINTS.md`, `docs/specs.md`
+- Eliminated all `progress/review_*.md` (`printer_profiles`, `budget_r11`, `product_management`); verdicts migrated inline into the three impl files
+- Fixed `init.sh` harness: `cancelled` features no longer require spec files
+- Commits: printer hardening fix, review-doc rule + cleanup, init.sh fix
+
+Output: repo clean of review markdowns; new rule in effect from this session.

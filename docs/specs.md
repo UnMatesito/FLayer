@@ -36,7 +36,7 @@ reviews             │
                     ▼
               [reviewer]
               verifies R<n> ↔ test, tasks [x]
-              progress/review_<feature>.md
+              review outcome (doc or inline) ←
                     │
               ┌─────┴─────┐
               ▼           ▼
@@ -46,6 +46,22 @@ reviews             │
         implementer   feature_list.json: "done"
         with feedback  progress/history.md += entry
 ```
+
+## Review outcome — doc only when it has content
+
+The reviewer creates `progress/review_<feature>.md` **only when** the review
+produced recommended changes (a rejection, or non-blocking hardening notes
+worth recording). A clean approval with nothing to report gets no review doc —
+the verdict is recorded inline in `progress/impl_<feature>.md`:
+
+```markdown
+## Reviewer verdict
+APPROVED — no recommended changes, no review doc created (date)
+```
+
+This keeps the repo clean: a review doc exists **iff** something needs to be
+looked at again. The leader and `CHECKPOINTS.md` treat either form (review doc
+or inline verdict) as proof the review happened.
 
 ## EARS — Requirements Notation
 

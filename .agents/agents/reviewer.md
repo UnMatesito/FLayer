@@ -26,7 +26,20 @@ Do not load full architecture docs or history.
 
 ## Output: `progress/review_<feature>.md`
 
-If approved:
+**Rule: create the review doc ONLY when the review produced recommended
+changes** — a rejection, or non-blocking hardening notes worth recording.
+A clean approval with nothing to report does NOT get a review doc; instead
+append an inline verdict to `progress/impl_<feature>.md`:
+
+```markdown
+## Reviewer verdict
+APPROVED — no recommended changes, no review doc created (date)
+```
+
+A review doc exists iff something needs to be looked at again. The leader
+accepts either form as proof the review happened.
+
+If approved with notes:
 ```markdown
 # Review: <feature>
 
@@ -41,6 +54,9 @@ If approved:
 78% ✓
 
 ## Verdict: APPROVED
+
+## Recommended changes (non-blocking)
+1. ... specific and actionable ...
 ```
 
 If rejected, be specific and actionable:
