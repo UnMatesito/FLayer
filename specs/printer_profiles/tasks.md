@@ -71,6 +71,16 @@
 - [x] `test_list_maintenance_ordered_by_date_desc` (R12)
 - [x] `test_list_maintenance_foreign_printer_404` (R6, R12)
 
+## Review follow-up (2026-08-04) — recommended changes
+
+- [x] Reject non-finite nozzle sizes (`NaN`, `Infinity`, `-Infinity`) with 422
+      via `value.is_finite()` in `validate_nozzle_sizes` (R15)
+- [x] Enforce `brand` / `model` max 100 chars after trim → 422 instead of DB
+      500 in `PrinterCreate`/`PrinterUpdate` (R20)
+- [x] Tests: `test_non_finite_nozzle_size_422`, `test_brand_model_too_long_422`,
+      `test_brand_model_exactly_100_chars_accepted`,
+      `test_update_brand_model_too_long_422` (R15, R20)
+
 ## Frontend
 
 - [x] Add `Printer`, `PrinterCreate`, `PrinterUpdate`, `MaintenanceRecord`, `MaintenanceCreate` types to `api.ts` (R13, R14)

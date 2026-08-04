@@ -20,7 +20,7 @@ def validate_nozzle_sizes(nozzles: list[str]) -> list[str]:
                 value = Decimal(normalized)
             except InvalidOperation:
                 raise ValueError(f"Invalid nozzle size: {size}")
-            if value <= 0:
+            if not value.is_finite() or value <= 0:
                 raise ValueError(f"Invalid nozzle size: {size}")
         if normalized in seen:
             raise ValueError(f"Duplicate nozzle size: {size}")

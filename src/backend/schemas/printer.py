@@ -33,6 +33,8 @@ class PrinterCreate(BaseModel):
         if v is None:
             return None
         stripped = v.strip()
+        if len(stripped) > 100:
+            raise ValueError("brand and model must be at most 100 characters")
         return stripped if stripped else None
 
     @field_validator("nozzle_sizes")
@@ -102,6 +104,8 @@ class PrinterUpdate(BaseModel):
         if v is None:
             return None
         stripped = v.strip()
+        if len(stripped) > 100:
+            raise ValueError("brand and model must be at most 100 characters")
         return stripped if stripped else None
 
     @field_validator("nozzle_sizes")

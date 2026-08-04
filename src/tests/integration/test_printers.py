@@ -184,6 +184,61 @@ def test_invalid_nozzle_size_422(client, auth_headers):
     assert response.status_code == 422
 
 
+def test_non_finite_nozzle_size_422(client, auth_headers):
+    for bad in ["NaN", "Infinity", "-Infinity"]:
+        response = client.post(
+            "/api/printers",
+            json={"name": "Non Finite", "nozzle_sizes": [bad]},
+            headers=auth_headers,
+        )
+        assert response.status_code == 422, f"{bad} should be rejected with 422"
+
+
+def test_brand_model_too_long_422(client, auth_headers):
+    long = "x" * 101
+    response = client.post(
+        "/api/printers",
+        json={"name": "Long Brand", "brand": long},
+        headers=auth_headers,
+    )
+    assert response.status_code == 422
+
+    response = client.post(
+        "/api/printers",
+        json={"name": "Long Model", "model": long},
+        headers=auth_headers,
+    )
+    assert response.status_code == 422
+
+    response = client.post(
+        "/api/printers",
+        json={"name": "Long Both", "brand": long, "model": long},
+        headers=auth_headers,
+    )
+    assert response.status_code == 422
+
+
+def test_brand_model_exactly_100_chars_accepted(client, auth_headers):
+    long = "x" * 100
+    response = client.post(
+        "/api/printers",
+        json={"name": "At Limit", "brand": long, "model": long},
+        headers=auth_headers,
+    )
+    assert response.status_code == 201
+    assert response.json()["brand"] == long
+    assert response.json()["model"] == long
+
+
+def test_update_brand_model_too_long_422(client, auth_headers, test_printer):
+    response = client.patch(
+        f"/api/printers/{test_printer.id}",
+        json={"brand": "x" * 101},
+        headers=auth_headers,
+    )
+    assert response.status_code == 422
+
+
 def test_negative_power_watts_422(client, auth_headers):
     response = client.post(
         "/api/printers",
