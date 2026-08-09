@@ -63,6 +63,7 @@ PostgreSQL          Mailpit / SendGrid  File Storage
 | ORM | SQLAlchemy 2.0 | 2.x | Async ORM with `Mapped` types, `AsyncAttrs`, `mapped_column` |
 | Migrations | Alembic | latest | SQLAlchemy-native migration tool |
 | UI | MUI v7 | 7.x | Production-ready components, `sx` prop, `slots`/`slotProps` |
+| Styling | Tailwind CSS v4 | 4.x | Utilities for layout/spacing/typography; `@theme` tokens mapped from MUI `cssVariables` (see `docs/conventions.md`) |
 | Charts | Nivo | latest | Covers dashboard + reports |
 | Data Fetching | TanStack Query v5 | 5.x | Server state management, cache invalidation, mutations |
 | Auth | JWT + email OTP | — | Simple, no SMS dependency |

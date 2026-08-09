@@ -1,13 +1,16 @@
 # Current
 
-**Feature:** none active — `printer_profiles` (done) + `generate_budget` R11 (done, approved)
-**Next:** pick next feature from `feature_list.json` (region_parameters, email_notifications, dashboard, reports pending)
+**Feature:** `dashboard` (implemented, awaiting review + manual pass)
+**Next:** human manual verification (tasks 65–66) + reviewer → done
 
-- `printer_profiles`: implemented + reviewer APPROVED, review recommended changes implemented; marked `done`
-- `generate_budget` R11 (printer select in budget form): implemented + reviewer APPROVED (1 rejection → fixed, re-approved)
+- `dashboard`: implementer done → `progress/impl_dashboard.md` (R1–R23, 181 tests, build clean, coverage 98%). Remaining tasks: #64 lint (pre-existing broken in Next 16), #65–66 manual UI/branding checks (human). Awaiting reviewer + human manual pass.
+
+## Context (prior sessions, all committed)
+
+- `printer_profiles`: done; 2026-08-04 review hardening done (non-finite nozzles → 422, brand/model ≤100 chars → 422)
+- `generate_budget` R11: done (printer select); 1 rejection → fixed
 - 151/151 tests, build clean
-- 2026-08-04: review recommended changes from `printers` implemented (non-finite nozzles → 422, brand/model ≤100 chars → 422)
-- 2026-08-04: new rule — review docs only when they contain recommended changes; clean approvals recorded as inline `## Reviewer verdict` in impl files; all `progress/review_*.md` eliminated (verdicts migrated inline)
+- Rule in effect: review docs only when they contain recommended changes (verdicts inline in impl files)
 
 Note: `arquiminis` cancelled by human decision (2026-07-31) — feature no longer needed.
 

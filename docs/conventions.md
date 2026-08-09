@@ -18,17 +18,37 @@
 - **Dependency injection** via `Depends` with `Annotated` syntax (Python 3.10+)
 - **Repository pattern** is optional for MVP; keep it simple with direct session usage in routers
 
-## TypeScript / React (Frontend — Next.js 16 App Router + MUI v7)
+## TypeScript / React (Frontend — Next.js 16 App Router + MUI v7 + Tailwind CSS v4)
 
 - Functional components + hooks, no classes
 - **Server Components** by default; use `"use client"` only when needed (interactivity, MUI hooks)
 - **Naming**: `PascalCase` for components, `camelCase` for functions/variables
 - One component per file, co-located with its styles if specific
 - **Data fetching with TanStack Query v5** — never bare `useEffect` + `fetch`; use `useQuery` / `useMutation`
-- **MUI v7 styling**: use `sx` prop for component-specific overrides, define typed `Record<string, SxProps<Theme>>` for modular styles
+
+### Hybrid styling — Tailwind CSS v4 + MUI v7
+
+One palette drives both systems: the MUI theme (with `cssVariables: true`) emits `--mui-palette-*` variables and `globals.css` maps them into the Tailwind `@theme` (`text-primary`, `bg-plate`, `border-line`, `text-slate`, ...). Never hardcode colors; always use theme tokens from either system.
+
+**Use Tailwind utilities (`className`) for:**
+- Layout: flex/grid, spacing, width/height, responsive variants (`md:`, `lg:`)
+- Typography: size, weight, color (`text-sm`, `font-semibold`, `text-ink`)
+- Simple surfaces, borders, rounded corners, shadows
+
+**Tailwind v4 spacing = MUI spacing.** `globals.css` sets `--spacing: 0.5rem` (8px) so `p-2` ≡ MUI `p: 2` (16px), `gap-3` ≡ `spacing(3)` (24px). Never use pixel values with scale classes — a design pixel size like `height: 40` is written as an arbitrary value `h-[40px]`. Typography maps: MUI `h4` → `text-[2.125rem]`, `h5` → `text-[1.5rem]`, `h6` → `text-[1.25rem]`, `body1` → `text-sm`, `body2` → `text-sm text-slate`, `caption` → `text-xs`.
+
+**Surface tokens:** `bg-snow` = paper, `bg-canvas` = grey.50 (page background), `bg-plate` = plate, `border-line` = divider.
+
+**Use MUI components + `sx` for:**
+- Interactive widgets: `Button`, `TextField`, `Select`, `Dialog`, `Snackbar`, `Table`, `Chip`, `Badge`, `Drawer`, `AppBar`
+- Component-specific overrides: define typed `Record<string, SxProps<Theme>>` for modular styles
 - **MUI v7 slots**: use `slots` and `slotProps` for deep customization of sub-components
 - **MUI v7 dark mode**: use `theme.applyStyles('dark', ...)` inside `sx` prop arrays
 - **Theme tokens** — use theme spacing (`p: 2` → `theme.spacing(2)`) and palette tokens (`color: 'primary.main'`); avoid hardcoded pixels
+
+**CSS layers:** `@layer theme, base, mui, components, utilities;` in `globals.css` + `StyledEngineProvider enableCssLayer` — MUI styles live in the `mui` layer, so Tailwind utilities always win for conflicts. Don't disable Tailwind preflight; don't remove the layer declaration.
+
+**New features:** write layout/spacing with Tailwind classes, keep MUI for widgets (see `docs/architecture_summary.md`).
 
 ## Error Handling
 
