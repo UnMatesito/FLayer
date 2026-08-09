@@ -16,6 +16,7 @@ Note: `arquiminis` cancelled by human decision (2026-07-31) — feature no longe
 
 ## Pending features
 
+- `app_entry` (spec_ready 2026-08-08 — simplified non-selling `/` + FlayerLogo; awaiting human approval)
 - `region_parameters` (no deps)
 - `email_notifications` (depends on `order_status`)
 - `dashboard` (depends on `stock_management`, `generate_budget`) — both deps done
