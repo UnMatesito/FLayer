@@ -16,3 +16,5 @@
 src/.coverage
 src/frontend/tsconfig.tsbuildinfo
 src/uploads
+
+.hallmark
