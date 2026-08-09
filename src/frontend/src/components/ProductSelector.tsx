@@ -1,22 +1,12 @@
 'use client';
 
 import {
-  Box, Card, CardContent, CardMedia, Typography, Stack, Chip,
-  Button, IconButton, TextField, InputAdornment, Alert,
+  Alert, Button, Chip, IconButton, InputAdornment, TextField,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import RemoveIcon from '@mui/icons-material/Remove';
 import DeleteIcon from '@mui/icons-material/Delete';
-import type { SxProps, Theme } from '@mui/material';
 import type { Product, LineItem } from '@/app/api';
-
-const styles: Record<string, SxProps<Theme>> = {
-  grid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
-    gap: 2,
-  },
-};
 
 interface Props {
   products: Product[];
@@ -40,44 +30,43 @@ export default function ProductSelector({
   }
 
   return (
-    <Box sx={styles.grid}>
+    <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-2">
       {products.filter((p) => p.is_active).map((product) => {
         const inCart = selectedIds.has(product.id);
         const cartItem = lineItems.find((item) => item.product_id === product.id);
         const outOfStock = product.stock_quantity < 1;
         return (
-          <Card key={product.id} variant="outlined" sx={{
-            opacity: outOfStock ? 0.5 : 1,
-            border: inCart ? '2px solid' : undefined,
-            borderColor: inCart ? 'primary.main' : undefined,
-          }}>
-            <CardMedia
-              component="img"
-              height="120"
-              image={product.image_url || '/placeholder.svg'}
+          <div
+            key={product.id}
+            className={`rounded-md border bg-snow ${
+              inCart ? 'border-2 border-primary' : 'border-line'
+            } ${outOfStock ? 'opacity-50' : ''}`}
+          >
+            <img
+              src={product.image_url || '/placeholder.svg'}
               alt={product.name}
-              sx={{ objectFit: 'cover' }}
+              className="h-[120px] w-full rounded-t-md object-cover"
             />
-            <CardContent sx={{ pb: 1 }}>
-              <Typography variant="subtitle2" fontWeight={600} noWrap>
+            <div className="p-2 pb-1">
+              <h3 className="truncate text-sm font-semibold">
                 {product.name}
-              </Typography>
-              <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 0.5 }}>
-                <Typography variant="h6" color="primary" fontWeight={700}>
+              </h3>
+              <div className="mt-0.5 flex items-center gap-1">
+                <span className="text-[1.25rem] font-bold text-primary">
                   ${Number(product.price).toFixed(2)}
-                </Typography>
+                </span>
                 <Chip
                   label={outOfStock ? 'Sin stock' : `${product.stock_quantity} uds.`}
                   size="small"
                   color={product.stock_quantity <= 3 ? 'warning' : 'default'}
                 />
-              </Stack>
+              </div>
               {outOfStock ? (
                 <Button variant="outlined" disabled size="small" sx={{ mt: 1 }} fullWidth>
                   Sin stock
                 </Button>
               ) : inCart && cartItem ? (
-                <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 1 }}>
+                <div className="mt-1 flex items-center gap-1">
                   <IconButton
                     size="small"
                     onClick={() => onUpdateQuantity(product.id, cartItem.quantity - 1, product.stock_quantity)}
@@ -107,7 +96,7 @@ export default function ProductSelector({
                   >
                     <DeleteIcon fontSize="small" />
                   </IconButton>
-                </Stack>
+                </div>
               ) : (
                 <Button
                   variant="contained"
@@ -120,10 +109,10 @@ export default function ProductSelector({
                   Agregar
                 </Button>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         );
       })}
-    </Box>
+    </div>
   );
 }

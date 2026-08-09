@@ -3,19 +3,15 @@
 import { useEffect, useState } from 'react';
 import {
   Autocomplete,
-  Box,
   Button,
   Chip,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
-  Stack,
   TextField,
-  Typography,
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
-import type { SxProps, Theme } from '@mui/material';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   createPrinter,
@@ -28,20 +24,6 @@ import {
 import { PrinterImage } from '@/components/PrinterImage';
 
 const NOZZLE_PRESETS = ['0.2', '0.4', '0.6', '0.8'];
-
-const styles: Record<string, SxProps<Theme>> = {
-  preview: {
-    width: 120,
-    height: 120,
-    borderRadius: 1,
-    flexShrink: 0,
-  },
-  imageRow: {
-    display: 'flex',
-    alignItems: 'flex-start',
-    gap: 2,
-  },
-};
 
 type FormState = {
   name: string;
@@ -132,8 +114,8 @@ export function PrinterFormDialog({
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle>{isEdit ? 'Editar impresora' : 'Agregar impresora'}</DialogTitle>
       <DialogContent>
-        <Stack spacing={2} sx={{ mt: 1 }}>
-          {error && <Typography color="error" variant="body2">{error}</Typography>}
+        <div className="mt-1 flex flex-col gap-2">
+          {error && <p className="text-sm text-error">{error}</p>}
           <TextField
             label="Nombre"
             value={form.name}
@@ -177,7 +159,7 @@ export function PrinterFormDialog({
               <TextField {...params} label="Boquillas (mm)" placeholder="Elegí o escribí un tamaño" />
             )}
           />
-          <Stack direction="row" spacing={2}>
+          <div className="flex flex-wrap gap-2">
             <TextField
               label="Potencia (W)"
               type="number"
@@ -194,7 +176,7 @@ export function PrinterFormDialog({
               fullWidth
               slotProps={{ htmlInput: { min: 0, step: 0.01 } }}
             />
-          </Stack>
+          </div>
           <TextField
             label="Costo repuestos / máquina"
             type="number"
@@ -203,9 +185,14 @@ export function PrinterFormDialog({
             fullWidth
             slotProps={{ htmlInput: { min: 0, step: 0.01 } }}
           />
-          <Box sx={styles.imageRow}>
-            <PrinterImage src={form.imageUrl.trim() || null} alt="Vista previa" sx={styles.preview} iconSize={48} />
-            <Stack spacing={1} sx={{ flexGrow: 1 }}>
+          <div className="flex items-start gap-2">
+            <PrinterImage
+              src={form.imageUrl.trim() || null}
+              alt="Vista previa"
+              className="h-[120px] w-[120px] shrink-0 rounded-md"
+              iconSize={48}
+            />
+            <div className="flex flex-grow flex-col gap-1">
               <TextField
                 label="Imagen (URL)"
                 value={form.imageUrl}
@@ -223,15 +210,15 @@ export function PrinterFormDialog({
               >
                 Quitar imagen
               </Button>
-            </Stack>
-          </Box>
+            </div>
+          </div>
           <TextField
             label="Notas"
             value={form.notes}
             onChange={(e) => set({ notes: e.target.value })}
             fullWidth multiline rows={2}
           />
-        </Stack>
+        </div>
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Cancelar</Button>

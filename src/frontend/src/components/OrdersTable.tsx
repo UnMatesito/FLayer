@@ -9,13 +9,10 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Paper,
-  Typography,
   Chip,
   Select,
   MenuItem,
   CircularProgress,
-  Box,
   IconButton,
   Button,
 } from '@mui/material';
@@ -34,11 +31,11 @@ function BudgetCell({ orderId, orderStatus, workType, hasBudget }: { orderId: st
   const router = useRouter();
 
   if (workType === 'product') {
-    return <Typography variant="body2" color="text.disabled">—</Typography>;
+    return <span className="text-sm text-slate">—</span>;
   }
 
   if (orderStatus !== 'quoting') {
-    return <Typography variant="body2" color="text.disabled">—</Typography>;
+    return <span className="text-sm text-slate">—</span>;
   }
 
   if (hasBudget) {
@@ -86,7 +83,7 @@ function StatusCell({ order, transitions }: StatusCellProps) {
 
   if (editing) {
     return (
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+      <div className="flex items-center gap-0.5">
         <Select
           value={selected}
           onChange={(e) => setSelected(e.target.value)}
@@ -126,24 +123,24 @@ function StatusCell({ order, transitions }: StatusCellProps) {
         >
           <CloseIcon fontSize="small" />
         </IconButton>
-      </Box>
+      </div>
     );
   }
 
   return (
-    <Box
+    <div
       onClick={(e) => {
         e.stopPropagation();
         setEditing(true);
       }}
-      sx={{ cursor: 'pointer' }}
+      className="cursor-pointer"
     >
       <Chip
         label={statusLabel(order.status)}
         color={statusColor(order.status) as any}
         size="small"
       />
-    </Box>
+    </div>
   );
 }
 
@@ -157,54 +154,57 @@ export default function OrdersTable() {
 
   if (isLoading) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+      <div className="flex justify-center p-4">
         <CircularProgress />
-      </Box>
+      </div>
     );
   }
 
   if (error) {
     return (
-      <Typography color="error">
+      <p className="text-sm text-error">
         Error al cargar pedidos:{' '}
         {error instanceof Error ? error.message : 'Error desconocido'}
-      </Typography>
+      </p>
     );
   }
 
   if (!orders || orders.length === 0) {
     return (
-      <Typography color="text.secondary" sx={{ py: 4 }}>
+      <p className="py-4 text-sm text-slate">
         No hay pedidos.
-      </Typography>
+      </p>
     );
   }
 
   return (
-    <TableContainer component={Paper}>
-      <Table>
-        <TableHead>
-          <TableRow>
-            <TableCell>ID</TableCell>
-            <TableCell>Cliente</TableCell>
-            <TableCell>Tipo</TableCell>
-            <TableCell>Estado</TableCell>
-            <TableCell>Presupuesto</TableCell>
-            <TableCell>Fecha</TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {orders.map((order) => (
-            <TableRow
-              key={order.id}
-              hover
-              onClick={() => router.push(`/dashboard/orders/${order.id}`)}
-              sx={{ cursor: 'pointer' }}
-            >
-              <TableCell sx={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>
-                {order.id.slice(0, 8)}...
-              </TableCell>
-              <TableCell>{order.customer_id}</TableCell>
+    <div className="card rounded-md border border-line bg-snow">
+      <TableContainer>
+        <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>Pedido</TableCell>
+                <TableCell>Cliente</TableCell>
+                <TableCell>Tipo</TableCell>
+                <TableCell>Estado</TableCell>
+                <TableCell>Presupuesto</TableCell>
+                <TableCell>Fecha</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {orders.map((order) => (
+                <TableRow
+                  key={order.id}
+                  hover
+                  onClick={() => router.push(`/dashboard/orders/${order.id}`)}
+                  sx={{ cursor: 'pointer' }}
+                >
+                  <TableCell className="font-mono text-[0.8rem]">
+                    #{order.id.slice(0, 8)}
+                  </TableCell>
+                  <TableCell>
+                    {order.customer_name ?? '—'}
+                  </TableCell>
               <TableCell>
                 {order.work_type === 'impresion_3d'
                   ? 'Impresión 3D'
@@ -226,5 +226,6 @@ export default function OrdersTable() {
         </TableBody>
       </Table>
     </TableContainer>
+    </div>
   );
 }

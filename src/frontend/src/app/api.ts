@@ -89,10 +89,14 @@ export interface SupplyUpdate {
 
 export interface StockMovement {
   id: string;
-  filament_id: string;
+  filament_id?: string | null;
   filament_color_name?: string | null;
+  supply_id?: string | null;
+  supply_name?: string | null;
   movement_type: 'consumption' | 'adjustment' | 'reversal';
-  quantity_grams: number;
+  quantity_grams?: number | null;
+  quantity?: number | null;
+  unit?: string | null;
   order_id?: string | null;
   order_reference?: string | null;
   created_by_user_id: string;
@@ -166,6 +170,7 @@ export interface InternalOrderPayload extends OrderPayload {
 export interface Order {
   id: string;
   customer_id: string;
+  customer_name?: string | null;
   work_type: string;
   description: string;
   files: { filename: string; url: string }[] | null;
@@ -185,11 +190,111 @@ export interface User {
   id: string;
   email: string;
   name: string;
+  primary_color: string | null;
+  logo_url: string | null;
+}
+
+export interface ProfileUpdate {
+  name?: string;
+  primary_color?: string | null;
 }
 
 export interface LoginResponse {
   user: User;
   otp_required: boolean;
+}
+
+export async function updateProfile(payload: ProfileUpdate): Promise<User> {
+  const res = await fetch(`${API_BASE}/auth/me`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+    credentials: 'include',
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'No se pudo guardar el perfil');
+  }
+  return res.json();
+}
+
+export async function uploadLogo(file: File): Promise<User> {
+  const formData = new FormData();
+  formData.append('file', file);
+  const res = await fetch(`${API_BASE}/auth/me/logo`, {
+    method: 'POST',
+    body: formData,
+    credentials: 'include',
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'No se pudo subir el logo');
+  }
+  return res.json();
+}
+
+export async function removeLogo(): Promise<User> {
+  const res = await fetch(`${API_BASE}/auth/me/logo`, {
+    method: 'DELETE',
+    credentials: 'include',
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'No se pudo quitar el logo');
+  }
+  return res.json();
+}
+
+// Dashboard summary
+export interface DashboardKpis {
+  orders_month: number;
+  revenue_month: number;
+  pending_orders: number;
+  printing_orders: number;
+  budgeted_value_quoting: number;
+  low_stock_filaments: number;
+  low_stock_supplies: number;
+  printers_active: number;
+  maintenance_month: number;
+}
+
+export interface ActivityPoint {
+  date: string;
+  orders: number;
+  revenue: number;
+}
+
+export interface RecentOrderItem {
+  id: string;
+  short_id: string;
+  customer_name: string;
+  work_type: string;
+  status: string;
+  final_value: number;
+  created_at: string;
+}
+
+export interface PrinterBayItem {
+  id: string;
+  name: string;
+  brand: string | null;
+  model: string | null;
+  maintenance_month: number;
+}
+
+export interface DashboardSummary {
+  as_of: string;
+  kpis: DashboardKpis;
+  activity: ActivityPoint[];
+  recent_orders: RecentOrderItem[];
+  low_stock: LowStockResponse;
+  printers: PrinterBayItem[];
+}
+
+export async function fetchDashboardSummary(): Promise<DashboardSummary> {
+  const res = await fetch(`${API_BASE}/dashboard/summary`, { credentials: 'include' });
+  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail || 'Failed to fetch summary');
+  return res.json();
 }
 
 export async function login(email: string, password: string): Promise<LoginResponse> {
@@ -414,8 +519,31 @@ export async function updateSupply(id: string, payload: SupplyUpdate): Promise<S
   return res.json();
 }
 
+export interface SupplyAdjust {
+  delta: number;
+  notes?: string;
+}
+
+export interface SupplyAdjustResult {
+  id: string;
+  quantity: number;
+  movement_id: string;
+}
+
+export async function adjustSupply(id: string, payload: SupplyAdjust): Promise<SupplyAdjustResult> {
+  const res = await fetch(`${API_BASE}/supplies/${id}/adjust`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+    credentials: 'include',
+  });
+  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail || 'Failed to adjust supply');
+  return res.json();
+}
+
 export async function fetchStockMovements(params?: {
   filament_id?: string;
+  supply_id?: string;
   movement_type?: string;
   order_id?: string;
   date_from?: string;

@@ -3,8 +3,7 @@
 import { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import {
-  Box, Typography, Button, Paper, Chip, CircularProgress,
-  Alert, Stack, Divider, TextField, Dialog, DialogTitle,
+  Button, Chip, CircularProgress, Alert, TextField, Dialog, DialogTitle,
   DialogContent, DialogActions, Table, TableBody, TableCell,
   TableContainer, TableHead, TableRow, MenuItem, Select,
   InputLabel, FormControl,
@@ -13,7 +12,6 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import ArchiveIcon from '@mui/icons-material/Archive';
-import type { SxProps, Theme } from '@mui/material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   fetchPrinter, deletePrinter, fetchPrinterMaintenance, createPrinterMaintenance,
@@ -27,21 +25,6 @@ const MAINTENANCE_TYPES: { value: MaintenanceType; label: string }[] = [
   { value: 'cleaning', label: 'Limpieza' },
   { value: 'repair', label: 'Reparación' },
 ];
-
-const styles: Record<string, SxProps<Theme>> = {
-  fieldLabel: {
-    color: 'text.secondary', fontSize: '0.8rem', mb: 0.5,
-  },
-  fieldValue: {
-    fontWeight: 500,
-  },
-  headerImage: {
-    width: 200,
-    height: 200,
-    borderRadius: 2,
-    flexShrink: 0,
-  },
-};
 
 function maintenanceColor(type: string) {
   switch (type) {
@@ -87,7 +70,7 @@ function AddMaintenanceDialog({ open, onClose, printerId }: {
     <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
       <DialogTitle>Agregar mantenimiento</DialogTitle>
       <DialogContent>
-        <Stack spacing={2} sx={{ mt: 1 }}>
+        <div className="mt-1 flex flex-col gap-2">
           {error && <Alert severity="error">{error}</Alert>}
           <FormControl fullWidth>
             <InputLabel>Tipo</InputLabel>
@@ -123,7 +106,7 @@ function AddMaintenanceDialog({ open, onClose, printerId }: {
             fullWidth
             slotProps={{ htmlInput: { min: 0, step: 0.01 } }}
           />
-        </Stack>
+        </div>
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Cancelar</Button>
@@ -172,34 +155,34 @@ export default function PrinterDetailPage() {
   });
 
   if (isLoading) {
-    return <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}><CircularProgress /></Box>;
+    return <div className="flex justify-center p-4"><CircularProgress /></div>;
   }
 
   if (error || !printer) {
     return (
-      <Box>
+      <div>
         <Alert severity="error">{error instanceof Error ? error.message : 'Impresora no encontrada'}</Alert>
         <Button startIcon={<ArrowBackIcon />} onClick={() => router.back()} sx={{ mt: 2 }}>Volver</Button>
-      </Box>
+      </div>
     );
   }
 
   return (
-    <Box>
+    <div>
       <Button startIcon={<ArrowBackIcon />} onClick={() => router.back()} sx={{ mb: 2 }}>Volver</Button>
 
-      <Paper sx={{ p: 3, mb: 3 }}>
-        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={3} sx={{ mb: 3 }}>
-          <PrinterImage src={printer.image_url} alt={printer.name} sx={styles.headerImage} iconSize={96} />
-          <Box sx={{ flexGrow: 1 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 1 }}>
-              <Box>
-                <Typography variant="h5" fontWeight={600}>{printer.name}</Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+      <div className="mb-3 card rounded-md border border-line bg-snow p-4">
+        <div className="mb-3 flex flex-col gap-3 sm:flex-row">
+          <PrinterImage src={printer.image_url} alt={printer.name} className="h-[200px] w-[200px] shrink-0 rounded-md" iconSize={96} />
+          <div className="grow">
+            <div className="flex items-start justify-between gap-1">
+              <div>
+                <h2 className="text-[1.5rem] font-semibold">{printer.name}</h2>
+                <p className="mt-0.5 text-sm text-slate">
                   {[printer.brand, printer.model].filter(Boolean).join(' · ') || 'Marca no especificada'}
-                </Typography>
-              </Box>
-              <Stack direction="row" spacing={1} sx={{ flexShrink: 0 }}>
+                </p>
+              </div>
+              <div className="flex shrink-0 gap-1">
                 <Button size="small" variant="outlined" startIcon={<EditIcon />} onClick={() => setEditOpen(true)}>
                   Editar
                 </Button>
@@ -207,57 +190,57 @@ export default function PrinterDetailPage() {
                   onClick={() => { if (confirm('¿Archivar esta impresora?')) archiveMutation.mutate(); }}>
                   Archivar
                 </Button>
-              </Stack>
-            </Box>
+              </div>
+            </div>
             {printer.nozzle_sizes.length > 0 && (
-              <Stack direction="row" spacing={0.5} sx={{ mt: 1.5 }} flexWrap="wrap" useFlexGap>
+              <div className="mt-1.5 flex flex-wrap gap-0.5">
                 {printer.nozzle_sizes.map((n) => (
                   <Chip key={n} label={`${n} mm`} size="small" variant="outlined" />
                 ))}
-              </Stack>
+              </div>
             )}
             {printer.notes && (
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 1.5 }}>
+              <p className="mt-1.5 text-sm text-slate">
                 {printer.notes}
-              </Typography>
+              </p>
             )}
-          </Box>
-        </Stack>
+          </div>
+        </div>
 
-        <Divider sx={{ mb: 3 }} />
+        <hr className="mb-3 border-line" />
 
-        <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 3 }}>
-          <Box>
-            <Typography sx={styles.fieldLabel}>Potencia</Typography>
-            <Typography sx={styles.fieldValue}>{printer.power_watts != null ? `${printer.power_watts} W` : '—'}</Typography>
-          </Box>
-          <Box>
-            <Typography sx={styles.fieldLabel}>Vida útil</Typography>
-            <Typography sx={styles.fieldValue}>{printer.lifespan_hours != null ? `${printer.lifespan_hours} h` : '—'}</Typography>
-          </Box>
-          <Box>
-            <Typography sx={styles.fieldLabel}>Costo repuestos / máquina</Typography>
-            <Typography sx={styles.fieldValue}>{formatMoney(printer.spare_parts_cost)}</Typography>
-          </Box>
-          <Box>
-            <Typography sx={styles.fieldLabel}>Estado</Typography>
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-3">
+          <div>
+            <p className="mb-0.5 text-xs text-slate">Potencia</p>
+            <p className="font-medium">{printer.power_watts != null ? `${printer.power_watts} W` : '—'}</p>
+          </div>
+          <div>
+            <p className="mb-0.5 text-xs text-slate">Vida útil</p>
+            <p className="font-medium">{printer.lifespan_hours != null ? `${printer.lifespan_hours} h` : '—'}</p>
+          </div>
+          <div>
+            <p className="mb-0.5 text-xs text-slate">Costo repuestos / máquina</p>
+            <p className="font-medium">{formatMoney(printer.spare_parts_cost)}</p>
+          </div>
+          <div>
+            <p className="mb-0.5 text-xs text-slate">Estado</p>
             <Chip label={printer.is_active ? 'Activa' : 'Archivada'} size="small" color={printer.is_active ? 'success' : 'default'} />
-          </Box>
-          <Box>
-            <Typography sx={styles.fieldLabel}>Creada</Typography>
-            <Typography sx={styles.fieldValue}>{new Date(printer.created_at).toLocaleDateString()}</Typography>
-          </Box>
-        </Box>
-      </Paper>
+          </div>
+          <div>
+            <p className="mb-0.5 text-xs text-slate">Creada</p>
+            <p className="font-medium">{new Date(printer.created_at).toLocaleDateString()}</p>
+          </div>
+        </div>
+      </div>
 
-      <Paper sx={{ p: 3 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-          <Typography variant="h6" fontWeight={600}>Historial de mantenimiento</Typography>
+      <div className="card rounded-md border border-line bg-snow p-4">
+        <div className="mb-2 flex items-center justify-between">
+          <h3 className="text-[1.25rem] font-semibold">Historial de mantenimiento</h3>
           <Button size="small" variant="contained" startIcon={<AddIcon />} onClick={() => setMaintenanceOpen(true)}>
             Agregar mantenimiento
           </Button>
-        </Box>
-        <Divider sx={{ mb: 2 }} />
+        </div>
+        <hr className="mb-2 border-line" />
 
         {maintenance && maintenance.length > 0 ? (
           <TableContainer>
@@ -285,12 +268,12 @@ export default function PrinterDetailPage() {
             </Table>
           </TableContainer>
         ) : (
-          <Typography color="text.secondary">Sin registros de mantenimiento.</Typography>
+          <p className="text-sm text-slate">Sin registros de mantenimiento.</p>
         )}
-      </Paper>
+      </div>
 
       {printer && <PrinterFormDialog open={editOpen} onClose={() => setEditOpen(false)} printer={printer} />}
       <AddMaintenanceDialog open={maintenanceOpen} onClose={() => setMaintenanceOpen(false)} printerId={printer.id} />
-    </Box>
+    </div>
   );
 }

@@ -3,19 +3,13 @@
 import { useState, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import {
-  Box, TextField, Button, Typography, RadioGroup,
-  FormControlLabel, Radio, Stack, Alert, CircularProgress,
+  TextField, Button, RadioGroup,
+  FormControlLabel, Radio, Alert, CircularProgress,
   FormControl, FormLabel,
 } from '@mui/material';
-import type { SxProps, Theme } from '@mui/material';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { createPublicOrder, fetchPublicProducts, type FileInfo, type LineItem } from '@/app/api';
 import ProductSelector from '@/components/ProductSelector';
-
-const styles: Record<string, SxProps<Theme>> = {
-  container: { maxWidth: 900, mx: 'auto', p: 4 },
-  field: { width: '100%' },
-};
 
 export default function OrderForm() {
   const searchParams = useSearchParams();
@@ -121,25 +115,25 @@ export default function OrderForm() {
 
   if (mutation.isSuccess) {
     return (
-      <Box sx={styles.container}>
+      <div className="mx-auto max-w-[56.25rem] p-4">
         <Alert severity="success" sx={{ mb: 2 }}>
           ¡Pedido recibido! Te contactaremos pronto.
         </Alert>
         <Button variant="outlined" onClick={resetForm}>Nuevo Pedido</Button>
-      </Box>
+      </div>
     );
   }
 
   return (
-    <Box sx={styles.container} component="form" onSubmit={handleSubmit}>
-      <Typography variant="h4" gutterBottom fontWeight={600}>
+    <form className="mx-auto max-w-[56.25rem] p-4" onSubmit={handleSubmit}>
+      <h1 className="mb-2 text-[2.125rem] font-semibold">
         Solicitar Pedido
-      </Typography>
+      </h1>
 
-      <Stack spacing={3}>
-        <TextField label="Nombre" value={name} onChange={(e) => setName(e.target.value)} required sx={styles.field} />
-        <TextField label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required sx={styles.field} />
-        <TextField label="Teléfono" value={phone} onChange={(e) => setPhone(e.target.value)} sx={styles.field} />
+      <div className="flex flex-col gap-3">
+        <TextField label="Nombre" value={name} onChange={(e) => setName(e.target.value)} required fullWidth />
+        <TextField label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required fullWidth />
+        <TextField label="Teléfono" value={phone} onChange={(e) => setPhone(e.target.value)} fullWidth />
 
         <FormControl>
           <FormLabel>Tipo de trabajo</FormLabel>
@@ -156,9 +150,9 @@ export default function OrderForm() {
         {workType === 'product' ? (
           <>
             {productsQuery.isLoading ? (
-              <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+              <div className="flex justify-center p-4">
                 <CircularProgress />
-              </Box>
+              </div>
             ) : productsQuery.isError ? (
               <Alert severity="error">Error al cargar productos. Intenta de nuevo.</Alert>
             ) : productsQuery.data && productsQuery.data.length > 0 ? (
@@ -176,15 +170,15 @@ export default function OrderForm() {
 
             {lineItems.length > 0 && (
               <Alert severity="info" icon={false}>
-                <Typography variant="body2" fontWeight={600}>Resumen del pedido:</Typography>
+                <p className="text-sm font-semibold text-slate">Resumen del pedido:</p>
                 {lineItems.map((item) => (
-                  <Typography key={item.product_id} variant="body2">
+                  <p key={item.product_id} className="text-sm text-slate">
                     {item.quantity}× {item.name} — ${(item.quantity * item.unit_price).toFixed(2)}
-                  </Typography>
+                  </p>
                 ))}
-                <Typography variant="body2" fontWeight={700} sx={{ mt: 0.5 }}>
+                <p className="mt-0.5 text-sm font-bold text-slate">
                   Total: ${totalAmount.toFixed(2)}
-                </Typography>
+                </p>
               </Alert>
             )}
 
@@ -194,7 +188,7 @@ export default function OrderForm() {
               onChange={(e) => setDescription(e.target.value)}
               multiline
               rows={2}
-              sx={styles.field}
+              fullWidth
             />
           </>
         ) : (
@@ -205,17 +199,17 @@ export default function OrderForm() {
             required
             multiline
             rows={4}
-            sx={styles.field}
+            fullWidth
           />
         )}
 
-        <Typography variant="subtitle2" color="text.secondary">
+        <p className="text-sm font-medium text-slate">
           Archivo (opcional) — Enlace a Drive, WeTransfer, etc.
-        </Typography>
-        <Stack direction="row" spacing={2}>
+        </p>
+        <div className="flex flex-wrap gap-2">
           <TextField label="Nombre del archivo" value={fileName} onChange={(e) => setFileName(e.target.value)} size="small" sx={{ flex: 1 }} />
           <TextField label="URL del archivo" value={fileUrl} onChange={(e) => setFileUrl(e.target.value)} size="small" sx={{ flex: 2 }} />
-        </Stack>
+        </div>
 
         {mutation.isError && (
           <Alert severity="error">
@@ -227,7 +221,7 @@ export default function OrderForm() {
           startIcon={mutation.isPending ? <CircularProgress size={20} /> : undefined}>
           {mutation.isPending ? 'Enviando...' : 'Enviar Pedido'}
         </Button>
-      </Stack>
-    </Box>
+      </div>
+    </form>
   );
 }

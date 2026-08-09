@@ -3,13 +3,12 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Dialog, DialogTitle, DialogContent, DialogActions,
-  Button, TextField, Stack, Box, Typography, IconButton,
+  Button, TextField, IconButton,
   FormControl, InputLabel, Select, MenuItem, Switch, FormControlLabel,
   CircularProgress, Alert, Table, TableBody, TableCell, TableHead, TableRow,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
-import type { SxProps, Theme } from '@mui/material';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   fetchFilaments, createBudget, updateBudget, previewBudget, fetchPrinters,
@@ -28,12 +27,6 @@ interface Props {
   orderId: string;
   existingBudget?: BudgetResponse | null;
 }
-
-const styles: Record<string, SxProps<Theme>> = {
-  filamentRow: {
-    display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap',
-  },
-};
 
 function itemKey(index: number) {
   return `item-${index}`;
@@ -187,11 +180,11 @@ export default function BudgetForm({ open, onClose, orderId, existingBudget }: P
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
       <DialogTitle>
-        {existingBudget ? 'Editar Presupuesto' : 'Generar Presupuesto'}
+        {existingBudget ? 'Editar presupuesto' : 'Generar presupuesto'}
       </DialogTitle>
       <DialogContent>
-        <Stack spacing={2} sx={{ mt: 1 }}>
-          <Stack direction="row" spacing={2} alignItems="center">
+        <div className="mt-1 flex flex-col gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <FormControl size="small" sx={{ width: 150 }}>
               <InputLabel>Moneda</InputLabel>
               <Select<string>
@@ -218,13 +211,13 @@ export default function BudgetForm({ open, onClose, orderId, existingBudget }: P
                 ))}
               </Select>
             </FormControl>
-          </Stack>
+          </div>
 
           {!useManualFilament && (
-            <Box>
-              <Typography variant="subtitle2" gutterBottom>Filamentos</Typography>
+            <div>
+              <p className="mb-1 text-sm font-medium">Filamentos</p>
               {items.map((item, idx) => (
-                <Box key={itemKey(idx)} sx={styles.filamentRow}>
+                <div key={itemKey(idx)} className="flex flex-wrap items-center gap-2">
                   <FormControl size="small" sx={{ minWidth: 220 }}>
                     <InputLabel>Producto</InputLabel>
                     <Select<string>
@@ -251,12 +244,12 @@ export default function BudgetForm({ open, onClose, orderId, existingBudget }: P
                   <IconButton size="small" color="error" onClick={() => removeItem(idx)} disabled={items.length <= 1}>
                     <DeleteIcon />
                   </IconButton>
-                </Box>
+                </div>
               ))}
               <Button startIcon={<AddIcon />} size="small" onClick={addItem} sx={{ mt: 1 }}>
                 Agregar filamento
               </Button>
-            </Box>
+            </div>
           )}
 
           <FormControlLabel
@@ -270,7 +263,7 @@ export default function BudgetForm({ open, onClose, orderId, existingBudget }: P
           />
 
           {useManualFilament && (
-            <Stack direction="row" spacing={2} alignItems="center">
+            <div className="flex flex-wrap items-center gap-2">
               <TextField
                 label="Costo manual de filamento"
                 type="number"
@@ -289,10 +282,10 @@ export default function BudgetForm({ open, onClose, orderId, existingBudget }: P
                 sx={{ width: 100 }}
                 slotProps={{ htmlInput: { min: 1 } }}
               />
-            </Stack>
+            </div>
           )}
 
-          <Stack direction="row" spacing={2}>
+          <div className="flex gap-2">
             <TextField
               label="Horas"
               type="number"
@@ -311,7 +304,7 @@ export default function BudgetForm({ open, onClose, orderId, existingBudget }: P
               sx={{ width: 100 }}
               slotProps={{ htmlInput: { min: 0, max: 59 } }}
             />
-          </Stack>
+          </div>
 
           <TextField
             label="Costos extra"
@@ -358,15 +351,15 @@ export default function BudgetForm({ open, onClose, orderId, existingBudget }: P
           />
 
           {preview && (
-            <Box sx={{ bgcolor: 'grey.50', p: 2, borderRadius: 1 }}>
-              <Typography variant="subtitle2" gutterBottom fontWeight={600}>
+            <div className="rounded-md bg-canvas p-2">
+              <p className="mb-1 text-sm font-semibold">
                 Previsualización
-              </Typography>
-              <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1 }}>
+              </p>
+              <p className="mb-1 text-xs text-slate">
                 {preview.printer_name ? `Impresora: ${preview.printer_name}` : 'Parámetros por defecto'}
                 {' — '}{preview.power_watts?.toFixed(0) ?? '120'}W, {preview.lifespan_hours?.toFixed(0) ?? '4320'}h,
                 repuestos {preview.currency === 'USD' ? 'US$' : '$'}{preview.spare_parts_cost?.toFixed(2) ?? '150000.00'}
-              </Typography>
+              </p>
               <Table size="small">
                 <TableBody>
                   <TableRow>
@@ -413,7 +406,7 @@ export default function BudgetForm({ open, onClose, orderId, existingBudget }: P
                   </TableRow>
                 </TableBody>
               </Table>
-            </Box>
+            </div>
           )}
 
           {previewError && (
@@ -427,7 +420,7 @@ export default function BudgetForm({ open, onClose, orderId, existingBudget }: P
               {saveMutation.error instanceof Error ? saveMutation.error.message : 'Error al guardar'}
             </Alert>
           )}
-        </Stack>
+        </div>
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose} disabled={saveMutation.isPending}>Cancelar</Button>

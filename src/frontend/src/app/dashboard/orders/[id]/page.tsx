@@ -3,13 +3,11 @@
 import { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import {
-  Container, Typography, Button, Box, Paper, Stack, Chip,
-  CircularProgress, Alert, Table, TableBody, TableCell, TableRow,
+  Button, Chip, CircularProgress, Alert, Table, TableBody, TableCell, TableRow,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
-import type { SxProps, Theme } from '@mui/material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import ProtectedRoute from '@/app/protected-route';
 import {
@@ -58,9 +56,9 @@ export default function OrderDetailPage() {
   if (isLoading) {
     return (
       <ProtectedRoute>
-        <Container maxWidth="md" sx={{ py: 4 }}>
-          <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}><CircularProgress /></Box>
-        </Container>
+        <div className="mx-auto w-full max-w-4xl px-3 py-4">
+          <div className="flex justify-center p-4"><CircularProgress /></div>
+        </div>
       </ProtectedRoute>
     );
   }
@@ -68,10 +66,10 @@ export default function OrderDetailPage() {
   if (error || !order) {
     return (
       <ProtectedRoute>
-        <Container maxWidth="md" sx={{ py: 4 }}>
+        <div className="mx-auto w-full max-w-4xl px-3 py-4">
           <Alert severity="error">{error instanceof Error ? error.message : 'Order not found'}</Alert>
-          <Button startIcon={<ArrowBackIcon />} onClick={() => router.push('/dashboard')} sx={{ mt: 2 }}>Volver al Dashboard</Button>
-        </Container>
+          <Button startIcon={<ArrowBackIcon />} onClick={() => router.push('/dashboard')} sx={{ mt: 2 }}>Volver al dashboard</Button>
+        </div>
       </ProtectedRoute>
     );
   }
@@ -81,73 +79,73 @@ export default function OrderDetailPage() {
 
   return (
     <ProtectedRoute>
-      <Container maxWidth="md" sx={{ py: 4 }}>
+      <div className="mx-auto w-full max-w-4xl px-3 py-4">
         <Button startIcon={<ArrowBackIcon />} onClick={() => router.push('/dashboard')} sx={{ mb: 2 }}>
-          Volver al Dashboard
+          Volver al dashboard
         </Button>
 
-        <Paper sx={{ p: 3, mb: 3 }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-            <Typography variant="h5" fontWeight={600}>Pedido</Typography>
+        <div className="mb-3 card rounded-md border border-line bg-snow p-4">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-[1.5rem] font-semibold">Pedido</h2>
             <Chip label={statusLabel(order.status)} color={statusColor(order.status) as any} size="medium" />
-          </Box>
+          </div>
 
           <Table size="small">
             <TableBody>
               <TableRow>
-                <TableCell sx={{ fontWeight: 600, width: 180 }}>ID</TableCell>
-                <TableCell sx={{ fontFamily: 'monospace' }}>{order.id}</TableCell>
+                <TableCell className="w-[180px] font-semibold">ID</TableCell>
+                <TableCell className="font-mono">{order.id}</TableCell>
               </TableRow>
               <TableRow>
-                <TableCell sx={{ fontWeight: 600 }}>Cliente</TableCell>
+                <TableCell className="font-semibold">Cliente</TableCell>
                 <TableCell>{order.customer_name}</TableCell>
               </TableRow>
               <TableRow>
-                <TableCell sx={{ fontWeight: 600 }}>Email</TableCell>
+                <TableCell className="font-semibold">Email</TableCell>
                 <TableCell>{order.customer_email}</TableCell>
               </TableRow>
               <TableRow>
-                <TableCell sx={{ fontWeight: 600 }}>Tipo de Trabajo</TableCell>
+                <TableCell className="font-semibold">Tipo de Trabajo</TableCell>
                 <TableCell>{workTypeLabel(order.work_type)}</TableCell>
               </TableRow>
               <TableRow>
-                <TableCell sx={{ fontWeight: 600 }}>Descripción</TableCell>
-                <TableCell sx={{ whiteSpace: 'pre-wrap' }}>{order.description}</TableCell>
+                <TableCell className="font-semibold">Descripción</TableCell>
+                <TableCell className="whitespace-pre-wrap">{order.description}</TableCell>
               </TableRow>
               {!isProduct && (
                 <TableRow>
-                  <TableCell sx={{ fontWeight: 600 }}>Filamento</TableCell>
+                  <TableCell className="font-semibold">Filamento</TableCell>
                   <TableCell>
                     {order.filament_id ? (
                       <Chip label={`Filamento asignado (${order.grams_estimated ?? '?'}g estimados)`} size="small" color="info" variant="outlined" />
                     ) : (
-                      <Typography variant="body2" color="text.secondary">No asignado</Typography>
+                      <p className="text-sm text-slate">No asignado</p>
                     )}
                   </TableCell>
                 </TableRow>
               )}
               <TableRow>
-                <TableCell sx={{ fontWeight: 600 }}>Fecha de Creación</TableCell>
+                <TableCell className="font-semibold">Fecha de Creación</TableCell>
                 <TableCell>{new Date(order.created_at).toLocaleDateString()}</TableCell>
               </TableRow>
               {order.files && order.files.length > 0 && (
                 <TableRow>
-                  <TableCell sx={{ fontWeight: 600 }}>Archivos</TableCell>
+                  <TableCell className="font-semibold">Archivos</TableCell>
                   <TableCell>
                     {order.files.map((f, i) => (
-                      <Typography key={i} variant="body2">{f.filename}: {f.url}</Typography>
+                      <p key={i} className="text-sm text-slate">{f.filename}: {f.url}</p>
                     ))}
                   </TableCell>
                 </TableRow>
               )}
             </TableBody>
           </Table>
-        </Paper>
+        </div>
 
         {actions.length > 0 && (
-          <Paper sx={{ p: 3 }}>
-            <Typography variant="h6" gutterBottom fontWeight={600}>Acciones</Typography>
-            <Stack direction="row" spacing={2}>
+          <div className="card rounded-md border border-line bg-snow p-4">
+            <h3 className="mb-2 text-[1.25rem] font-semibold">Acciones</h3>
+            <div className="flex gap-2">
               {actions.map((action) => (
                 <Button
                   key={action.targetStatus}
@@ -159,19 +157,19 @@ export default function OrderDetailPage() {
                   {action.label}
                 </Button>
               ))}
-            </Stack>
+            </div>
             {statusMutation.isError && (
               <Alert severity="error" sx={{ mt: 2 }}>
                 {statusMutation.error instanceof Error ? statusMutation.error.message : 'Error al actualizar el estado'}
               </Alert>
             )}
-          </Paper>
+          </div>
         )}
 
         {!isProduct && (
-          <Paper sx={{ p: 3, mt: 3 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-              <Typography variant="h6" fontWeight={600}>Presupuesto</Typography>
+          <div className="mt-3 card rounded-md border border-line bg-snow p-4">
+            <div className="mb-2 flex items-center justify-between">
+              <h3 className="text-[1.25rem] font-semibold">Presupuesto</h3>
               {budget && order.status === 'quoting' && (
                 <Button
                   variant="outlined"
@@ -179,40 +177,38 @@ export default function OrderDetailPage() {
                   startIcon={<EditIcon />}
                   onClick={() => setBudgetFormOpen(true)}
                 >
-                  Editar Presupuesto
+                  Editar presupuesto
                 </Button>
               )}
-            </Box>
+            </div>
 
             {budgetLoading ? (
-              <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+              <div className="flex justify-center p-4">
                 <CircularProgress size={24} />
-              </Box>
+              </div>
             ) : budget ? (
               <BudgetBreakdown budget={budget} orderId={id} />
             ) : order.status === 'quoting' ? (
-              <Box sx={{ textAlign: 'center', py: 3 }}>
-                <Typography color="text.secondary" sx={{ mb: 2 }}>
+              <div className="flex flex-col items-start gap-1.5 py-1">
+                <p className="text-sm text-slate">
                   No hay presupuesto para este pedido.
-                </Typography>
+                </p>
                 <Button
                   variant="contained"
                   startIcon={<AddIcon />}
                   onClick={() => setBudgetFormOpen(true)}
                 >
-                  Generar Presupuesto
+                  Generar presupuesto
                 </Button>
-              </Box>
+              </div>
             ) : (
-              <Box sx={{ textAlign: 'center', py: 3 }}>
-                <Typography color="text.secondary">
-                  No hay presupuesto para este pedido.
-                </Typography>
-              </Box>
+              <p className="py-1 text-sm text-slate">
+                No hay presupuesto para este pedido.
+              </p>
             )}
-          </Paper>
+          </div>
         )}
-      </Container>
+      </div>
 
       <BudgetForm
         open={budgetFormOpen}

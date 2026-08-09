@@ -2,16 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import {
-  Box,
-  Button,
-  Container,
-  Paper,
-  TextField,
-  Typography,
-  Alert,
-  Stack,
-} from '@mui/material';
+import { Button, TextField, Alert } from '@mui/material';
 import { useAuth } from '../auth-context';
 import { sendOtp } from '../api';
 
@@ -49,16 +40,16 @@ export default function VerifyOtpPage() {
   };
 
   return (
-    <Container maxWidth="sm" sx={{ py: 8 }}>
-      <Paper sx={{ p: 4 }}>
-        <Typography variant="h5" gutterBottom fontWeight={600}>
+    <div className="mx-auto w-full max-w-md px-4 py-8">
+      <div className="card rounded-md border border-line bg-snow p-4">
+        <h2 className="mb-2 text-[1.5rem] font-semibold">
           Verificación
-        </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+        </h2>
+        <p className="mb-3 text-sm text-slate">
           Ingresa el código de verificación que enviamos a tu correo.
-        </Typography>
-        <Box component="form" onSubmit={handleSubmit}>
-          <Stack spacing={2}>
+        </p>
+        <form onSubmit={handleSubmit}>
+          <div className="flex flex-col gap-2">
             {error && <Alert severity="error">{error}</Alert>}
             {message && <Alert severity="success">{message}</Alert>}
             <TextField
@@ -83,9 +74,9 @@ export default function VerifyOtpPage() {
             <Button variant="text" onClick={handleResend} disabled={loading}>
               Reenviar código
             </Button>
-          </Stack>
-        </Box>
-      </Paper>
-    </Container>
+          </div>
+        </form>
+      </div>
+    </div>
   );
 }

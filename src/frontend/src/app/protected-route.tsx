@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useEffect, type ReactNode } from 'react';
-import { CircularProgress, Box } from '@mui/material';
+import { CircularProgress } from '@mui/material';
 import { useAuth } from './auth-context';
 
 export default function ProtectedRoute({ children }: { children: ReactNode }) {
@@ -17,9 +17,9 @@ export default function ProtectedRoute({ children }: { children: ReactNode }) {
 
   if (loading) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
+      <div className="flex justify-center py-8">
         <CircularProgress />
-      </Box>
+      </div>
     );
   }
 

@@ -3,30 +3,19 @@
 import { useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import {
-  Box, Typography, Button, Paper, Chip, CircularProgress,
-  Alert, Stack, Divider, TextField, Dialog, DialogTitle,
+  Button, Chip, CircularProgress, Alert, TextField, Dialog, DialogTitle,
   DialogContent, DialogActions, Avatar, Table, TableBody, TableCell,
   TableContainer, TableHead, TableRow,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ArchiveIcon from '@mui/icons-material/Archive';
 import UploadIcon from '@mui/icons-material/Upload';
-import type { SxProps, Theme } from '@mui/material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   fetchProduct, updateProduct, deleteProduct, uploadProductImage,
   fetchProductStockMovements, adjustProductStock,
   type Product, type ProductUpdate, type ProductStockMovement,
 } from '@/app/api';
-
-const styles: Record<string, SxProps<Theme>> = {
-  fieldLabel: {
-    color: 'text.secondary', fontSize: '0.8rem', mb: 0.5,
-  },
-  fieldValue: {
-    fontWeight: 500,
-  },
-};
 
 function EditProductDialog({ open, onClose, product }: { open: boolean; onClose: () => void; product: Product }) {
   const queryClient = useQueryClient();
@@ -53,8 +42,8 @@ function EditProductDialog({ open, onClose, product }: { open: boolean; onClose:
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle>Editar Producto</DialogTitle>
       <DialogContent>
-        <Stack spacing={2} sx={{ mt: 1 }}>
-          {error && <Typography color="error" variant="body2">{error}</Typography>}
+        <div className="mt-1 flex flex-col gap-2">
+          {error && <p className="text-sm text-error">{error}</p>}
           <TextField
             label="Nombre"
             value={form.name ?? ''}
@@ -83,7 +72,7 @@ function EditProductDialog({ open, onClose, product }: { open: boolean; onClose:
             fullWidth
             slotProps={{ htmlInput: { min: 0, step: 1 } }}
           />
-        </Stack>
+        </div>
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Cancelar</Button>
@@ -120,7 +109,7 @@ function AdjustStockDialog({ open, onClose, product }: { open: boolean; onClose:
     <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
       <DialogTitle>Ajustar Stock</DialogTitle>
       <DialogContent>
-        <Stack spacing={2} sx={{ mt: 1 }}>
+        <div className="mt-1 flex flex-col gap-2">
           {error && <Alert severity="error">{error}</Alert>}
           <TextField
             label="Delta"
@@ -136,7 +125,7 @@ function AdjustStockDialog({ open, onClose, product }: { open: boolean; onClose:
             onChange={(e) => setNotes(e.target.value)}
             fullWidth multiline rows={2}
           />
-        </Stack>
+        </div>
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Cancelar</Button>
@@ -219,33 +208,33 @@ export default function ProductDetailPage() {
   });
 
   if (isLoading) {
-    return <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}><CircularProgress /></Box>;
+    return <div className="flex justify-center p-4"><CircularProgress /></div>;
   }
 
   if (error || !product) {
     return (
-      <Box>
+      <div>
         <Alert severity="error">{error instanceof Error ? error.message : 'Producto no encontrado'}</Alert>
         <Button startIcon={<ArrowBackIcon />} onClick={() => router.back()} sx={{ mt: 2 }}>Volver</Button>
-      </Box>
+      </div>
     );
   }
 
   return (
-    <Box>
+    <div>
       <Button startIcon={<ArrowBackIcon />} onClick={() => router.back()} sx={{ mb: 2 }}>Volver</Button>
 
-      <Paper sx={{ p: 3, mb: 3 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 3 }}>
-          <Box>
-            <Typography variant="h5" fontWeight={600}>{product.name}</Typography>
+      <div className="mb-3 card rounded-md border border-line bg-snow p-4">
+        <div className="mb-3 flex items-start justify-between">
+          <div>
+            <h2 className="text-[1.5rem] font-semibold">{product.name}</h2>
             {product.description && (
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+              <p className="mt-0.5 text-sm text-slate">
                 {product.description}
-              </Typography>
+              </p>
             )}
-          </Box>
-          <Stack direction="row" spacing={1}>
+          </div>
+          <div className="flex gap-1">
             <Button size="small" variant="outlined" onClick={() => setEditDialog(true)}>Editar</Button>
             {product.is_active ? (
               <Button size="small" variant="outlined" color="error" startIcon={<ArchiveIcon />}
@@ -257,63 +246,63 @@ export default function ProductDetailPage() {
                 Activar
               </Button>
             )}
-          </Stack>
-        </Box>
+          </div>
+        </div>
 
-        <Divider sx={{ mb: 3 }} />
+        <hr className="mb-3 border-line" />
 
-        <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 3 }}>
-          <Box>
-            <Typography sx={styles.fieldLabel}>Precio</Typography>
-            <Typography sx={styles.fieldValue}>${Number(product.price).toFixed(2)}</Typography>
-          </Box>
-          <Box>
-            <Typography sx={styles.fieldLabel}>Stock</Typography>
-            <Box sx={styles.fieldValue}>
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-3">
+          <div>
+            <p className="mb-0.5 text-xs text-slate">Precio</p>
+            <p className="font-medium">${Number(product.price).toFixed(2)}</p>
+          </div>
+          <div>
+            <p className="mb-0.5 text-xs text-slate">Stock</p>
+            <div className="font-medium">
               {product.stock_quantity}
               {product.stock_quantity < 1 && (
                 <Chip label="Sin stock" size="small" color="warning" sx={{ ml: 1 }} />
               )}
-            </Box>
-          </Box>
-          <Box>
-            <Typography sx={styles.fieldLabel}>Estado</Typography>
+            </div>
+          </div>
+          <div>
+            <p className="mb-0.5 text-xs text-slate">Estado</p>
             <Chip label={product.is_active ? 'Activo' : 'Archivado'} size="small" color={product.is_active ? 'success' : 'default'} />
-          </Box>
-          <Box>
-            <Typography sx={styles.fieldLabel}>Creado</Typography>
-            <Typography sx={styles.fieldValue}>{new Date(product.created_at).toLocaleDateString()}</Typography>
-          </Box>
-          <Box>
-            <Typography sx={styles.fieldLabel}>Actualizado</Typography>
-            <Typography sx={styles.fieldValue}>{new Date(product.updated_at).toLocaleDateString()}</Typography>
-          </Box>
-        </Box>
-      </Paper>
+          </div>
+          <div>
+            <p className="mb-0.5 text-xs text-slate">Creado</p>
+            <p className="font-medium">{new Date(product.created_at).toLocaleDateString()}</p>
+          </div>
+          <div>
+            <p className="mb-0.5 text-xs text-slate">Actualizado</p>
+            <p className="font-medium">{new Date(product.updated_at).toLocaleDateString()}</p>
+          </div>
+        </div>
+      </div>
 
-      <Paper sx={{ p: 3, mb: 3 }}>
-        <Typography variant="h6" fontWeight={600} gutterBottom>Imagen</Typography>
-        <Divider sx={{ mb: 2 }} />
+      <div className="mb-3 card rounded-md border border-line bg-snow p-4">
+        <h3 className="mb-2 text-[1.25rem] font-semibold">Imagen</h3>
+        <hr className="mb-2 border-line" />
         {uploadError && <Alert severity="error" sx={{ mb: 2 }}>{uploadError}</Alert>}
 
-        <Stack direction="row" spacing={3} alignItems="center">
+        <div className="flex items-center gap-3">
           {product.image_url ? (
             <Avatar src={product.image_url} alt={product.name} variant="rounded" sx={{ width: 160, height: 160 }} />
           ) : (
-            <Box sx={{ width: 160, height: 160, borderRadius: 1, border: '2px dashed', borderColor: 'divider', display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: 'grey.50' }}>
-              <Typography variant="body2" color="text.secondary">Sin imagen</Typography>
-            </Box>
+            <div className="flex h-[160px] w-[160px] items-center justify-center rounded-md border-2 border-dashed border-line bg-plate">
+              <p className="text-sm text-slate">Sin imagen</p>
+            </div>
           )}
-          <Stack spacing={1.5}>
+          <div className="flex flex-col gap-1.5">
             <Button variant="outlined" component="label" startIcon={<UploadIcon />}>
               {product.image_url ? 'Reemplazar imagen' : 'Subir imagen'}
               <input ref={fileInputRef} type="file" hidden accept="image/jpeg,image/png,image/webp"
                 onChange={(e) => { setSelectedFile(e.target.files?.[0] ?? null); setUploadError(''); }} />
             </Button>
             {selectedFile && (
-              <Typography variant="caption" color="text.secondary">
+              <p className="text-xs text-slate">
                 {selectedFile.name} ({(selectedFile.size / 1024 / 1024).toFixed(1)} MB)
-              </Typography>
+              </p>
             )}
             {selectedFile && (
               <Button variant="contained" size="small" onClick={() => uploadMutation.mutate(selectedFile)}
@@ -321,16 +310,16 @@ export default function ProductDetailPage() {
                 {uploadMutation.isPending ? 'Subiendo...' : 'Confirmar subida'}
               </Button>
             )}
-          </Stack>
-        </Stack>
-      </Paper>
+          </div>
+        </div>
+      </div>
 
-      <Paper sx={{ p: 3, mb: 3 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-          <Typography variant="h6" fontWeight={600}>Stock</Typography>
+      <div className="mb-3 card rounded-md border border-line bg-snow p-4">
+        <div className="mb-2 flex items-center justify-between">
+          <h3 className="text-[1.25rem] font-semibold">Stock</h3>
           <Button size="small" variant="outlined" onClick={() => setAdjustDialog(true)}>Ajustar stock</Button>
-        </Box>
-        <Divider sx={{ mb: 2 }} />
+        </div>
+        <hr className="mb-2 border-line" />
 
         {movements && movements.length > 0 ? (
           <TableContainer>
@@ -362,12 +351,12 @@ export default function ProductDetailPage() {
             </Table>
           </TableContainer>
         ) : (
-          <Typography color="text.secondary">Sin movimientos de stock registrados.</Typography>
+          <p className="text-sm text-slate">Sin movimientos de stock registrados.</p>
         )}
-      </Paper>
+      </div>
 
       <EditProductDialog open={editDialog} onClose={() => setEditDialog(false)} product={product} />
       <AdjustStockDialog open={adjustDialog} onClose={() => setAdjustDialog(false)} product={product} />
-    </Box>
+    </div>
   );
 }

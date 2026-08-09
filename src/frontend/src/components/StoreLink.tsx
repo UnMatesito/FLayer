@@ -2,32 +2,17 @@
 
 import { useState } from 'react';
 import {
-  Box,
-  Typography,
   Button,
-  Paper,
-  TextField,
-  Stack,
-  Snackbar,
-  IconButton,
   CircularProgress,
+  IconButton,
+  Snackbar,
+  TextField,
 } from '@mui/material';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import ShareIcon from '@mui/icons-material/Share';
-import type { SxProps, Theme } from '@mui/material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchStoreToken, regenerateStoreToken } from '@/app/api';
-
-const styles: Record<string, SxProps<Theme>> = {
-  container: { p: 3 },
-  urlField: {
-    '& .MuiInputBase-root': {
-      fontFamily: 'monospace',
-      fontSize: '0.85rem',
-    },
-  },
-};
 
 export default function StoreLink() {
   const queryClient = useQueryClient();
@@ -57,27 +42,27 @@ export default function StoreLink() {
   };
 
   return (
-    <Paper sx={styles.container}>
-      <Stack spacing={2}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+    <div className="card rounded-md border border-line bg-snow p-3">
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center gap-1">
           <ShareIcon color="primary" />
-          <Typography variant="h6" fontWeight={600}>
+          <h3 className="text-[1.25rem] font-semibold">
             Formulario de pedidos
-          </Typography>
-        </Box>
+          </h3>
+        </div>
 
-        <Typography variant="body2" color="text.secondary">
+        <p className="text-sm text-slate">
           Comparte este link con tus clientes para que puedan hacer pedidos directamente.
-        </Typography>
+        </p>
 
         {isLoading ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
+          <div className="flex justify-center py-4">
             <CircularProgress size={24} />
-          </Box>
+          </div>
         ) : isError ? (
-          <Typography color="error" variant="body2">
+          <p className="text-sm text-error">
             Error al cargar el link.
-          </Typography>
+          </p>
         ) : data ? (
           <>
             <TextField
@@ -85,7 +70,12 @@ export default function StoreLink() {
               value={data.url}
               size="small"
               fullWidth
-              sx={styles.urlField}
+              sx={{
+                '& .MuiInputBase-root': {
+                  fontFamily: 'monospace',
+                  fontSize: '0.85rem',
+                },
+              }}
               slotProps={{
                 input: {
                   readOnly: true,
@@ -97,7 +87,7 @@ export default function StoreLink() {
                 },
               }}
             />
-            <Stack direction="row" spacing={2}>
+            <div className="flex gap-2">
               <Button
                 variant="contained"
                 size="small"
@@ -115,10 +105,10 @@ export default function StoreLink() {
               >
                 {regenerateMutation.isPending ? 'Regenerando...' : 'Regenerar token'}
               </Button>
-            </Stack>
+            </div>
           </>
         ) : null}
-      </Stack>
+      </div>
 
       <Snackbar
         open={copied}
@@ -127,6 +117,6 @@ export default function StoreLink() {
         message="Link copiado al portapapeles"
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       />
-    </Paper>
+    </div>
   );
 }

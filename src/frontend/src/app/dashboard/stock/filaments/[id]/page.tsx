@@ -3,38 +3,22 @@
 import { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import {
-  Box, Typography, Button, Paper, Table, TableBody, TableCell,
+  Button, Table, TableBody, TableCell,
   TableContainer, TableHead, TableRow, Chip, CircularProgress,
-  Alert, Stack, Divider, TextField, Dialog, DialogTitle,
-  DialogContent, DialogActions, IconButton, Select, MenuItem, FormControl, InputLabel,
+  Alert, TextField, Dialog, DialogTitle,
+  DialogContent, DialogActions, Select, MenuItem, FormControl, InputLabel,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import EditIcon from '@mui/icons-material/Edit';
 import ArchiveIcon from '@mui/icons-material/Archive';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import SettingsIcon from '@mui/icons-material/Settings';
-import type { SxProps, Theme } from '@mui/material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   fetchFilament, updateFilament, adjustFilamentWeight,
   fetchStockMovements, type Filament, type FilamentAdjustResponse, type FilamentSettings,
 } from '@/app/api';
 import { FilamentIcon } from '@/components/FilamentIcon';
-
-const styles: Record<string, SxProps<Theme>> = {
-  fieldLabel: {
-    color: 'text.secondary', fontSize: '0.8rem', mb: 0.5,
-  },
-  fieldValue: {
-    fontWeight: 500,
-  },
-  lowStockChip: {
-    ml: 1,
-  },
-  movementChip: {
-    textTransform: 'capitalize',
-  },
-};
 
 function movementTypeColor(type: string) {
   switch (type) {
@@ -67,7 +51,7 @@ function AdjustWeightDialog({ open, onClose, filamentId }: { open: boolean; onCl
     <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
       <DialogTitle>Ajustar Peso</DialogTitle>
       <DialogContent>
-        <Stack spacing={2} sx={{ mt: 1 }}>
+        <div className="mt-1 flex flex-col gap-2">
           <TextField
             label="Delta (gramos)"
             type="number"
@@ -85,7 +69,7 @@ function AdjustWeightDialog({ open, onClose, filamentId }: { open: boolean; onCl
             multiline
             rows={2}
           />
-        </Stack>
+        </div>
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Cancelar</Button>
@@ -118,7 +102,7 @@ function SettingsDialog({ open, onClose, filament, filamentId }: { open: boolean
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
       <DialogTitle>Editar configuración de impresión</DialogTitle>
       <DialogContent>
-        <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2, mt: 1 }}>
+        <div className="mt-1 grid grid-cols-2 gap-2">
           <TextField label="Temp. boquilla mín. recomendada" type="number" value={settings.recommended_nozzle_temp_min ?? ''} onChange={(e) => setSetting('recommended_nozzle_temp_min', e.target.value ? Number(e.target.value) : undefined)} fullWidth />
           <TextField label="Temp. boquilla máx. recomendada" type="number" value={settings.recommended_nozzle_temp_max ?? ''} onChange={(e) => setSetting('recommended_nozzle_temp_max', e.target.value ? Number(e.target.value) : undefined)} fullWidth />
           <TextField label="Flow Ratio" type="number" value={settings.flow_ratio ?? ''} onChange={(e) => setSetting('flow_ratio', e.target.value ? Number(e.target.value) : undefined)} fullWidth inputProps={{ step: 0.01 }} />
@@ -133,7 +117,7 @@ function SettingsDialog({ open, onClose, filament, filamentId }: { open: boolean
             </Select>
           </FormControl>
           <TextField label="Temp. cama (°C)" type="number" value={settings.plate_temperature ?? ''} onChange={(e) => setSetting('plate_temperature', e.target.value ? Number(e.target.value) : undefined)} fullWidth />
-        </Box>
+        </div>
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Cancelar</Button>
@@ -175,36 +159,36 @@ export default function FilamentDetailPage() {
   });
 
   if (isLoading) {
-    return <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}><CircularProgress /></Box>;
+    return <div className="flex justify-center p-4"><CircularProgress /></div>;
   }
 
   if (error || !filament) {
     return (
-      <Box>
+      <div>
         <Alert severity="error">{error instanceof Error ? error.message : 'Filamento no encontrado'}</Alert>
         <Button startIcon={<ArrowBackIcon />} onClick={() => router.back()} sx={{ mt: 2 }}>Volver</Button>
-      </Box>
+      </div>
     );
   }
 
   const isLow = filament.weight_grams < filament.min_stock_warning_grams;
 
   return (
-    <Box>
+    <div>
       <Button startIcon={<ArrowBackIcon />} onClick={() => router.back()} sx={{ mb: 2 }}>Volver</Button>
 
-      <Paper sx={{ p: 3, mb: 3 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 3 }}>
-            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+      <div className="mb-3 card rounded-md border border-line bg-snow p-4">
+        <div className="mb-3 flex items-start justify-between">
+            <div className="flex items-center gap-2">
               <FilamentIcon color={filament.color_hex} size={48} />
-              <Box>
-              <Typography variant="h5" fontWeight={600}>{filament.color_name}</Typography>
-              <Typography variant="body2" color="text.secondary">
+              <div>
+              <h2 className="text-[1.5rem] font-semibold">{filament.color_name}</h2>
+              <p className="text-sm text-slate">
                 {filament.brand ? `${filament.brand} — ` : ''}{filament.filament_type}
-              </Typography>
-            </Box>
-          </Box>
-          <Stack direction="row" spacing={1}>
+              </p>
+            </div>
+          </div>
+          <div className="flex gap-1">
             <Button size="small" variant="outlined" startIcon={<SettingsIcon />} onClick={() => setSettingsDialog(true)}>
               Configuración
             </Button>
@@ -215,91 +199,91 @@ export default function FilamentDetailPage() {
               onClick={() => { if (confirm('¿Archivar este filamento?')) archiveMutation.mutate(); }}>
               Archivar
             </Button>
-          </Stack>
-        </Box>
+          </div>
+        </div>
 
-        <Divider sx={{ mb: 3 }} />
+        <hr className="mb-3 border-line" />
 
-        <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 3 }}>
-          <Box>
-            <Typography sx={styles.fieldLabel}>Peso Actual</Typography>
-            <Typography sx={styles.fieldValue}>
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-3">
+          <div>
+            <p className="mb-0.5 text-xs text-slate">Peso Actual</p>
+            <p className="font-medium">
               {filament.weight_grams.toFixed(1)}g
-              {isLow && <Chip icon={<WarningAmberIcon />} label="Stock bajo" size="small" color="warning" sx={styles.lowStockChip} />}
-            </Typography>
-          </Box>
-          <Box>
-            <Typography sx={styles.fieldLabel}>Precio por kg</Typography>
-            <Typography sx={styles.fieldValue}>${filament.price_per_kg.toFixed(2)}</Typography>
-          </Box>
-          <Box>
-            <Typography sx={styles.fieldLabel}>Stock Mínimo</Typography>
-            <Typography sx={styles.fieldValue}>{filament.min_stock_warning_grams}g</Typography>
-          </Box>
-          <Box>
-            <Typography sx={styles.fieldLabel}>Estado</Typography>
+              {isLow && <Chip icon={<WarningAmberIcon />} label="Stock bajo" size="small" color="warning" sx={{ ml: 1 }} />}
+            </p>
+          </div>
+          <div>
+            <p className="mb-0.5 text-xs text-slate">Precio por kg</p>
+            <p className="font-medium">${filament.price_per_kg.toFixed(2)}</p>
+          </div>
+          <div>
+            <p className="mb-0.5 text-xs text-slate">Stock Mínimo</p>
+            <p className="font-medium">{filament.min_stock_warning_grams}g</p>
+          </div>
+          <div>
+            <p className="mb-0.5 text-xs text-slate">Estado</p>
             <Chip label={filament.is_active ? 'Activo' : 'Archivado'} size="small" color={filament.is_active ? 'success' : 'default'} />
-          </Box>
-          <Box>
-            <Typography sx={styles.fieldLabel}>Color Hex</Typography>
-            <Typography sx={styles.fieldValue} fontFamily="monospace">{filament.color_hex}</Typography>
-          </Box>
-        </Box>
+          </div>
+          <div>
+            <p className="mb-0.5 text-xs text-slate">Color Hex</p>
+            <p className="font-mono font-medium">{filament.color_hex}</p>
+          </div>
+        </div>
 
         {filament.settings && (
           <>
-            <Divider sx={{ my: 3 }} />
-            <Typography variant="h6" fontWeight={600} gutterBottom>Configuración de impresión</Typography>
-            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 3 }}>
+            <hr className="my-3 border-line" />
+            <h3 className="mb-2 text-[1.25rem] font-semibold">Configuración de impresión</h3>
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-3">
               {filament.settings.recommended_nozzle_temp_min != null && filament.settings.recommended_nozzle_temp_max != null && (
-                <Box>
-                  <Typography sx={styles.fieldLabel}>Temp. boquilla recomendada</Typography>
-                  <Typography sx={styles.fieldValue}>{filament.settings.recommended_nozzle_temp_min}°C — {filament.settings.recommended_nozzle_temp_max}°C</Typography>
-                </Box>
+                <div>
+                  <p className="mb-0.5 text-xs text-slate">Temp. boquilla recomendada</p>
+                  <p className="font-medium">{filament.settings.recommended_nozzle_temp_min}°C — {filament.settings.recommended_nozzle_temp_max}°C</p>
+                </div>
               )}
               {filament.settings.nozzle_temperature != null && (
-                <Box>
-                  <Typography sx={styles.fieldLabel}>Temp. boquilla</Typography>
-                  <Typography sx={styles.fieldValue}>{filament.settings.nozzle_temperature}°C</Typography>
-                </Box>
+                <div>
+                  <p className="mb-0.5 text-xs text-slate">Temp. boquilla</p>
+                  <p className="font-medium">{filament.settings.nozzle_temperature}°C</p>
+                </div>
               )}
               {filament.settings.flow_ratio != null && (
-                <Box>
-                  <Typography sx={styles.fieldLabel}>Flow Ratio</Typography>
-                  <Typography sx={styles.fieldValue}>{filament.settings.flow_ratio}</Typography>
-                </Box>
+                <div>
+                  <p className="mb-0.5 text-xs text-slate">Flow Ratio</p>
+                  <p className="font-medium">{filament.settings.flow_ratio}</p>
+                </div>
               )}
               {filament.settings.max_volumetric_speed != null && (
-                <Box>
-                  <Typography sx={styles.fieldLabel}>Velocidad volumétrica máx.</Typography>
-                  <Typography sx={styles.fieldValue}>{filament.settings.max_volumetric_speed} mm³/s</Typography>
-                </Box>
+                <div>
+                  <p className="mb-0.5 text-xs text-slate">Velocidad volumétrica máx.</p>
+                  <p className="font-medium">{filament.settings.max_volumetric_speed} mm³/s</p>
+                </div>
               )}
               {filament.settings.pressure_advance != null && (
-                <Box>
-                  <Typography sx={styles.fieldLabel}>Pressure Advance</Typography>
-                  <Typography sx={styles.fieldValue}>{filament.settings.pressure_advance}</Typography>
-                </Box>
+                <div>
+                  <p className="mb-0.5 text-xs text-slate">Pressure Advance</p>
+                  <p className="font-medium">{filament.settings.pressure_advance}</p>
+                </div>
               )}
               {filament.settings.nominal_diameter != null && (
-                <Box>
-                  <Typography sx={styles.fieldLabel}>Diámetro nominal</Typography>
-                  <Typography sx={styles.fieldValue}>{filament.settings.nominal_diameter} mm</Typography>
-                </Box>
+                <div>
+                  <p className="mb-0.5 text-xs text-slate">Diámetro nominal</p>
+                  <p className="font-medium">{filament.settings.nominal_diameter} mm</p>
+                </div>
               )}
               {filament.settings.plate_temperature != null && (
-                <Box>
-                  <Typography sx={styles.fieldLabel}>Temp. cama</Typography>
-                  <Typography sx={styles.fieldValue}>{filament.settings.plate_temperature}°C</Typography>
-                </Box>
+                <div>
+                  <p className="mb-0.5 text-xs text-slate">Temp. cama</p>
+                  <p className="font-medium">{filament.settings.plate_temperature}°C</p>
+                </div>
               )}
-            </Box>
+            </div>
           </>
         )}
-      </Paper>
+      </div>
 
-      <Paper sx={{ p: 3 }}>
-        <Typography variant="h6" fontWeight={600} gutterBottom>Historial de Movimientos</Typography>
+      <div className="card rounded-md border border-line bg-snow p-4">
+        <h3 className="mb-2 text-[1.25rem] font-semibold">Historial de Movimientos</h3>
         {movements && movements.items.length > 0 ? (
           <TableContainer>
             <Table size="small">
@@ -317,10 +301,10 @@ export default function FilamentDetailPage() {
                   <TableRow key={m.id}>
                     <TableCell>{new Date(m.created_at).toLocaleDateString()}</TableCell>
                     <TableCell>
-                      <Chip label={m.movement_type} size="small" color={movementTypeColor(m.movement_type)} sx={styles.movementChip} />
+                      <Chip label={m.movement_type} size="small" color={movementTypeColor(m.movement_type)} sx={{ textTransform: 'capitalize' }} />
                     </TableCell>
-                    <TableCell align="right" sx={{ color: m.quantity_grams < 0 ? 'error.main' : 'success.main', fontWeight: 600 }}>
-                      {m.quantity_grams > 0 ? '+' : ''}{m.quantity_grams.toFixed(1)}
+                    <TableCell align="right" sx={{ color: (m.quantity_grams ?? 0) < 0 ? 'error.main' : 'success.main', fontWeight: 600 }}>
+                      {(m.quantity_grams ?? 0) > 0 ? '+' : ''}{(m.quantity_grams ?? 0).toFixed(1)}
                     </TableCell>
                     <TableCell>{m.order_reference || '-'}</TableCell>
                     <TableCell>{m.notes || '-'}</TableCell>
@@ -330,14 +314,14 @@ export default function FilamentDetailPage() {
             </Table>
           </TableContainer>
         ) : (
-          <Typography color="text.secondary">Sin movimientos registrados.</Typography>
+          <p className="text-sm text-slate">Sin movimientos registrados.</p>
         )}
-      </Paper>
+      </div>
 
       <AdjustWeightDialog open={adjustDialog} onClose={() => setAdjustDialog(false)} filamentId={id} />
       {filament && (
         <SettingsDialog open={settingsDialog} onClose={() => setSettingsDialog(false)} filament={filament} filamentId={id} />
       )}
-    </Box>
+    </div>
   );
 }

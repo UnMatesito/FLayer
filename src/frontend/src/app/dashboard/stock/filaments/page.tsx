@@ -3,11 +3,10 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  Box, Typography, Button, Paper, Table, TableBody, TableCell,
-  TableContainer, TableHead, TableRow, Chip, CircularProgress,
-  Dialog, DialogTitle, DialogContent, DialogActions, TextField,
-  Stack, IconButton, Select, MenuItem, FormControl, InputLabel,
-  Collapse,
+  Button, Chip, CircularProgress, Collapse, Dialog, DialogActions,
+  DialogContent, DialogTitle, FormControl, IconButton, InputLabel,
+  MenuItem, Select, Table, TableBody, TableCell,
+  TableHead, TableRow, TextField,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import ArchiveIcon from '@mui/icons-material/Archive';
@@ -16,6 +15,7 @@ import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import SettingsIcon from '@mui/icons-material/Settings';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import type { SxProps, Theme } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   fetchFilaments, createFilament, updateFilament,
@@ -24,19 +24,9 @@ import {
 import { FilamentIcon } from '@/components/FilamentIcon';
 
 const styles: Record<string, SxProps<Theme>> = {
-  header: {
-    display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3,
-  },
   lowStockRow: {
     bgcolor: 'warning.50',
     '&:hover': { bgcolor: 'warning.100' },
-  },
-  lowStockChip: {
-    ml: 1,
-  },
-  colorInput: {
-    width: 40, height: 40, p: 0.5, border: 1, borderColor: 'divider', borderRadius: 1,
-    '& input': { width: '100%', height: '100%', p: 0, border: 'none', cursor: 'pointer', bgcolor: 'transparent' },
   },
 };
 
@@ -80,15 +70,15 @@ function AddFilamentDialog({ open, onClose }: { open: boolean; onClose: () => vo
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
       <DialogTitle>Agregar Filamento</DialogTitle>
       <DialogContent>
-        <Stack spacing={2} sx={{ mt: 1 }}>
+        <div className="mt-2 flex flex-col gap-2">
           <TextField label="Nombre de color" value={form.color_name} onChange={(e) => setForm({ ...form, color_name: e.target.value })} fullWidth required />
           <TextField label="Marca" value={form.brand} onChange={(e) => setForm({ ...form, brand: e.target.value })} fullWidth />
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Typography variant="body2" color="text.secondary">Color</Typography>
-            <Box component="label" sx={styles.colorInput}>
-              <input type="color" value={form.color_hex} onChange={(e) => setForm({ ...form, color_hex: e.target.value })} />
-            </Box>
-          </Box>
+          <div className="flex items-center gap-1">
+            <span className="text-sm text-slate">Color</span>
+            <label className="flex h-[40px] w-[40px] cursor-pointer items-center justify-center rounded-md border border-line p-1">
+              <input type="color" value={form.color_hex} onChange={(e) => setForm({ ...form, color_hex: e.target.value })} className="h-full w-full cursor-pointer border-none bg-transparent p-0" />
+            </label>
+          </div>
           <FormControl fullWidth>
             <InputLabel>Tipo</InputLabel>
             <Select value={form.filament_type} label="Tipo" onChange={(e) => setForm({ ...form, filament_type: e.target.value })}>
@@ -110,7 +100,7 @@ function AddFilamentDialog({ open, onClose }: { open: boolean; onClose: () => vo
           </Button>
 
           <Collapse in={settingsOpen}>
-            <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
+            <div className="grid grid-cols-2 gap-2 rounded-md bg-plate p-4">
               <TextField label="Temp. boquilla mín. recomendada" type="number" value={form.settings?.recommended_nozzle_temp_min ?? ''} onChange={(e) => setSetting('recommended_nozzle_temp_min', e.target.value ? Number(e.target.value) : undefined)} fullWidth />
               <TextField label="Temp. boquilla máx. recomendada" type="number" value={form.settings?.recommended_nozzle_temp_max ?? ''} onChange={(e) => setSetting('recommended_nozzle_temp_max', e.target.value ? Number(e.target.value) : undefined)} fullWidth />
               <TextField label="Flow Ratio" type="number" value={form.settings?.flow_ratio ?? ''} onChange={(e) => setSetting('flow_ratio', e.target.value ? Number(e.target.value) : undefined)} fullWidth inputProps={{ step: 0.01 }} />
@@ -125,9 +115,9 @@ function AddFilamentDialog({ open, onClose }: { open: boolean; onClose: () => vo
                 </Select>
               </FormControl>
               <TextField label="Temp. cama (°C)" type="number" value={form.settings?.plate_temperature ?? ''} onChange={(e) => setSetting('plate_temperature', e.target.value ? Number(e.target.value) : undefined)} fullWidth />
-            </Box>
+            </div>
           </Collapse>
-        </Stack>
+        </div>
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Cancelar</Button>
@@ -142,6 +132,8 @@ function AddFilamentDialog({ open, onClose }: { open: boolean; onClose: () => vo
 export default function FilamentsPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const theme = useTheme();
+  const paper = theme.vars?.palette.background.paper ?? theme.palette.background.paper;
   const [dialogOpen, setDialogOpen] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
 
@@ -167,7 +159,7 @@ export default function FilamentsPage() {
   });
 
   if (isLoading) {
-    return <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}><CircularProgress /></Box>;
+    return <div className="flex justify-center p-4"><CircularProgress /></div>;
   }
 
   const visible = showArchived
@@ -175,12 +167,12 @@ export default function FilamentsPage() {
     : filaments?.filter((f) => f.is_active) ?? [];
 
   return (
-    <Box>
-      <Box sx={styles.header}>
-        <Typography variant="h5" fontWeight={600}>
+    <div>
+      <div className="mb-6 flex items-center justify-between">
+        <h2 className="text-[1.6rem] font-bold leading-[1.15] tracking-[-0.01em]">
           {showArchived ? 'Filamentos archivados' : 'Filamentos'}
-        </Typography>
-        <Stack direction="row" spacing={1}>
+        </h2>
+        <div className="flex gap-1">
           <Button
             variant={showArchived ? 'contained' : 'outlined'}
             startIcon={<ArchiveIcon />}
@@ -191,27 +183,27 @@ export default function FilamentsPage() {
           {!showArchived && (
             <Button startIcon={<AddIcon />} variant="contained" onClick={() => setDialogOpen(true)}>Agregar Filamento</Button>
           )}
-        </Stack>
-      </Box>
+        </div>
+      </div>
 
-      <TableContainer component={Paper}>
+      <div className="card rounded-md border border-line bg-snow">
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell>Color</TableCell>
-              <TableCell>Nombre</TableCell>
-              <TableCell>Marca</TableCell>
-              <TableCell>Tipo</TableCell>
-              <TableCell align="right">Peso (g)</TableCell>
-              <TableCell align="right">Precio/kg</TableCell>
-              <TableCell>Stock</TableCell>
+              <TableCell align="center">Color</TableCell>
+              <TableCell align="center">Nombre</TableCell>
+              <TableCell align="center">Marca</TableCell>
+              <TableCell align="center">Tipo</TableCell>
+              <TableCell align="center">Peso (g)</TableCell>
+              <TableCell align="center">Precio/kg</TableCell>
+              <TableCell align="center">Stock</TableCell>
               <TableCell align="center">Acciones</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {visible.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} align="center" sx={{ py: 4, color: 'text.secondary' }}>
+                <TableCell colSpan={8} align="center" className="py-8 text-slate">
                   {showArchived ? 'No hay filamentos archivados.' : 'No hay filamentos registrados.'}
                 </TableCell>
               </TableRow>
@@ -229,17 +221,19 @@ export default function FilamentsPage() {
                     }}
                     onClick={() => router.push(`/dashboard/stock/filaments/${f.id}`)}
                   >
-                    <TableCell>
-                      <FilamentIcon color={f.color_hex} size={24} />
+                    <TableCell align="center">
+                      <span className="flex items-center justify-center">
+                        <FilamentIcon color={f.color_hex} size={24} hole={paper} />
+                      </span>
                     </TableCell>
-                    <TableCell>{f.color_name}</TableCell>
-                    <TableCell>{f.brand || '-'}</TableCell>
-                    <TableCell><Chip label={f.filament_type} size="small" variant="outlined" /></TableCell>
-                    <TableCell align="right">{f.weight_grams.toFixed(1)}g</TableCell>
-                    <TableCell align="right">${f.price_per_kg.toFixed(2)}</TableCell>
-                    <TableCell>
+                    <TableCell align="center">{f.color_name}</TableCell>
+                    <TableCell align="center">{f.brand || '-'}</TableCell>
+                    <TableCell align="center"><Chip label={f.filament_type} size="small" variant="outlined" /></TableCell>
+                    <TableCell align="center">{f.weight_grams.toFixed(1)}g</TableCell>
+                    <TableCell align="center">${f.price_per_kg.toFixed(2)}</TableCell>
+                    <TableCell align="center">
                       {!showArchived && isLow && (
-                        <Chip icon={<WarningAmberIcon />} label="Stock bajo" size="small" color="warning" sx={styles.lowStockChip} />
+                        <Chip icon={<WarningAmberIcon />} label="Stock bajo" size="small" color="warning" />
                       )}
                     </TableCell>
                     <TableCell align="center" onClick={(e) => e.stopPropagation()}>
@@ -269,9 +263,9 @@ export default function FilamentsPage() {
             )}
           </TableBody>
         </Table>
-      </TableContainer>
+      </div>
 
       {!showArchived && <AddFilamentDialog open={dialogOpen} onClose={() => setDialogOpen(false)} />}
-    </Box>
+    </div>
   );
 }
