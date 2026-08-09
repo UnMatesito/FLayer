@@ -137,6 +137,17 @@ class SupplyUpdate(BaseModel):
     is_active: bool | None = None
 
 
+class SupplyAdjustRequest(BaseModel):
+    delta: float
+    notes: str | None = None
+
+
+class SupplyAdjustResponse(BaseModel):
+    id: UUID
+    quantity: float
+    movement_id: UUID
+
+
 class SupplyResponse(BaseModel):
     id: UUID
     user_id: UUID
@@ -153,10 +164,14 @@ class SupplyResponse(BaseModel):
 
 class StockMovementResponse(BaseModel):
     id: UUID
-    filament_id: UUID
+    filament_id: UUID | None = None
     filament_color_name: str | None = None
+    supply_id: UUID | None = None
+    supply_name: str | None = None
     movement_type: str
-    quantity_grams: float
+    quantity_grams: float | None = None
+    quantity: float | None = None
+    unit: str | None = None
     order_id: UUID | None = None
     order_reference: str | None = None
     created_by_user_id: UUID

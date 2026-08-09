@@ -22,6 +22,8 @@ from backend.schemas.stock import (
     LowStockSupply,
     PaginatedStockMovements,
     StockMovementResponse,
+    SupplyAdjustRequest,
+    SupplyAdjustResponse,
     SupplyCreate,
     SupplyResponse,
     SupplyUpdate,
@@ -230,9 +232,35 @@ async def update_supply(
     return supply
 
 
+@router.patch("/api/supplies/{supply_id}/adjust", response_model=SupplyAdjustResponse)
+async def adjust_supply_stock(
+    supply_id: UUID,
+    body: SupplyAdjustRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> SupplyAdjustResponse:
+    try:
+        new_quantity, movement_id = await stock_service.adjust_supply(
+            db=db,
+            supply_id=supply_id,
+            delta=body.delta,
+            user_id=current_user.id,
+            notes=body.notes,
+        )
+        await db.commit()
+        return SupplyAdjustResponse(
+            id=supply_id,
+            quantity=new_quantity,
+            movement_id=movement_id,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
 @router.get("/api/stock-movements", response_model=PaginatedStockMovements)
 async def list_stock_movements(
     filament_id: UUID | None = Query(None),
+    supply_id: UUID | None = Query(None),
     movement_type: str | None = Query(None),
     order_id: UUID | None = Query(None),
     date_from: str | None = Query(None),
@@ -248,6 +276,8 @@ async def list_stock_movements(
 
     if filament_id is not None:
         query = query.where(StockMovement.filament_id == filament_id)
+    if supply_id is not None:
+        query = query.where(StockMovement.supply_id == supply_id)
     if movement_type is not None:
         if movement_type not in VALID_MOVEMENT_TYPES:
             raise HTTPException(
@@ -274,12 +304,24 @@ async def list_stock_movements(
     items = []
     for m in movements:
         filament_name = None
-        filament_result = await db.execute(
-            select(Filament.color_name).where(Filament.id == m.filament_id)
-        )
-        filament_row = filament_result.scalar_one_or_none()
-        if filament_row:
-            filament_name = filament_row
+        if m.filament_id:
+            filament_result = await db.execute(
+                select(Filament.color_name).where(Filament.id == m.filament_id)
+            )
+            filament_row = filament_result.scalar_one_or_none()
+            if filament_row:
+                filament_name = filament_row
+
+        supply_name = None
+        unit = m.unit
+        if m.supply_id:
+            supply_result = await db.execute(
+                select(Supply.name, Supply.unit).where(Supply.id == m.supply_id)
+            )
+            supply_row = supply_result.first()
+            if supply_row:
+                supply_name = supply_row[0]
+                unit = unit or supply_row[1]
 
         order_ref = None
         if m.order_id:
@@ -295,8 +337,12 @@ async def list_stock_movements(
                 id=m.id,
                 filament_id=m.filament_id,
                 filament_color_name=filament_name,
+                supply_id=m.supply_id,
+                supply_name=supply_name,
                 movement_type=m.movement_type,
-                quantity_grams=float(m.quantity_grams),
+                quantity_grams=float(m.quantity_grams) if m.quantity_grams is not None else None,
+                quantity=float(m.quantity) if m.quantity is not None else None,
+                unit=unit,
                 order_id=m.order_id,
                 order_reference=order_ref,
                 created_by_user_id=m.created_by_user_id,

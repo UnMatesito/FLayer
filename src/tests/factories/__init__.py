@@ -1,3 +1,4 @@
+from tests.factories.budget_factory import BudgetFactory
 from tests.factories.customer_factory import CustomerFactory
 from tests.factories.order_factory import OrderFactory, OrderNoteFactory
 from tests.factories.schema_factories import (
@@ -9,6 +10,7 @@ from tests.factories.schema_factories import (
 from tests.factories.user_factory import UserFactory
 
 __all__ = [
+    "BudgetFactory",
     "CustomerCreateFactory",
     "CustomerFactory",
     "FileInfoFactory",

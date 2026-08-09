@@ -17,13 +17,20 @@ class StockMovement(Base):
     user_id: Mapped[uuid.UUID] = mapped_column(
         UUID, ForeignKey("users.id"), nullable=False
     )
-    filament_id: Mapped[uuid.UUID] = mapped_column(
-        UUID, ForeignKey("filaments.id"), nullable=False
+    filament_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID, ForeignKey("filaments.id"), nullable=True
+    )
+    supply_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID, ForeignKey("supplies.id"), nullable=True
     )
     movement_type: Mapped[str] = mapped_column(String(20), nullable=False)
-    quantity_grams: Mapped[float] = mapped_column(
-        Numeric(10, 2), nullable=False
+    quantity_grams: Mapped[float | None] = mapped_column(
+        Numeric(10, 2), nullable=True
     )
+    quantity: Mapped[float | None] = mapped_column(
+        Numeric(10, 2), nullable=True
+    )
+    unit: Mapped[str | None] = mapped_column(String(20), nullable=True)
     order_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID, ForeignKey("orders.id"), nullable=True
     )

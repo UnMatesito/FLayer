@@ -272,10 +272,18 @@ async def list_orders(
             select(Budget.order_id).where(Budget.order_id.in_(order_ids)).distinct()
         )
         order_ids_with_budget = {row[0] for row in budget_result.fetchall()}
+        customer_result = await db.execute(
+            select(Customer.id, Customer.name).where(
+                Customer.id.in_([o.customer_id for o in orders])
+            )
+        )
+        customer_names = {row[0]: row[1] for row in customer_result.fetchall()}
     else:
         order_ids_with_budget = set()
+        customer_names = {}
 
     for order in orders:
         order.has_budget = order.id in order_ids_with_budget
+        order.customer_name = customer_names.get(order.customer_id)
 
     return list(orders)
