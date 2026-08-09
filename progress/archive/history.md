@@ -185,3 +185,15 @@ Output: `printer_profiles` marked `done` in `feature_list.json`.
 - Commits: printer hardening fix, review-doc rule + cleanup, init.sh fix
 
 Output: repo clean of review markdowns; new rule in effect from this session.
+
+## Session 14 — 2026-08-08
+
+**Feature:** `dashboard` (impl, committed now) + landing redesign + `app_entry` spec
+**Transition:** dashboard impl → committed (awaiting review + manual pass); `app_entry` → `spec_ready`
+
+- Committed the `dashboard` implementation (was uncommitted in the working tree): backend overview API (`dashboard_service`, low-stock counts), tenant branding (`logo_url` + storage), supply movements (migration `015`, list/movement endpoints, `016` quantity nullable), migration `014_add_user_branding`, dashboard pages + profile, MUI v7 + Tailwind v4 system setup (`@mui/material-nextjs`, `@tailwindcss/postcss`, `globals.css`, theme rewrite), dashboard frontend (orders/stock/products/printers lists, orders table, LayerBarChart, auth + providers rework), 2 dashboard test suites + budget factory
+- Landing redesign (this session): `/` rebuilt on the Boneyard DNA (Split Diptych: hero + launcher panel + steps + feature rows), pure black/white replaced with gray-900/gray-50 tokens, IBM Plex Mono → Overpass Mono, zero arbitrary Tailwind values, Hallmark stamp + `.hallmark/log.json`
+- `app_entry` feature spec written by `spec_author` (R1–R7): `/` simplified to a non-selling entry point, `FlayerLogo` component with theme tokens, dashboard Logotype fallback; frontend-only (full-stack exception documented)
+- Added agent skills: `hallmark`, `material-ui-nextjs`, `material-ui-tailwind` (skills-lock.json updated)
+
+Output: commits made per logical group; `app_entry` waiting for human approval.
