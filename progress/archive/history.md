@@ -197,3 +197,14 @@ Output: repo clean of review markdowns; new rule in effect from this session.
 - Added agent skills: `hallmark`, `material-ui-nextjs`, `material-ui-tailwind` (skills-lock.json updated)
 
 Output: commits made per logical group; `app_entry` waiting for human approval.
+
+## Session 15 — 2026-08-10
+
+**Feature:** `dashboard` (human manual pass)
+**Transition:** `in_progress` → `done`
+
+- Human completed the dashboard manual pass (UI/branding checks) themselves and marked the feature `done` in `feature_list.json`
+- Manual verification checklist checked in `progress/impl_dashboard.md`
+- Both deps (`stock_management`, `generate_budget`) done → `reports` now unblocked; `app_entry` still awaiting human approval
+
+Output: dashboard done; repo clean.

@@ -1,7 +1,7 @@
 # Project State
 
-**Current feature:** *dashboard*
-**Status:** spec_ready
+**Current feature:** none
+**Status:** dashboard done; next features pending human decision
 **Active tasks:** none
 
 ## Architecture
@@ -27,4 +27,4 @@ None.
 
 ## Next
 
-Human approval → launch implementer.
+Human decision: approve `app_entry` spec (→ implementer) or start `reports`.

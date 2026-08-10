@@ -55,10 +55,10 @@ Frontend: `src/frontend/src/app/theme.ts`, `layout.tsx`, `providers.tsx`, `auth-
 - Frontend lint: **NOT runnable** — `package.json` lint script is `next lint`, removed in Next 16 (`Invalid project directory ... lint`). Pre-existing; not introduced by this feature. Recommend dropping the script or migrating to ESLint CLI.
 - `./init.sh` re-run: green (script idempotent; migration 014 applied cleanly from scratch).
 
-## Manual verification (pending — human or app run)
+## Manual verification (done — 2026-08-10, human pass)
 
-- [ ] Login → home shows chart + KPIs from real data; low stock appears from seeded fixtures; orders hub reached via quick action; sidebar "Pedidos" highlights; mobile viewport stacked; reduced-motion static chart.
-- [ ] Branding: set color → theme + chart today-bar + nav selected change instantly; upload logo → replaces "Flayer" in sidebar AND AppBar; remove → wordmark returns; name appears in home greeting only; invalid hex/file → inline error; `curl` branding endpoints without session → 401.
+- [x] Login → home shows chart + KPIs from real data; low stock appears from seeded fixtures; orders hub reached via quick action; sidebar "Pedidos" highlights; mobile viewport stacked; reduced-motion static chart.
+- [x] Branding: set color → theme + chart today-bar + nav selected change instantly; upload logo → replaces "Flayer" in sidebar AND AppBar; remove → wordmark returns; name appears in home greeting only; invalid hex/file → inline error; `curl` branding endpoints without session → 401.
 
 ## Deviations / notes
 
