@@ -2,19 +2,13 @@
 
 import { useState, useMemo } from 'react';
 import {
-  Box, TextField, Button, Typography, RadioGroup,
-  FormControlLabel, Radio, Stack, Alert, CircularProgress,
+  TextField, Button, RadioGroup,
+  FormControlLabel, Radio, Alert, CircularProgress,
   FormControl, FormLabel, Checkbox,
 } from '@mui/material';
-import type { SxProps, Theme } from '@mui/material';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createInternalOrder, fetchProducts, type InternalOrderPayload, type Product, type LineItem } from '@/app/api';
 import ProductSelector from '@/components/ProductSelector';
-
-const styles: Record<string, SxProps<Theme>> = {
-  container: { maxWidth: 800 },
-  field: { width: '100%' },
-};
 
 interface Props {
   onSuccess?: () => void;
@@ -114,29 +108,29 @@ export default function InternalOrderForm({ onSuccess }: Props) {
 
   if (mutation.isSuccess) {
     return (
-      <Box sx={styles.container}>
+      <div className="max-w-[50rem]">
         <Alert severity="success" sx={{ mb: 2 }}>
           Pedido creado exitosamente.
         </Alert>
         <Button variant="outlined" onClick={resetForm}>
           Crear Otro
         </Button>
-      </Box>
+      </div>
     );
   }
 
   const canSubmit = name.trim() && email;
 
   return (
-    <Box sx={styles.container} component="form" onSubmit={handleSubmit}>
-      <Typography variant="h6" gutterBottom fontWeight={600}>
+    <form className="max-w-[50rem]" onSubmit={handleSubmit}>
+      <h3 className="mb-2 text-[1.25rem] font-semibold">
         Nuevo Pedido (Interno)
-      </Typography>
+      </h3>
 
-      <Stack spacing={2}>
-        <TextField label="Nombre" value={name} onChange={(e) => setName(e.target.value)} required sx={styles.field} />
-        <TextField label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required sx={styles.field} />
-        <TextField label="Teléfono" value={phone} onChange={(e) => setPhone(e.target.value)} sx={styles.field} />
+      <div className="flex flex-col gap-2">
+        <TextField label="Nombre" value={name} onChange={(e) => setName(e.target.value)} required fullWidth />
+        <TextField label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required fullWidth />
+        <TextField label="Teléfono" value={phone} onChange={(e) => setPhone(e.target.value)} fullWidth />
 
         <FormControl>
           <FormLabel>Tipo de trabajo</FormLabel>
@@ -167,15 +161,15 @@ export default function InternalOrderForm({ onSuccess }: Props) {
 
             {lineItems.length > 0 && (
               <Alert severity="info" icon={false}>
-                <Typography variant="body2" fontWeight={600}>Resumen del pedido:</Typography>
+                <p className="text-sm font-semibold text-slate">Resumen del pedido:</p>
                 {lineItems.map((item) => (
-                  <Typography key={item.product_id} variant="body2">
+                  <p key={item.product_id} className="text-sm text-slate">
                     {item.quantity}× {item.name} — ${(item.quantity * item.unit_price).toFixed(2)}
-                  </Typography>
+                  </p>
                 ))}
-                <Typography variant="body2" fontWeight={700} sx={{ mt: 0.5 }}>
+                <p className="mt-0.5 text-sm font-bold text-slate">
                   Total: ${totalAmount.toFixed(2)}
-                </Typography>
+                </p>
               </Alert>
             )}
 
@@ -185,11 +179,11 @@ export default function InternalOrderForm({ onSuccess }: Props) {
               onChange={(e) => setDescription(e.target.value)}
               multiline
               rows={2}
-              sx={styles.field}
+              fullWidth
             />
           </>
         ) : (
-          <TextField label="Descripción" value={description} onChange={(e) => setDescription(e.target.value)} required multiline rows={4} sx={styles.field} />
+          <TextField label="Descripción" value={description} onChange={(e) => setDescription(e.target.value)} required multiline rows={4} fullWidth />
         )}
 
         <FormControlLabel control={<Checkbox checked={skipNotification} onChange={(e) => setSkipNotification(e.target.checked)} />} label="Cliente ya notificado (no enviar email)" />
@@ -204,7 +198,7 @@ export default function InternalOrderForm({ onSuccess }: Props) {
           startIcon={mutation.isPending ? <CircularProgress size={20} /> : undefined}>
           {mutation.isPending ? 'Creando...' : 'Crear Pedido'}
         </Button>
-      </Stack>
-    </Box>
+      </div>
+    </form>
   );
 }

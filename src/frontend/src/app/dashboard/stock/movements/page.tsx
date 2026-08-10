@@ -2,20 +2,14 @@
 
 import { useState } from 'react';
 import {
-  Box, Typography, Paper, Table, TableBody, TableCell,
-  TableContainer, TableHead, TableRow, Chip, CircularProgress,
-  TextField, Stack, FormControl, InputLabel, Select, MenuItem,
-  TablePagination, Button,
+  Button, Chip, CircularProgress, FormControl, InputLabel, MenuItem,
+  Select, Table, TableBody, TableCell, TableContainer, TableHead,
+  TableRow, TablePagination, TextField,
 } from '@mui/material';
-import type { SxProps, Theme } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
-import { fetchFilaments, fetchStockMovements, type Filament } from '@/app/api';
-
-const styles: Record<string, SxProps<Theme>> = {
-  header: { mb: 3 },
-  filters: { mb: 3 },
-  chip: { textTransform: 'capitalize' },
-};
+import {
+  fetchFilaments, fetchStockMovements, fetchSupplies, type Filament, type Supply, type StockMovement,
+} from '@/app/api';
 
 const MOVEMENT_TYPES = ['consumption', 'adjustment', 'reversal'];
 
@@ -37,11 +31,25 @@ function movementTypeLabel(type: string) {
   }
 }
 
+function movementAmount(m: StockMovement): { value: number; unit: string } {
+  if (m.quantity !== null && m.quantity !== undefined) {
+    return { value: m.quantity, unit: m.unit ?? '' };
+  }
+  return { value: m.quantity_grams ?? 0, unit: 'g' };
+}
+
+function movementItemName(m: StockMovement) {
+  if (m.supply_name) return m.supply_name;
+  if (m.filament_color_name) return m.filament_color_name;
+  return (m.supply_id ?? m.filament_id ?? '').slice(0, 8);
+}
+
 export default function MovementsPage() {
   const [page, setPage] = useState(0);
   const [perPage, setPerPage] = useState(20);
   const [movementType, setMovementType] = useState<string>('');
   const [filamentFilter, setFilamentFilter] = useState<string>('');
+  const [supplyFilter, setSupplyFilter] = useState<string>('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
 
@@ -50,11 +58,17 @@ export default function MovementsPage() {
     queryFn: () => fetchFilaments(true),
   });
 
+  const { data: supplies } = useQuery<Supply[]>({
+    queryKey: ['supplies-all'],
+    queryFn: () => fetchSupplies(true),
+  });
+
   const { data, isLoading } = useQuery({
-    queryKey: ['stock-movements', page, perPage, movementType, filamentFilter, dateFrom, dateTo],
+    queryKey: ['stock-movements', page, perPage, movementType, filamentFilter, supplyFilter, dateFrom, dateTo],
     queryFn: () => fetchStockMovements({
       movement_type: movementType || undefined,
       filament_id: filamentFilter || undefined,
+      supply_id: supplyFilter || undefined,
       date_from: dateFrom || undefined,
       date_to: dateTo || undefined,
       page: page + 1,
@@ -63,13 +77,13 @@ export default function MovementsPage() {
   });
 
   return (
-    <Box>
-      <Box sx={styles.header}>
-        <Typography variant="h5" fontWeight={600}>Movimientos de Stock</Typography>
-      </Box>
+    <div>
+      <div className="mb-6">
+        <h2 className="text-[1.6rem] font-bold leading-[1.15] tracking-[-0.01em]">Historial</h2>
+      </div>
 
-      <Paper sx={{ p: 2, ...styles.filters }}>
-        <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap>
+      <div className="mb-6 card rounded-md border border-line bg-snow p-4">
+        <div className="flex flex-wrap gap-2">
           <FormControl size="small" sx={{ minWidth: 160 }}>
             <InputLabel>Tipo</InputLabel>
             <Select value={movementType} label="Tipo" onChange={(e) => { setMovementType(e.target.value); setPage(0); }}>
@@ -84,54 +98,62 @@ export default function MovementsPage() {
               {filaments?.map((f) => <MenuItem key={f.id} value={f.id}>{f.color_name}</MenuItem>)}
             </Select>
           </FormControl>
+          <FormControl size="small" sx={{ minWidth: 200 }}>
+            <InputLabel>Insumo</InputLabel>
+            <Select value={supplyFilter} label="Insumo" onChange={(e) => { setSupplyFilter(e.target.value); setPage(0); }}>
+              <MenuItem value="">Todos</MenuItem>
+              {supplies?.map((s) => <MenuItem key={s.id} value={s.id}>{s.name}</MenuItem>)}
+            </Select>
+          </FormControl>
           <TextField size="small" type="date" label="Desde" value={dateFrom}
             onChange={(e) => { setDateFrom(e.target.value); setPage(0); }}
             InputLabelProps={{ shrink: true }} sx={{ minWidth: 160 }} />
           <TextField size="small" type="date" label="Hasta" value={dateTo}
             onChange={(e) => { setDateTo(e.target.value); setPage(0); }}
             InputLabelProps={{ shrink: true }} sx={{ minWidth: 160 }} />
-          <Button size="small" onClick={() => { setMovementType(''); setFilamentFilter(''); setDateFrom(''); setDateTo(''); setPage(0); }}>
+          <Button size="small" onClick={() => { setMovementType(''); setFilamentFilter(''); setSupplyFilter(''); setDateFrom(''); setDateTo(''); setPage(0); }}>
             Limpiar
           </Button>
-        </Stack>
-      </Paper>
+        </div>
+      </div>
 
-      <Paper>
+      <div className="card rounded-md border border-line bg-snow">
         {isLoading ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}><CircularProgress /></Box>
+          <div className="flex justify-center p-4"><CircularProgress /></div>
         ) : (
           <>
             <TableContainer>
               <Table size="small">
                 <TableHead>
                   <TableRow>
-                    <TableCell>Fecha</TableCell>
-                    <TableCell>Filamento</TableCell>
-                    <TableCell>Tipo</TableCell>
-                    <TableCell align="right">Cantidad (g)</TableCell>
-                    <TableCell>Orden</TableCell>
-                    <TableCell>Notas</TableCell>
+                    <TableCell align="center">Fecha</TableCell>
+                    <TableCell align="center">Elemento</TableCell>
+                    <TableCell align="center">Tipo</TableCell>
+                    <TableCell align="center">Cantidad</TableCell>
+                    <TableCell align="center">Orden</TableCell>
+                    <TableCell align="center">Notas</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {data?.items.map((m) => (
-                    <TableRow key={m.id} hover>
-                      <TableCell>{new Date(m.created_at).toLocaleString()}</TableCell>
-                      <TableCell>{m.filament_color_name || m.filament_id.slice(0, 8)}</TableCell>
-                      <TableCell>
-                        <Chip label={movementTypeLabel(m.movement_type)} size="small"
-                          color={movementTypeColor(m.movement_type)} sx={styles.chip} />
-                      </TableCell>
-                      <TableCell align="right" sx={{
-                        fontWeight: 600,
-                        color: m.quantity_grams < 0 ? 'error.main' : 'success.main',
-                      }}>
-                        {m.quantity_grams > 0 ? '+' : ''}{m.quantity_grams.toFixed(1)}
-                      </TableCell>
-                      <TableCell>{m.order_reference || '-'}</TableCell>
-                      <TableCell>{m.notes || '-'}</TableCell>
-                    </TableRow>
-                  ))}
+                  {data?.items.map((m) => {
+                    const { value, unit } = movementAmount(m);
+                    const negative = value < 0;
+                    return (
+                      <TableRow key={m.id} hover>
+                        <TableCell align="center">{new Date(m.created_at).toLocaleString()}</TableCell>
+                        <TableCell align="center">{movementItemName(m)}</TableCell>
+                        <TableCell align="center">
+                          <Chip label={movementTypeLabel(m.movement_type)} size="small"
+                            color={movementTypeColor(m.movement_type)} className="capitalize" />
+                        </TableCell>
+                        <TableCell align="center" className={negative ? 'font-semibold text-error' : 'font-semibold text-success'}>
+                          {value > 0 ? '+' : ''}{value.toFixed(1)} {unit}
+                        </TableCell>
+                        <TableCell align="center">{m.order_reference || '-'}</TableCell>
+                        <TableCell align="center">{m.notes || '-'}</TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </TableContainer>
@@ -146,7 +168,7 @@ export default function MovementsPage() {
             />
           </>
         )}
-      </Paper>
-    </Box>
+      </div>
+    </div>
   );
 }

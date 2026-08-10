@@ -1,10 +1,8 @@
 'use client';
 
 import {
-  Box, Typography, Stack, Table, TableBody, TableCell, TableRow,
-  TableHead, Divider,
+  Table, TableBody, TableCell, TableRow, TableHead,
 } from '@mui/material';
-import type { SxProps, Theme } from '@mui/material';
 import { type BudgetResponse } from '@/app/api';
 
 interface Props {
@@ -33,17 +31,17 @@ export default function BudgetBreakdown({ budget }: Props) {
   const sparePartsCost = budget.spare_parts_cost ?? (budget.currency === 'USD' ? 400 : 150000);
 
   return (
-    <Box>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <Typography variant="h6" fontWeight={600}>Presupuesto</Typography>
-        <Typography variant="caption" color="text.secondary">
+    <div>
+      <div className="mb-2 flex items-center justify-between">
+        <h3 className="text-[1.25rem] font-semibold">Presupuesto</h3>
+        <p className="text-xs text-slate">
           v{budget.version}
-        </Typography>
-      </Box>
+        </p>
+      </div>
 
       {budget.filament_items.length > 0 && (
-        <Box sx={{ mb: 2 }}>
-          <Typography variant="subtitle2" gutterBottom>Filamentos</Typography>
+        <div className="mb-2">
+          <p className="mb-1 text-sm font-medium">Filamentos</p>
           <Table size="small">
             <TableHead>
               <TableRow>
@@ -64,29 +62,29 @@ export default function BudgetBreakdown({ budget }: Props) {
               ))}
             </TableBody>
           </Table>
-        </Box>
+        </div>
       )}
 
       {budget.manual_filament_cost != null && (
-        <Typography variant="body2" sx={{ mb: 1 }}>
+        <p className="mb-1 text-sm text-slate">
           Costo manual de filamento: {sym}{budget.manual_filament_cost.toFixed(2)}
           {budget.manual_grams != null && ` (${budget.manual_grams}g)`}
-        </Typography>
+        </p>
       )}
 
-      <Box sx={{ mb: 1, p: 1.5, bgcolor: 'grey.50', borderRadius: 1 }}>
-        <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600 }}>
+      <div className="mb-1 rounded-md bg-canvas p-1.5">
+        <p className="mb-1 text-sm font-semibold">
           Máquina
-        </Typography>
-        <Typography variant="body2">
+        </p>
+        <p className="text-sm">
           {budget.printer_name ? `Impresora: ${budget.printer_name}` : 'Impresora: parámetros por defecto'}
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
+        </p>
+        <p className="text-sm text-slate">
           Potencia: {powerWatts}W · Vida útil: {lifespanHours}h · Repuestos: {sym}{sparePartsCost.toFixed(2)}
-        </Typography>
-      </Box>
+        </p>
+      </div>
 
-      <Divider sx={{ my: 1 }} />
+      <hr className="my-1 border-line" />
 
       <Table size="small">
         <TableBody>
@@ -125,34 +123,23 @@ export default function BudgetBreakdown({ budget }: Props) {
         </TableBody>
       </Table>
 
-      <Box
-        sx={{
-          bgcolor: 'primary.light',
-          color: 'primary.contrastText',
-          p: 2,
-          borderRadius: 1,
-          mt: 1,
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-        }}
-      >
-        <Typography variant="h6" fontWeight={700}>Precio final</Typography>
-        <Typography variant="h6" fontWeight={700}>
+      <div className="mt-1 flex items-center justify-between rounded-md bg-primary p-2 text-[var(--mui-palette-primary-contrastText)]">
+        <h3 className="text-[1.25rem] font-bold">Precio final</h3>
+        <h3 className="text-[1.25rem] font-bold">
           {sym}{budget.final_price.toFixed(2)}
-        </Typography>
-      </Box>
+        </h3>
+      </div>
 
-      <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, textAlign: 'right' }}>
+      <p className="mt-0.5 text-right text-sm text-slate">
         Precio ML sugerido: {sym}{budget.ml_price.toFixed(2)}
-      </Typography>
+      </p>
 
       {budget.notes && (
-        <Box sx={{ mt: 2, p: 1.5, bgcolor: 'grey.50', borderRadius: 1 }}>
-          <Typography variant="caption" fontWeight={600} color="text.secondary">Notas</Typography>
-          <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>{budget.notes}</Typography>
-        </Box>
+        <div className="mt-2 rounded-md bg-canvas p-1.5">
+          <p className="text-xs font-semibold text-slate">Notas</p>
+          <p className="whitespace-pre-wrap text-sm">{budget.notes}</p>
+        </div>
       )}
-    </Box>
+    </div>
   );
 }

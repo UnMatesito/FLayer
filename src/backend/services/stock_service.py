@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.models.filament import Filament
 from backend.models.stock_movement import StockMovement
+from backend.models.supply import Supply
 
 logger = logging.getLogger(__name__)
 
@@ -126,6 +127,45 @@ class StockService:
         await db.flush()
 
         return float(filament.weight_grams), movement.id
+
+    @staticmethod
+    async def adjust_supply(
+        db: AsyncSession,
+        supply_id: UUID,
+        delta: float,
+        user_id: UUID,
+        notes: str | None = None,
+    ) -> tuple[float, UUID]:
+        result = await db.execute(
+            select(Supply).where(
+                Supply.id == supply_id,
+                Supply.user_id == user_id,
+            )
+        )
+        supply = result.scalar_one_or_none()
+        if supply is None:
+            raise ValueError(f"Supply {supply_id} not found")
+
+        new_quantity = float(supply.quantity) + delta
+        if new_quantity < 0:
+            raise ValueError("Stock cannot be negative")
+
+        supply.quantity = new_quantity
+        await db.flush()
+
+        movement = StockMovement(
+            user_id=user_id,
+            supply_id=supply_id,
+            movement_type="adjustment",
+            quantity=delta,
+            unit=supply.unit,
+            created_by_user_id=user_id,
+            notes=notes,
+        )
+        db.add(movement)
+        await db.flush()
+
+        return float(supply.quantity), movement.id
 
 
 stock_service = StockService()

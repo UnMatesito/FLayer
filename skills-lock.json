@@ -7,6 +7,24 @@
       "skillPath": "skills/frontend-design/SKILL.md",
       "computedHash": "4eabc66183767153e404b39d1b839b1c37f2d82d86f0a0d7e880a579d8d62336"
     },
+    "hallmark": {
+      "source": "nutlope/hallmark",
+      "sourceType": "github",
+      "skillPath": "skills/hallmark/SKILL.md",
+      "computedHash": "579f86b27cdd7eb972107f7aecedd537f472891c5fd7c7c821bea15f64e0fe86"
+    },
+    "material-ui-nextjs": {
+      "source": "mui/material-ui",
+      "sourceType": "github",
+      "skillPath": "skills/material-ui-nextjs/SKILL.md",
+      "computedHash": "dcee153b8af675ae22b01eb7bd73cab8484990f2889bd190bf5aca55107c67a7"
+    },
+    "material-ui-tailwind": {
+      "source": "mui/material-ui",
+      "sourceType": "github",
+      "skillPath": "skills/material-ui-tailwind/SKILL.md",
+      "computedHash": "a50bed34976f7793b69c2f7a95942060f417b38af5ccf8d626d811dc1ad8b6fe"
+    },
     "mui": {
       "source": "softaworks/agent-toolkit",
       "sourceType": "github",

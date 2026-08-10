@@ -62,6 +62,7 @@ class OrderCreate(BaseModel):
 class OrderResponse(BaseModel):
     id: UUID
     customer_id: UUID
+    customer_name: str | None = None
     work_type: str
     description: str
     files: list[dict[str, Any]] | None

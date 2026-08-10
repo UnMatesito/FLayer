@@ -1,0 +1,47 @@
+@layer theme, base, mui, components, utilities;
+@import 'tailwindcss';
+
+/* Hybrid MUI v7 + Tailwind v4 tokens.
+   MUI theme emits --mui-palette-* CSS variables (cssVariables: colorSchemeSelector
+   'data' in theme.ts); Tailwind utilities (bg-*, text-*, border-*) resolve to the
+   same values, so a single palette drives both styling systems. The dark color
+   scheme overrides the same variables under [data-mui-color-scheme="dark"].
+   Fallbacks match the light scheme so SSR/first paint renders correctly. */
+@theme inline {
+  /* MUI uses an 8px spacing unit; Tailwind's default is 4px. Setting the base
+     to 0.5rem makes p-2 == MUI p:2 (16px), gap-3 == spacing(3) (24px), etc. */
+  --spacing: 0.5rem;
+
+  --color-primary: var(--mui-palette-primary-main, #e4572e);
+  --color-ember: #e4572e;
+  --color-ink: var(--mui-palette-text-primary, #111827);
+  --color-slate: var(--mui-palette-text-secondary, #4a5058);
+  --color-plate: var(--mui-palette-background-default, #e9ebee);
+  --color-snow: var(--mui-palette-background-paper, #f9fafb);
+  --color-line: var(--mui-palette-divider, #d9dee4);
+  --color-canvas: var(--mui-palette-background-level1, #f1f3f5);
+  --color-error: var(--mui-palette-error-main, #d32f2f);
+  --color-warning: var(--mui-palette-warning-main, #ed6c02);
+  --color-info: var(--mui-palette-info-main, #0288d1);
+  --color-success: var(--mui-palette-success-main, #2e7d32);
+
+  --font-sans: var(--font-overpass), Overpass, ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-overpass-mono), 'Overpass Mono', ui-monospace, monospace;
+}
+
+/* Devias-style card: hairline border + a whisper of shadow on light,
+   border-only on dark (shadows don't read there). */
+.card {
+  box-shadow:
+    0 1px 2px 0 rgb(16 24 40 / 0.04),
+    0 1px 3px 0 rgb(16 24 40 / 0.03);
+}
+[data-mui-color-scheme='dark'] .card,
+[data-mui-color-scheme='system'] .card {
+  box-shadow: none;
+}
+@media (prefers-color-scheme: dark) {
+  [data-mui-color-scheme='system'] .card {
+    box-shadow: none;
+  }
+}

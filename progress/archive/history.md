@@ -172,3 +172,39 @@ Output: waiting for human approval of `printer_profiles` spec.
 - Commit subject: `feat: printer_profiles + generate_budget R11 (printer select)` — entered before commit per archive-first rule
 
 Output: `printer_profiles` marked `done` in `feature_list.json`.
+
+## Session 13 — 2026-08-04
+
+**Feature:** `printer_profiles` review hardening + process rule (review docs)
+**Transition:** follow-up work → committed; review markdowns eliminated
+
+- Implemented both recommended changes from the printer review: non-finite nozzle sizes (`NaN`/`Infinity`/`-Infinity`) → 422 via `value.is_finite()` (`printer_service.py`); `brand`/`model` >100 chars → 422 in `PrinterCreate`/`PrinterUpdate` (`schemas/printer.py`). 4 new tests → **151/151 pass**, `printer_service.py` 95%, `schemas/printer.py` 93%
+- New rule (docs): `progress/review_<feature>.md` is created only when the review produced recommended changes; clean approvals are recorded as an inline `## Reviewer verdict` in the impl file. Updated `reviewer.md`, `leader.md`, `CHECKPOINTS.md`, `docs/specs.md`
+- Eliminated all `progress/review_*.md` (`printer_profiles`, `budget_r11`, `product_management`); verdicts migrated inline into the three impl files
+- Fixed `init.sh` harness: `cancelled` features no longer require spec files
+- Commits: printer hardening fix, review-doc rule + cleanup, init.sh fix
+
+Output: repo clean of review markdowns; new rule in effect from this session.
+
+## Session 14 — 2026-08-08
+
+**Feature:** `dashboard` (impl, committed now) + landing redesign + `app_entry` spec
+**Transition:** dashboard impl → committed (awaiting review + manual pass); `app_entry` → `spec_ready`
+
+- Committed the `dashboard` implementation (was uncommitted in the working tree): backend overview API (`dashboard_service`, low-stock counts), tenant branding (`logo_url` + storage), supply movements (migration `015`, list/movement endpoints, `016` quantity nullable), migration `014_add_user_branding`, dashboard pages + profile, MUI v7 + Tailwind v4 system setup (`@mui/material-nextjs`, `@tailwindcss/postcss`, `globals.css`, theme rewrite), dashboard frontend (orders/stock/products/printers lists, orders table, LayerBarChart, auth + providers rework), 2 dashboard test suites + budget factory
+- Landing redesign (this session): `/` rebuilt on the Boneyard DNA (Split Diptych: hero + launcher panel + steps + feature rows), pure black/white replaced with gray-900/gray-50 tokens, IBM Plex Mono → Overpass Mono, zero arbitrary Tailwind values, Hallmark stamp + `.hallmark/log.json`
+- `app_entry` feature spec written by `spec_author` (R1–R7): `/` simplified to a non-selling entry point, `FlayerLogo` component with theme tokens, dashboard Logotype fallback; frontend-only (full-stack exception documented)
+- Added agent skills: `hallmark`, `material-ui-nextjs`, `material-ui-tailwind` (skills-lock.json updated)
+
+Output: commits made per logical group; `app_entry` waiting for human approval.
+
+## Session 15 — 2026-08-10
+
+**Feature:** `dashboard` (human manual pass)
+**Transition:** `in_progress` → `done`
+
+- Human completed the dashboard manual pass (UI/branding checks) themselves and marked the feature `done` in `feature_list.json`
+- Manual verification checklist checked in `progress/impl_dashboard.md`
+- Both deps (`stock_management`, `generate_budget`) done → `reports` now unblocked; `app_entry` still awaiting human approval
+
+Output: dashboard done; repo clean.

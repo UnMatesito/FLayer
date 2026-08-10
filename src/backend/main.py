@@ -8,6 +8,7 @@ from sqlalchemy import create_engine, text
 
 from backend.api.auth import router as auth_router
 from backend.api.budget import router as budget_router
+from backend.api.dashboard import router as dashboard_router
 from backend.api.order_status import router as order_status_router
 from backend.api.orders import router as orders_router
 from backend.api.printers import router as printers_router
@@ -48,6 +49,7 @@ app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 app.include_router(auth_router)
 app.include_router(budget_router)
+app.include_router(dashboard_router)
 app.include_router(orders_router)
 app.include_router(order_status_router)
 app.include_router(printers_router)

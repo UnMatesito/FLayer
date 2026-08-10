@@ -22,7 +22,9 @@ Objective criteria for "this is good". If not met, it cannot advance.
 
 ## Checkpoint: Feature complete (`in_progress` → `done`)
 
-- [ ] `progress/review_<feature>.md` exists with verdict "APPROVED"
+- [ ] Review outcome recorded: `progress/review_<feature>.md` with verdict
+      "APPROVED", OR the impl file's inline `## Reviewer verdict` says
+      "APPROVED" (clean approval — no review doc per rule)
 - [ ] All tasks in `tasks.md` marked `[x]`
 - [ ] `feature_list.json` updated to `"status": "done"`
 - [ ] `progress/history.md` has session entry

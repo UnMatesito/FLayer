@@ -10,12 +10,13 @@ if [ "$IN_PROGRESS" -gt 1 ]; then
   exit 1
 fi
 
-# 2. Every non-pending feature must have complete specs
+# 2. Every feature that went through the spec step must have complete specs
+#    (excludes 'pending' and 'cancelled' — cancelled features never had specs)
 FEATURES=$(python3 -c "
 import json
 data = json.load(open('feature_list.json'))
 for f in data['features']:
-    if f['status'] != 'pending':
+    if f['status'] not in ('pending', 'cancelled'):
         print(f['name'])
 ")
 

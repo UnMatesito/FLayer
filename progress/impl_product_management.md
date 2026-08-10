@@ -33,3 +33,10 @@ R10 ← test_upload_product_image_invalid_type, test_upload_product_image_too_la
 - [x] Frontend: products list page at `/dashboard/products` with create dialog, archive/restore
 - [x] Frontend: product detail page at `/dashboard/products/[id]` with edit, archive/activate
 - [x] Frontend: "Productos" nav link in dashboard sidebar
+
+## Reviewer verdict
+
+APPROVED — full traceability, all tests pass, coverage > 70% on all touched
+files (2026-07-31). Minor non-blocking notes only (pytest-cov path quirk;
+PATCH empty-name path untested). Review doc eliminated 2026-08-04 per the
+new rule: review docs exist only when they contain recommended changes.

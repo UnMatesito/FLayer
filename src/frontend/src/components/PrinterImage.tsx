@@ -1,19 +1,17 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Box } from '@mui/material';
-import type { SxProps, Theme } from '@mui/material';
 import { PrinterIcon } from '@/components/PrinterIcon';
 
 export function PrinterImage({
   src,
   alt,
-  sx,
+  className = '',
   iconSize = 60,
 }: {
   src: string | null;
   alt: string;
-  sx?: SxProps<Theme>;
+  className?: string;
   iconSize?: number;
 }) {
   const [failed, setFailed] = useState(false);
@@ -21,29 +19,20 @@ export function PrinterImage({
 
   if (!src || failed) {
     return (
-      <Box
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          bgcolor: 'grey.100',
-          ...sx,
-        }}
-      >
-        <PrinterIcon color="#9e9e9e" size={iconSize} />
-      </Box>
+      <div className={`flex items-center justify-center bg-canvas text-slate ${className}`}>
+        <PrinterIcon color="currentColor" size={iconSize} />
+      </div>
     );
   }
 
   return (
-    <Box sx={{ overflow: 'hidden', ...sx }}>
-      <Box
-        component="img"
+    <div className={`overflow-hidden ${className}`}>
+      <img
         src={src}
         alt={alt}
         onError={() => setFailed(true)}
-        sx={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+        className="block h-full w-full object-cover"
       />
-    </Box>
+    </div>
   );
 }

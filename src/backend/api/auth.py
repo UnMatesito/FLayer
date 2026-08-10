@@ -2,7 +2,7 @@ import secrets
 from datetime import datetime, timedelta, timezone
 
 import bcrypt
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from fastapi import APIRouter, Depends, File, HTTPException, Request, Response, UploadFile, status
 from jose import jwt
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -19,16 +19,29 @@ from backend.schemas.auth import (
     OtpSendResponse,
     OtpVerifyRequest,
     OtpVerifyResponse,
+    ProfileUpdate,
     RegisterRequest,
     RegisterResponse,
     UserResponse,
 )
+from backend.services import storage_service
 from backend.services.email_service import email_service
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 OTP_EXPIRE_MINUTES = 10
 COOKIE_KEY = "access_token"
+
+
+def _user_response(user: User) -> UserResponse:
+    logo_url = storage_service.get_file_url(user.logo_path) if user.logo_path else None
+    return UserResponse(
+        id=user.id,
+        email=user.email,
+        name=user.name,
+        primary_color=user.primary_color,
+        logo_url=logo_url,
+    )
 
 
 def _create_token(user: User, otp_verified: bool = False) -> str:
@@ -153,11 +166,57 @@ async def verify_otp(
 async def get_me(
     current_user: User = Depends(get_verified_user),
 ) -> UserResponse:
-    return UserResponse(
-        id=current_user.id,
-        email=current_user.email,
-        name=current_user.name,
-    )
+    return _user_response(current_user)
+
+
+@router.patch("/me", response_model=UserResponse)
+async def update_me(
+    body: ProfileUpdate,
+    current_user: User = Depends(get_verified_user),
+    db: AsyncSession = Depends(get_db),
+) -> UserResponse:
+    data = body.model_dump(exclude_unset=True)
+    if "name" in data:
+        current_user.name = data["name"]
+    if "primary_color" in data:
+        current_user.primary_color = data["primary_color"]
+    await db.commit()
+    await db.refresh(current_user)
+    return _user_response(current_user)
+
+
+@router.post("/me/logo", response_model=UserResponse)
+async def upload_logo(
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_verified_user),
+    db: AsyncSession = Depends(get_db),
+) -> UserResponse:
+    try:
+        storage_service.validate_image(file)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(e))
+
+    if current_user.logo_path:
+        storage_service.delete_file(current_user.logo_path)
+
+    path = await storage_service.save_logo(file, current_user.id)
+    current_user.logo_path = path
+    await db.commit()
+    await db.refresh(current_user)
+    return _user_response(current_user)
+
+
+@router.delete("/me/logo", response_model=UserResponse)
+async def delete_logo(
+    current_user: User = Depends(get_verified_user),
+    db: AsyncSession = Depends(get_db),
+) -> UserResponse:
+    if current_user.logo_path:
+        storage_service.delete_file(current_user.logo_path)
+        current_user.logo_path = None
+        await db.commit()
+        await db.refresh(current_user)
+    return _user_response(current_user)
 
 
 @router.post("/register", response_model=RegisterResponse, status_code=201)
@@ -178,12 +237,18 @@ async def register(
         email=body.email,
         name=body.name,
         hashed_password=hashed,
+        primary_color=body.primary_color,
     )
     db.add(user)
     await db.commit()
     await db.refresh(user)
 
-    return RegisterResponse(id=user.id, email=user.email, name=user.name)
+    return RegisterResponse(
+        id=user.id,
+        email=user.email,
+        name=user.name,
+        primary_color=user.primary_color,
+    )
 
 
 @router.post("/logout", response_model=LogoutResponse)

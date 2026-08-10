@@ -3,15 +3,20 @@
 **Feature:** `region_parameters` — spec_ready (awaiting human approval)
 **Next:** human reads `specs/region_parameters/{requirements,design,tasks}.md` and says "approved" or "change X"
 
-- `printer_profiles`: implemented + reviewer APPROVED → `progress/review_printer_profiles.md`; marked `done`
-- `generate_budget` R11 (printer select in budget form): implemented + reviewer APPROVED → `progress/review_budget_r11.md` (1 rejection → fixed: missing PUT tests, stale `final_price` bug)
-- 147/147 tests, build clean
+- `dashboard`: DONE → `progress/impl_dashboard.md` (R1–R23, 181 tests, build clean, coverage 98%, reviewer APPROVED). Manual UI/branding pass completed by human; marked `done` in `feature_list.json`.
+
+## Context (prior sessions, all committed)
+
+- `printer_profiles`: done; 2026-08-04 review hardening done (non-finite nozzles → 422, brand/model ≤100 chars → 422)
+- `generate_budget` R11: done (printer select); 1 rejection → fixed
+- 151/151 baseline tests, 181 with dashboard; build clean
+- Rule in effect: review docs only when they contain recommended changes (verdicts inline in impl files)
 
 Note: `arquiminis` cancelled by human decision (2026-07-31) — feature no longer needed.
 
 ## Pending features
 
 - `registration` (no deps beyond done auth — deferred registration UI, includes currency at registration)
+- `region_parameters` (no deps)
 - `email_notifications` (depends on `order_status`)
-- `dashboard` (depends on `stock_management`, `generate_budget`) — both deps done
-- `reports` (depends on `dashboard`)
+- `reports` (depends on `dashboard`) — dep done, unblocked

@@ -3,52 +3,18 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  Box, Typography, Button, Card, CardContent, CardActions,
-  Chip, CircularProgress, Grid, IconButton, Stack,
+  Button, Chip, CircularProgress, IconButton,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import ArchiveIcon from '@mui/icons-material/Archive';
 import EditIcon from '@mui/icons-material/Edit';
-import ThreeDRotationIcon from '@mui/icons-material/ThreeDRotation';
 import BoltIcon from '@mui/icons-material/Bolt';
 import ScheduleIcon from '@mui/icons-material/Schedule';
 import PaymentsIcon from '@mui/icons-material/Payments';
-import type { SxProps, Theme } from '@mui/material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchPrinters, deletePrinter, type Printer } from '@/app/api';
 import { PrinterFormDialog } from '@/components/PrinterFormDialog';
 import { PrinterImage } from '@/components/PrinterImage';
-
-const styles: Record<string, SxProps<Theme>> = {
-  header: {
-    display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3,
-    flexWrap: 'wrap', gap: 1,
-  },
-  card: {
-    display: 'flex', flexDirection: 'column', cursor: 'pointer',
-    transition: 'box-shadow 0.2s, transform 0.2s',
-    '&:hover': { boxShadow: 6, transform: 'translateY(-2px)' },
-  },
-  image: {
-    height: 160,
-    width: '100%',
-  },
-  brandLine: {
-    color: 'text.secondary', fontSize: '0.85rem', mb: 1,
-  },
-  paramRow: {
-    display: 'flex', alignItems: 'center', gap: 1,
-  },
-  paramValue: {
-    fontWeight: 600, fontSize: '0.9rem',
-  },
-  paramIcon: {
-    fontSize: 16, color: 'text.disabled',
-  },
-  actions: {
-    justifyContent: 'space-between', px: 2, pb: 1.5,
-  },
-};
 
 function formatMoney(value: number | null): string {
   if (value == null) return '—';
@@ -61,42 +27,45 @@ function PrinterCard({ printer, onEdit, onArchive }: {
   const router = useRouter();
 
   return (
-    <Card sx={styles.card} onClick={() => router.push(`/dashboard/printers/${printer.id}`)}>
-      <PrinterImage src={printer.image_url} alt={printer.name} sx={styles.image} iconSize={64} />
-      <CardContent sx={{ flexGrow: 1, pb: 0 }}>
-        <Typography variant="h6" fontWeight={600} lineHeight={1.2} noWrap>
+    <div
+      className="flex cursor-pointer flex-col overflow-hidden card rounded-md border border-line bg-snow transition-colors hover:border-slate/60"
+      onClick={() => router.push(`/dashboard/printers/${printer.id}`)}
+    >
+      <PrinterImage src={printer.image_url} alt={printer.name} className="h-[160px] w-full" iconSize={64} />
+      <div className="flex flex-1 flex-col p-2 pb-0">
+        <h3 className="truncate text-[1.25rem] font-semibold leading-[1.2]">
           {printer.name}
-        </Typography>
-        <Typography sx={styles.brandLine}>
+        </h3>
+        <p className="mb-1 text-[0.85rem] text-slate">
           {[printer.brand, printer.model].filter(Boolean).join(' · ') || 'Marca no especificada'}
-        </Typography>
+        </p>
         {printer.nozzle_sizes.length > 0 && (
-          <Stack direction="row" spacing={0.5} sx={{ mb: 1.5 }} flexWrap="wrap" useFlexGap>
+          <div className="mb-1.5 flex flex-wrap gap-0.5">
             {printer.nozzle_sizes.map((n) => (
               <Chip key={n} label={`${n} mm`} size="small" variant="outlined" />
             ))}
-          </Stack>
+          </div>
         )}
-        <Stack spacing={0.75}>
-          <Box sx={styles.paramRow}>
-            <BoltIcon sx={styles.paramIcon} />
-            <Typography sx={styles.paramValue}>
+        <div className="flex flex-col gap-0.75">
+          <div className="flex items-center gap-1">
+            <BoltIcon sx={{ fontSize: 16 }} className="text-slate" />
+            <p className="text-[0.9rem] font-semibold">
               {printer.power_watts != null ? `${printer.power_watts} W` : '—'}
-            </Typography>
-          </Box>
-          <Box sx={styles.paramRow}>
-            <ScheduleIcon sx={styles.paramIcon} />
-            <Typography sx={styles.paramValue}>
+            </p>
+          </div>
+          <div className="flex items-center gap-1">
+            <ScheduleIcon sx={{ fontSize: 16 }} className="text-slate" />
+            <p className="text-[0.9rem] font-semibold">
               {printer.lifespan_hours != null ? `${printer.lifespan_hours} h` : '—'}
-            </Typography>
-          </Box>
-          <Box sx={styles.paramRow}>
-            <PaymentsIcon sx={styles.paramIcon} />
-            <Typography sx={styles.paramValue}>{formatMoney(printer.spare_parts_cost)}</Typography>
-          </Box>
-        </Stack>
-      </CardContent>
-      <CardActions sx={styles.actions} onClick={(e) => e.stopPropagation()}>
+            </p>
+          </div>
+          <div className="flex items-center gap-1">
+            <PaymentsIcon sx={{ fontSize: 16 }} className="text-slate" />
+            <p className="text-[0.9rem] font-semibold">{formatMoney(printer.spare_parts_cost)}</p>
+          </div>
+        </div>
+      </div>
+      <div className="flex items-center justify-between px-2 pb-1.5" onClick={(e) => e.stopPropagation()}>
         <IconButton size="small" color="primary" title="Editar" onClick={() => onEdit(printer)}>
           <EditIcon />
         </IconButton>
@@ -104,8 +73,8 @@ function PrinterCard({ printer, onEdit, onArchive }: {
           onClick={() => { if (confirm('¿Archivar esta impresora?')) onArchive(printer.id); }}>
           <ArchiveIcon />
         </IconButton>
-      </CardActions>
-    </Card>
+      </div>
+    </div>
   );
 }
 
@@ -125,41 +94,38 @@ export default function PrintersPage() {
   });
 
   if (isLoading) {
-    return <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}><CircularProgress /></Box>;
+    return <div className="flex justify-center p-4"><CircularProgress /></div>;
   }
 
   return (
-    <Box>
-      <Box sx={styles.header}>
-        <Typography variant="h5" fontWeight={600}>Impresoras</Typography>
+    <div>
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-1">
+        <h2 className="text-[1.6rem] font-bold leading-[1.15] tracking-[-0.01em]">Impresoras</h2>
         <Button startIcon={<AddIcon />} variant="contained" onClick={() => setCreateOpen(true)}>
           Agregar impresora
         </Button>
-      </Box>
+      </div>
 
       {!printers || printers.length === 0 ? (
-        <Box sx={{ textAlign: 'center', py: 8 }}>
-          <ThreeDRotationIcon sx={{ fontSize: 64, color: 'grey.300', mb: 2 }} />
-          <Typography color="text.secondary">No hay impresoras registradas.</Typography>
-        </Box>
+        <p className="py-6 text-sm text-slate">No hay impresoras registradas.</p>
       ) : (
-        <Grid container spacing={3}>
+        <div className="grid grid-cols-12 gap-3">
           {printers.map((p) => (
-            <Grid key={p.id} size={{ xs: 12, sm: 6, md: 4, lg: 3 }}>
+            <div key={p.id} className="col-span-12 sm:col-span-6 md:col-span-4 lg:col-span-3">
               <PrinterCard
                 printer={p}
                 onEdit={(printer) => setEditing(printer)}
                 onArchive={(id) => archiveMutation.mutate(id)}
               />
-            </Grid>
+            </div>
           ))}
-        </Grid>
+        </div>
       )}
 
       <PrinterFormDialog open={createOpen} onClose={() => setCreateOpen(false)} />
       {editing && (
         <PrinterFormDialog open onClose={() => setEditing(null)} printer={editing} />
       )}
-    </Box>
+    </div>
   );
 }

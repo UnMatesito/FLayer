@@ -11,12 +11,15 @@
   "dependencies": {
     "@emotion/react": "^11.13.0",
     "@emotion/styled": "^11.13.0",
-    "@mui/material": "^7.0.0",
     "@mui/icons-material": "^7.0.0",
+    "@mui/material": "^7.0.0",
+    "@mui/material-nextjs": "^7.3.10",
+    "@tailwindcss/postcss": "^4.3.3",
     "@tanstack/react-query": "^5.60.0",
     "next": "^16.0.0",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "tailwindcss": "^4.3.3"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",

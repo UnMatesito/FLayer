@@ -2,16 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import {
-  Box,
-  Button,
-  Container,
-  Paper,
-  TextField,
-  Typography,
-  Alert,
-  Stack,
-} from '@mui/material';
+import { Button, TextField, Alert } from '@mui/material';
 import { useAuth } from '../auth-context';
 
 export default function LoginPage() {
@@ -37,13 +28,13 @@ export default function LoginPage() {
   };
 
   return (
-    <Container maxWidth="sm" sx={{ py: 8 }}>
-      <Paper sx={{ p: 4 }}>
-        <Typography variant="h5" gutterBottom fontWeight={600}>
+    <div className="mx-auto w-full max-w-md px-4 py-8">
+      <div className="card rounded-md border border-line bg-snow p-4">
+        <h2 className="mb-2 text-[1.5rem] font-semibold">
           Iniciar sesión
-        </Typography>
-        <Box component="form" onSubmit={handleSubmit}>
-          <Stack spacing={2}>
+        </h2>
+        <form onSubmit={handleSubmit}>
+          <div className="flex flex-col gap-2">
             {error && <Alert severity="error">{error}</Alert>}
             <TextField
               label="Email"
@@ -71,9 +62,9 @@ export default function LoginPage() {
             >
               {loading ? 'Ingresando...' : 'Ingresar'}
             </Button>
-          </Stack>
-        </Box>
-      </Paper>
-    </Container>
+          </div>
+        </form>
+      </div>
+    </div>
   );
 }

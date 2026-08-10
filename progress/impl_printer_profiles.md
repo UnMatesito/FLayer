@@ -144,3 +144,33 @@ Addressed both rejection items from `progress/review_budget_r11.md`.
 - `specs/generate_budget/tasks.md` — both PUT task lines kept `[x]` with review-follow-up annotation; 4 new test tasks added as `[x]`
 
 No commit made (per instructions).
+
+## Review follow-up (2026-08-04) — recommended changes implemented
+
+Both non-blocking notes from `progress/review_printer_profiles.md` fixed:
+
+1. **Non-finite nozzle sizes** — `validate_nozzle_sizes` now rejects `NaN`,
+   `Infinity`, `-Infinity` via `value.is_finite()` (was: uncaught
+   `InvalidOperation` → 500 for `"NaN"`, `"Infinity"` accepted as custom size).
+2. **Brand/model length** — `brand_model_optional` (both `PrinterCreate` and
+   `PrinterUpdate`) enforces ≤100 chars after trim → clean 422 (was: DB
+   `VARCHAR(100)` overflow → 500).
+
+New tests in `src/tests/integration/test_printers.py`:
+`test_non_finite_nozzle_size_422`, `test_brand_model_too_long_422`,
+`test_brand_model_exactly_100_chars_accepted`,
+`test_update_brand_model_too_long_422`.
+
+### Verification
+
+- `pytest tests/` — **151 passed** (147 + 4 new)
+- Coverage: `printer_service.py` 95%, `schemas/printer.py` 93%
+
+## Reviewer verdict
+
+APPROVED — full traceability R1–R20, 70/70 tasks `[x]`, 135 tests at review
+time (2026-07-31), coverage > 70% on all touched files. Review produced 2
+non-blocking recommended changes (non-finite nozzles, brand/model length) —
+both implemented and verified on 2026-08-04 (see "Review follow-up" above),
+151/151 tests. Review doc eliminated 2026-08-04 per the new rule: review
+docs exist only when they contain recommended changes.

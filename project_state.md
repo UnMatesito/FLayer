@@ -1,7 +1,7 @@
 # Project State
 
-**Current feature:** *generate_budget*
-**Status:** done
+**Current feature:** none
+**Status:** dashboard done; next features pending human decision
 **Active tasks:** none
 
 ## Architecture
@@ -18,7 +18,7 @@ FastAPI + Next.js 16 + PostgreSQL (Docker) + MUI v7. SDD workflow (spec → code
 
 ## Relevant files
 
-- `specs/create_order/{requirements,design,tasks}.md`
+- `specs/dashboard/{requirements,design,tasks}.md`
 - `progress/current.md`
 
 ## Blockers
@@ -27,4 +27,4 @@ None.
 
 ## Next
 
-Human approval → launch implementer.
+Human decision: approve `app_entry` spec (→ implementer) or start `reports`.

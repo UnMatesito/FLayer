@@ -32,6 +32,26 @@ async def save_file(file: UploadFile, product_id: uuid.UUID) -> str:
     return str(upload_path)
 
 
+async def save_logo(file: UploadFile, user_id: uuid.UUID) -> str:
+    """Validate and persist a business logotype as uploads/logo_<user_id><ext>."""
+    validate_image(file)
+    ext = _ext_from_content_type(file.content_type)
+    filename = f"logo_{user_id}{ext}"
+    upload_path = UPLOAD_DIR / filename
+    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+    content = await file.read()
+    upload_path.write_bytes(content)
+    return str(upload_path)
+
+
+def delete_file(path: str) -> None:
+    """Remove a previously stored upload file from disk (best-effort)."""
+    try:
+        Path(path).unlink(missing_ok=True)
+    except OSError:
+        pass
+
+
 def get_file_url(path: str) -> str:
     return f"/{path}"
 
