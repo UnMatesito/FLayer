@@ -1,10 +1,11 @@
 {
   "features": [
     { "name": "authentication",     "status": "done", "depends_on": [] },
+    { "name": "registration",       "status": "pending", "depends_on": ["authentication"] },
     { "name": "create_order",       "status": "done", "depends_on": ["authentication"] },
     { "name": "order_status",       "status": "done",    "depends_on": ["create_order"] },
     { "name": "generate_budget",    "status": "done",    "depends_on": ["create_order"] },
-    { "name": "region_parameters",  "status": "pending",    "depends_on": [] },
+    { "name": "region_parameters",  "status": "spec_ready", "depends_on": [] },
     { "name": "stock_management",   "status": "done", "depends_on": ["order_status"] },
     { "name": "product_management", "status": "done",    "depends_on": ["create_order"] },
     { "name": "arquiminis",         "status": "cancelled",    "depends_on": ["product_management"] },
