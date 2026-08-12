@@ -34,6 +34,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .finally(() => setLoading(false));
   }, []);
 
+  useEffect(() => {
+    document.title = user?.business_name ? `${user.business_name} - Flayer` : 'Flayer';
+  }, [user?.business_name]);
+
   const login = useCallback(async (email: string, password: string) => {
     const res = await apiLogin(email, password);
     setUser(res.user);
