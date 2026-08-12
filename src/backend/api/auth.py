@@ -39,8 +39,10 @@ def _user_response(user: User) -> UserResponse:
         id=user.id,
         email=user.email,
         name=user.name,
+        business_name=user.business_name,
         primary_color=user.primary_color,
         logo_url=logo_url,
+        currency=user.currency,
     )
 
 
@@ -111,7 +113,7 @@ async def login(
     await db.commit()
 
     return LoginResponse(
-        user=UserResponse(id=user.id, email=user.email, name=user.name),
+        user=_user_response(user),
         otp_required=True,
     )
 
@@ -178,8 +180,12 @@ async def update_me(
     data = body.model_dump(exclude_unset=True)
     if "name" in data:
         current_user.name = data["name"]
+    if "business_name" in data:
+        current_user.business_name = data["business_name"]
     if "primary_color" in data:
         current_user.primary_color = data["primary_color"]
+    if "currency" in data:
+        current_user.currency = data["currency"]
     await db.commit()
     await db.refresh(current_user)
     return _user_response(current_user)

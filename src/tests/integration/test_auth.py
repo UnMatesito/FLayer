@@ -220,6 +220,59 @@ class TestMe:
         assert data["email"] == "me@example.com"
         assert data["name"] == "Me Test"
 
+    def test_update_business_name(self, client, db_session):
+        user = User(
+            email="biz@example.com",
+            name="Biz",
+            hashed_password="hash",
+        )
+        db_session.add(user)
+        db_session.flush()
+
+        token = jwt.encode(
+            {"sub": str(user.id), "otp_verified": True},
+            settings.secret_key,
+            algorithm=settings.jwt_algorithm,
+        )
+
+        client.cookies.set("access_token", token)
+        resp = client.patch(
+            "/api/auth/me",
+            json={"business_name": "  Mate Designs  "},
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["business_name"] == "Mate Designs"
+
+        resp = client.patch(
+            "/api/auth/me",
+            json={"business_name": "   "},
+        )
+        assert resp.status_code == 200
+        assert resp.json()["business_name"] is None
+
+    def test_business_name_too_long(self, client, db_session):
+        user = User(
+            email="bizlong@example.com",
+            name="Biz Long",
+            hashed_password="hash",
+        )
+        db_session.add(user)
+        db_session.flush()
+
+        token = jwt.encode(
+            {"sub": str(user.id), "otp_verified": True},
+            settings.secret_key,
+            algorithm=settings.jwt_algorithm,
+        )
+
+        client.cookies.set("access_token", token)
+        resp = client.patch(
+            "/api/auth/me",
+            json={"business_name": "x" * 256},
+        )
+        assert resp.status_code == 422
+
     def test_me_no_token(self, client):
         resp = client.get("/api/auth/me")
         assert resp.status_code == 401

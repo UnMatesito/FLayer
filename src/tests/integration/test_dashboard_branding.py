@@ -189,7 +189,8 @@ class TestMeBranding:
         assert data["primary_color"] is None
         assert data["logo_url"] is None
         assert "logo_path" not in data
-        assert set(data.keys()) == {"id", "email", "name", "primary_color", "logo_url"}
+        assert set(data.keys()) == {"id", "email", "name", "business_name", "primary_color", "logo_url", "currency"}
+        assert data["currency"] == "ARS"
 
 
 class TestLogoUpload:

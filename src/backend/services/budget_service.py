@@ -6,42 +6,167 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from backend.models.budget_parameters import BudgetParameters
 from backend.models.filament import Filament
 
 logger = logging.getLogger(__name__)
 
-HARDCODED_DEFAULTS_ARS = {
+SEED_PARAMETERS_ARS = {
     "electricity_price_kwh": Decimal("140.00"),
+    "error_margin_percent": Decimal("5.00"),
+    "margin_multiplier_wholesale": Decimal("3.00"),
+    "margin_multiplier_retail": Decimal("4.00"),
+    "margin_multiplier_keychain": Decimal("5.00"),
+}
+
+SEED_PARAMETERS_USD = {
+    "electricity_price_kwh": Decimal("0.15"),
+    "error_margin_percent": Decimal("5.00"),
+    "margin_multiplier_wholesale": Decimal("3.00"),
+    "margin_multiplier_retail": Decimal("4.00"),
+    "margin_multiplier_keychain": Decimal("5.00"),
+}
+
+SEED_PARAMETERS_EUR = {
+    "electricity_price_kwh": Decimal("0.25"),
+    "error_margin_percent": Decimal("5.00"),
+    "margin_multiplier_wholesale": Decimal("3.00"),
+    "margin_multiplier_retail": Decimal("4.00"),
+    "margin_multiplier_keychain": Decimal("5.00"),
+}
+
+SEED_PARAMETERS_BRL = {
+    "electricity_price_kwh": Decimal("0.80"),
+    "error_margin_percent": Decimal("5.00"),
+    "margin_multiplier_wholesale": Decimal("3.00"),
+    "margin_multiplier_retail": Decimal("4.00"),
+    "margin_multiplier_keychain": Decimal("5.00"),
+}
+
+SEED_PARAMETERS_GBP = {
+    "electricity_price_kwh": Decimal("0.25"),
+    "error_margin_percent": Decimal("5.00"),
+    "margin_multiplier_wholesale": Decimal("3.00"),
+    "margin_multiplier_retail": Decimal("4.00"),
+    "margin_multiplier_keychain": Decimal("5.00"),
+}
+
+SEED_PARAMETERS_MXN = {
+    "electricity_price_kwh": Decimal("2.50"),
+    "error_margin_percent": Decimal("5.00"),
+    "margin_multiplier_wholesale": Decimal("3.00"),
+    "margin_multiplier_retail": Decimal("4.00"),
+    "margin_multiplier_keychain": Decimal("5.00"),
+}
+
+MACHINE_DEFAULTS_ARS = {
     "machine_wattage": Decimal("120"),
     "machine_cost": Decimal("150000.00"),
     "machine_lifespan_hours": Decimal("4320"),
-    "error_margin_percent": Decimal("5.00"),
-    "margin_multiplier_wholesale": Decimal("3.00"),
-    "margin_multiplier_retail": Decimal("4.00"),
-    "margin_multiplier_keychain": Decimal("5.00"),
 }
 
-HARDCODED_DEFAULTS_USD = {
-    "electricity_price_kwh": Decimal("0.15"),
+MACHINE_DEFAULTS_USD = {
     "machine_wattage": Decimal("120"),
     "machine_cost": Decimal("400.00"),
     "machine_lifespan_hours": Decimal("5000"),
-    "error_margin_percent": Decimal("5.00"),
-    "margin_multiplier_wholesale": Decimal("3.00"),
-    "margin_multiplier_retail": Decimal("4.00"),
-    "margin_multiplier_keychain": Decimal("5.00"),
 }
 
+MACHINE_DEFAULTS_EUR = {
+    "machine_wattage": Decimal("120"),
+    "machine_cost": Decimal("400.00"),
+    "machine_lifespan_hours": Decimal("5000"),
+}
 
-def _get_defaults(currency: str) -> dict[str, Decimal]:
-    if currency == "USD":
-        return HARDCODED_DEFAULTS_USD
-    return HARDCODED_DEFAULTS_ARS
+MACHINE_DEFAULTS_BRL = {
+    "machine_wattage": Decimal("120"),
+    "machine_cost": Decimal("2200.00"),
+    "machine_lifespan_hours": Decimal("5000"),
+}
+
+MACHINE_DEFAULTS_GBP = {
+    "machine_wattage": Decimal("120"),
+    "machine_cost": Decimal("320.00"),
+    "machine_lifespan_hours": Decimal("5000"),
+}
+
+MACHINE_DEFAULTS_MXN = {
+    "machine_wattage": Decimal("120"),
+    "machine_cost": Decimal("8000.00"),
+    "machine_lifespan_hours": Decimal("5000"),
+}
+
+SEED_PARAMETERS: dict[str, dict[str, Decimal]] = {
+    "ARS": SEED_PARAMETERS_ARS,
+    "USD": SEED_PARAMETERS_USD,
+    "EUR": SEED_PARAMETERS_EUR,
+    "BRL": SEED_PARAMETERS_BRL,
+    "GBP": SEED_PARAMETERS_GBP,
+    "MXN": SEED_PARAMETERS_MXN,
+}
+
+MACHINE_DEFAULTS: dict[str, dict[str, Decimal]] = {
+    "ARS": MACHINE_DEFAULTS_ARS,
+    "USD": MACHINE_DEFAULTS_USD,
+    "EUR": MACHINE_DEFAULTS_EUR,
+    "BRL": MACHINE_DEFAULTS_BRL,
+    "GBP": MACHINE_DEFAULTS_GBP,
+    "MXN": MACHINE_DEFAULTS_MXN,
+}
+
+CONFIGURABLE_KEYS = frozenset({
+    "electricity_price_kwh",
+    "error_margin_percent",
+    "margin_multiplier_wholesale",
+    "margin_multiplier_retail",
+    "margin_multiplier_keychain",
+})
 
 
-def _get_margin_multiplier(margin_type: str, defaults: dict[str, Decimal]) -> Decimal:
-    key = f"margin_multiplier_{margin_type}"
-    return defaults[key]
+def _get_machine_defaults(currency: str) -> dict[str, Decimal]:
+    return MACHINE_DEFAULTS.get(currency, MACHINE_DEFAULTS_ARS)
+
+
+async def get_budget_parameters(
+    db: AsyncSession,
+    user_id: UUID,
+    currency: str,
+) -> dict[str, Decimal]:
+    """Return the configurable budget parameters for (user, currency), seeding on first access.
+
+    Always ends with a DB row: when no row exists, one is inserted with the
+    seed values (is_default = TRUE) before returning.
+    """
+    result = await db.execute(
+        select(BudgetParameters).where(
+            BudgetParameters.user_id == user_id,
+            BudgetParameters.currency == currency,
+        )
+    )
+    row = result.scalar_one_or_none()
+
+    if row is None:
+        seed = SEED_PARAMETERS.get(currency, SEED_PARAMETERS_ARS)
+        row = BudgetParameters(
+            user_id=user_id,
+            currency=currency,
+            electricity_price_kwh=seed["electricity_price_kwh"],
+            error_margin_percent=seed["error_margin_percent"],
+            margin_multiplier_wholesale=seed["margin_multiplier_wholesale"],
+            margin_multiplier_retail=seed["margin_multiplier_retail"],
+            margin_multiplier_keychain=seed["margin_multiplier_keychain"],
+            is_default=True,
+        )
+        db.add(row)
+        await db.commit()
+        await db.refresh(row)
+
+    return {
+        "electricity_price_kwh": Decimal(str(row.electricity_price_kwh)),
+        "error_margin_percent": Decimal(str(row.error_margin_percent)),
+        "margin_multiplier_wholesale": Decimal(str(row.margin_multiplier_wholesale)),
+        "margin_multiplier_retail": Decimal(str(row.margin_multiplier_retail)),
+        "margin_multiplier_keychain": Decimal(str(row.margin_multiplier_keychain)),
+    }
 
 
 def resolve_machine_params(
@@ -53,7 +178,7 @@ def resolve_machine_params(
     Each profile field that is NULL (or no printer at all) falls back to the
     currency default. Returns the resolved values as Decimals.
     """
-    defaults = _get_defaults(currency)
+    defaults = _get_machine_defaults(currency)
     return {
         "power_watts": (
             Decimal(str(printer.power_watts))
@@ -82,12 +207,13 @@ def calculate_breakdown(
     margin_type: str,
     manual_price: Decimal | None,
     currency: str,
-    power_watts: Decimal | None = None,
-    lifespan_hours: Decimal | None = None,
-    spare_parts_cost: Decimal | None = None,
+    electricity_price_kwh: Decimal,
+    error_margin_percent: Decimal,
+    margin_multipliers: dict[str, Decimal],
+    power_watts: Decimal,
+    lifespan_hours: Decimal,
+    spare_parts_cost: Decimal,
 ) -> dict[str, Any]:
-    defaults = _get_defaults(currency)
-
     if manual_filament_cost is not None:
         filament_total = manual_filament_cost
     else:
@@ -98,11 +224,9 @@ def calculate_breakdown(
 
     time_hours = Decimal(str(hours)) + Decimal(str(minutes)) / Decimal("60")
 
-    machine_wattage = power_watts if power_watts is not None else defaults["machine_wattage"]
-    electricity_price_kwh = defaults["electricity_price_kwh"]
-    machine_cost = spare_parts_cost if spare_parts_cost is not None else defaults["machine_cost"]
-    machine_lifespan_hours = lifespan_hours if lifespan_hours is not None else defaults["machine_lifespan_hours"]
-    error_margin_percent = defaults["error_margin_percent"]
+    machine_wattage = power_watts
+    machine_cost = spare_parts_cost
+    machine_lifespan_hours = lifespan_hours
 
     electricity_cost = time_hours * (machine_wattage / Decimal("1000")) * electricity_price_kwh
     amortization_cost = time_hours * (machine_cost / machine_lifespan_hours)
@@ -110,7 +234,7 @@ def calculate_breakdown(
     subtotal_with_error = subtotal * (Decimal("1") + error_margin_percent / Decimal("100"))
     total_before_margin = subtotal_with_error + extra_costs
 
-    margin_multiplier = _get_margin_multiplier(margin_type, defaults)
+    margin_multiplier = margin_multipliers[margin_type]
 
     if manual_price is not None:
         final_price = manual_price
@@ -190,9 +314,12 @@ class BudgetCalculator:
         margin_type: str,
         manual_price: float | None,
         currency: str,
-        power_watts: Decimal | None = None,
-        lifespan_hours: Decimal | None = None,
-        spare_parts_cost: Decimal | None = None,
+        electricity_price_kwh: Decimal,
+        error_margin_percent: Decimal,
+        margin_multipliers: dict[str, Decimal],
+        power_watts: Decimal,
+        lifespan_hours: Decimal,
+        spare_parts_cost: Decimal,
     ) -> dict[str, Any]:
         enriched_items = await self.enrich_filament_items(db, filament_items)
 
@@ -205,6 +332,9 @@ class BudgetCalculator:
             margin_type=margin_type,
             manual_price=Decimal(str(manual_price)) if manual_price is not None else None,
             currency=currency,
+            electricity_price_kwh=electricity_price_kwh,
+            error_margin_percent=error_margin_percent,
+            margin_multipliers=margin_multipliers,
             power_watts=power_watts,
             lifespan_hours=lifespan_hours,
             spare_parts_cost=spare_parts_cost,
@@ -225,9 +355,12 @@ class BudgetCalculator:
         margin_type: str,
         manual_price: float | None,
         currency: str,
-        power_watts: Decimal | None = None,
-        lifespan_hours: Decimal | None = None,
-        spare_parts_cost: Decimal | None = None,
+        electricity_price_kwh: Decimal,
+        error_margin_percent: Decimal,
+        margin_multipliers: dict[str, Decimal],
+        power_watts: Decimal,
+        lifespan_hours: Decimal,
+        spare_parts_cost: Decimal,
     ) -> dict[str, Any]:
         return calculate_breakdown(
             filament_items=filament_items,
@@ -238,6 +371,9 @@ class BudgetCalculator:
             margin_type=margin_type,
             manual_price=Decimal(str(manual_price)) if manual_price is not None else None,
             currency=currency,
+            electricity_price_kwh=electricity_price_kwh,
+            error_margin_percent=error_margin_percent,
+            margin_multipliers=margin_multipliers,
             power_watts=power_watts,
             lifespan_hours=lifespan_hours,
             spare_parts_cost=spare_parts_cost,

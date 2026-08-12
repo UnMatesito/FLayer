@@ -3,15 +3,12 @@
 import {
   Table, TableBody, TableCell, TableRow, TableHead,
 } from '@mui/material';
+import { currencySymbol, MACHINE_DEFAULT_FALLBACKS } from '@/app/api';
 import { type BudgetResponse } from '@/app/api';
 
 interface Props {
   budget: BudgetResponse;
   orderId: string;
-}
-
-function currencySymbol(currency: 'ARS' | 'USD') {
-  return currency === 'USD' ? 'US$' : '$';
 }
 
 function marginLabel(type: string) {
@@ -27,8 +24,8 @@ export default function BudgetBreakdown({ budget }: Props) {
   const sym = currencySymbol(budget.currency);
 
   const powerWatts = budget.power_watts ?? 120;
-  const lifespanHours = budget.lifespan_hours ?? (budget.currency === 'USD' ? 5000 : 4320);
-  const sparePartsCost = budget.spare_parts_cost ?? (budget.currency === 'USD' ? 400 : 150000);
+  const lifespanHours = budget.lifespan_hours ?? MACHINE_DEFAULT_FALLBACKS[budget.currency].lifespan_hours;
+  const sparePartsCost = budget.spare_parts_cost ?? MACHINE_DEFAULT_FALLBACKS[budget.currency].spare_parts_cost;
 
   return (
     <div>

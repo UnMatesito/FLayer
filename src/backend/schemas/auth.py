@@ -1,9 +1,14 @@
 import re
+from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel, EmailStr, field_validator
 
 HEX_COLOR_PATTERN = re.compile(r"^#[0-9A-Fa-f]{6}$")
+
+Currency = Literal["ARS", "USD", "EUR", "BRL", "GBP", "MXN"]
+
+ALL_CURRENCIES: tuple[Currency, ...] = ("ARS", "USD", "EUR", "BRL", "GBP", "MXN")
 
 
 def _validate_hex_color(v: str | None) -> str | None:
@@ -43,15 +48,19 @@ class UserResponse(BaseModel):
     id: UUID
     email: str
     name: str
+    business_name: str | None = None
     primary_color: str | None = None
     logo_url: str | None = None
+    currency: Currency = "ARS"
 
     model_config = {"from_attributes": True}
 
 
 class ProfileUpdate(BaseModel):
     name: str | None = None
+    business_name: str | None = None
     primary_color: str | None = None
+    currency: Currency | None = None
 
     model_config = {"extra": "forbid"}
 
@@ -65,6 +74,18 @@ class ProfileUpdate(BaseModel):
             raise ValueError("Name must not be empty")
         if len(stripped) > 255:
             raise ValueError("Name must be at most 255 characters")
+        return stripped
+
+    @field_validator("business_name")
+    @classmethod
+    def valid_business_name(cls, v: str | None) -> str | None:
+        if v is None:
+            return None
+        stripped = v.strip()
+        if not stripped:
+            return None
+        if len(stripped) > 255:
+            raise ValueError("Business name must be at most 255 characters")
         return stripped
 
     @field_validator("primary_color")

@@ -40,9 +40,10 @@ DB: PostgreSQL · ORM: SQLAlchemy 2.0 (async) · Migrations: Alembic
 ```
 users ──┬── customers ──── orders ──┬── order_notes
         │                          ├── order_status_history
-        │                          ├── budgets ──── budget_parameters
+        │                          ├── budgets
         │                          └── arquiminis_orders
         │
+        ├── budget_parameters
         ├── filaments ──── stock_movements ──(order_id)──> orders
         ├── supplies
         ├── printers ──── printer_maintenance
@@ -76,4 +77,13 @@ final_price            = subtotal_with_error × margin_multiplier
 ```
 
 `margin_multiplier` depends on type (wholesale/retail/keychain), comes from
-`budget_parameters`.
+`budget_parameters`. The five configurable values (`electricity_price_kwh`,
+`error_margin_percent`, `margin_multiplier_wholesale`,
+`margin_multiplier_retail`, `margin_multiplier_keychain`) come from
+`budget_parameters` per `(user_id, currency)` (table owned by
+`region_parameters`), seeded on first access with the pre-feature defaults
+and editable via the Perfil page. `users.currency` (default `'ARS'`) drives
+the budget currency default when the form omits `currency`. `budgets`
+snapshots `electricity_price_kwh`, `error_margin_percent` and
+`margin_multiplier` at calculation time (`NULL` electricity snapshot = a
+pre-`region_parameters` budget → falls back to the seeded value at read).

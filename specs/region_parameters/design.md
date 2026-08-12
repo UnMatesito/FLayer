@@ -11,7 +11,7 @@ Feature name is `region_parameters`, table name is `budget_parameters`
 |---|---|---|---|
 | `id` | UUID | PK, `DEFAULT gen_random_uuid()` | |
 | `user_id` | UUID | NOT NULL, FK → `users(id)` | Multi-tenant |
-| `currency` | VARCHAR(3) | NOT NULL, `CHECK (currency IN ('ARS','USD'))` | |
+| `currency` | VARCHAR(3) | NOT NULL, `CHECK (currency IN ('ARS','USD','EUR','BRL','GBP','MXN'))` | |
 | `electricity_price_kwh` | DECIMAL(12,2) | NOT NULL, `CHECK (> 0)` | Price per kWh in the row's currency |
 | `error_margin_percent` | DECIMAL(5,2) | NOT NULL, `CHECK (>= 0 AND <= 100)` | Calibration waste margin |
 | `margin_multiplier_wholesale` | DECIMAL(5,2) | NOT NULL, `CHECK (> 0 AND <= 100)` | |
@@ -23,14 +23,14 @@ Feature name is `region_parameters`, table name is `budget_parameters`
 
 Constraints:
 - `UNIQUE (user_id, currency)` — at most one row per tenant per currency
-- Check constraints named `ck_budget_parameters_*` (see migration 014)
+- Check constraints named `ck_budget_parameters_*` (see migration 017)
 - **No soft-delete column** — see decision below
 
 ### `users` (extended by this feature)
 
 | Column | Type | Constraints | Notes |
 |---|---|---|---|
-| `currency` | VARCHAR(3) | NOT NULL, `DEFAULT 'ARS'`, `CHECK (currency IN ('ARS','USD'))` | New column; existing rows backfilled to `ARS` by the server default |
+| `currency` | VARCHAR(3) | NOT NULL, `DEFAULT 'ARS'`, `CHECK (currency IN ('ARS','USD','EUR','BRL','GBP','MXN'))` | New column; existing rows backfilled to `ARS` by the server default |
 
 ### `budgets` (extended by this feature)
 
@@ -44,12 +44,17 @@ NOT NULL columns on `budgets` — this feature only adds the missing
 price actually used was the pre-feature default, which is exactly what the
 seeded `(user, currency)` value returns.
 
-## Migrations (single Alembic migration `014`)
+## Migrations (`017`, `018`)
 
-1. Create `budget_parameters` with the FK, unique constraint, and checks above.
-2. `ALTER TABLE users ADD COLUMN currency VARCHAR(3) NOT NULL DEFAULT 'ARS'`
-   (server default backfills existing rows) + currency check constraint.
-3. `ALTER TABLE budgets ADD COLUMN electricity_price_kwh DECIMAL(12,2)`.
+`014`, `015`, `016` are already taken by `dashboard` (user branding, supply
+movements, quantity nullable) — this feature creates `017`.
+
+1. `017`: Create `budget_parameters` with the FK, unique constraint, and checks
+   above; add `users.currency` (server default backfills existing rows);
+   add `budgets.electricity_price_kwh`.
+2. `018`: widen both currency check constraints (`ck_budget_parameters_currency`
+   and `ck_users_currency`) from `('ARS','USD')` to the six supported
+   currencies — added later per human request (EUR, BRL, GBP, MXN)
 
 ## Endpoints
 
@@ -59,10 +64,14 @@ All routes tenant-scoped via the existing `get_current_user` dependency
 
 | Method | Route | Auth | Usage |
 |---|---|---|---|
-| `GET` | `/api/budget-parameters` | Required | Read effective parameters for both currencies (R1, R2, R7) |
+| `GET` | `/api/budget-parameters` | Required | Read effective parameters for all six currencies (R1, R2, R7) |
 | `PUT` | `/api/budget-parameters/{currency}` | Required | Upsert one currency's parameters (R3–R7) |
-| `PATCH` | `/api/auth/me` | Required | Update the user's default currency (R14) |
+| `PATCH` | `/api/auth/me` | Required (extended) | Update the user's default currency (R14) |
 | `GET` | `/api/auth/me` | Required (extended) | User profile now includes `currency` (R13) |
+
+The two `/api/auth/me` routes already exist since `dashboard` (they handle
+name / `primary_color` / logo via `ProfileUpdate` and `UserResponse`). This
+feature **extends** them — it does not create them.
 
 ### `GET /api/budget-parameters` — Response (200)
 
@@ -91,7 +100,9 @@ All routes tenant-scoped via the existing `get_current_user` dependency
 }
 ```
 
-Both currencies are always present (seed-on-first-access guarantees it).
+All six currencies are always present (seed-on-first-access guarantees it). The
+response iterates `ALL_CURRENCIES` (`schemas/auth.py`), so the bundle always
+matches the backend's currency list.
 `is_default: true` means the row still holds the seeded values and the
 operator has never customized it; `false` means a `PUT` has customized it.
 The frontend uses this to show a "valores por defecto" hint (R15).
@@ -127,18 +138,29 @@ is the path param (R6). Validation ranges per R5.
 }
 ```
 
-### `PATCH /api/auth/me` — Request / Response (200)
+### `PATCH /api/auth/me` — Request / Response (200) (extended, not new)
 
 ```json
 { "currency": "USD" }
 ```
 →
 ```json
-{ "id": "uuid", "email": "maker@flayer.app", "name": "Maker", "currency": "USD" }
+{
+  "id": "uuid",
+  "email": "maker@flayer.app",
+  "name": "Maker",
+  "primary_color": "#E4572E",
+  "logo_url": "https://cdn.flayer.app/logos/uuid.png",
+  "currency": "USD"
+}
 ```
 
-`UserResponse` gains `currency` (R13). `PATCH` accepts `{ "currency": ... }`
-only; invalid value → 422 (R14).
+`UserResponse` (already carries `primary_color` and `logo_url` from
+`dashboard`) gains `currency` (R13). The existing `ProfileUpdate` schema
+(`name`, `primary_color`, `model_config = {"extra": "forbid"}`) gains an
+optional `currency` Literal field — a value other than `ARS`/`USD` → 422
+(R14). The existing `update_me` handler gains one more `if "currency" in
+data:` branch; the other fields keep their current behavior.
 
 ### Budget endpoints — defaulting change
 
@@ -163,12 +185,15 @@ ends with a DB row: it `SELECT`s the `budget_parameters` row and, when it does
 not exist, `INSERT`s it with the seed values (`is_default = TRUE`) before
 returning. The `HARDCODED_DEFAULTS_{ARS,USD}` dicts are **deleted** — they are
 never read at calculation time. Their values survive only as seed data used at
-row creation (see "Technical decisions").
+row creation (see "Technical decisions"). Seed constants exist for all six
+currencies (`SEED_PARAMETERS_*`, `MACHINE_DEFAULTS_*`); error margin and
+multipliers are identical across currencies, the electricity price and machine
+cost differ per currency (documented values are reasonable market averages).
 
 **The machine-parameter fallback is split out, not deleted:** the three
 machine defaults (`machine_wattage`, `machine_cost`, `machine_lifespan_hours`)
 are not part of this feature's configurable set (they belong to printer
-profiles). They move to a dedicated `MACHINE_DEFAULTS_{ARS,USD}` constant used
+profiles). They move to dedicated `MACHINE_DEFAULTS_{CURRENCY}` constants used
 only by `resolve_machine_params` — behavior unchanged.
 
 **`calculate_breakdown` gains required parameters** (the `None → fallback`
@@ -301,26 +326,39 @@ arguments (no `None` → fallback; every call is backed by a `budget_parameters`
 row), and the endpoints do the async `get_budget_parameters` lookup exactly
 where they already call `resolve_machine_params`. Unit-testable without a DB.
 
-**Chosen: parameters live as a block in the Perfil page, not a standalone page.**
+**Chosen: parameters live as a block in the existing Perfil page, not a
+standalone page.**
 Discarded: a separate `/dashboard/parameters` page. Chosen: the values are the
-operator's configuration — the Perfil page groups what belongs to the user,
-and the ARS/USD toggle keeps the block compact. No other user-related section
-or field is added to the Perfil page (user identity editing is out of scope).
+operator's configuration — the Perfil page (already created by `dashboard`)
+groups what belongs to the user, and the currency toggle keeps the block
+compact.
+
+**Chosen: the parameters view points at the default currency.**
+Discarded: an independent toggle that ignores `users.currency`. Chosen: on
+load the block shows the operator's default currency's parameters, and after
+saving a new default the view switches to it (the toggle stays usable for
+inspecting other currencies). The visible currency being the default is also
+stated inline so the operator always knows which currency the fields belong to. This feature only adds the "Parámetros del Maker" block; the existing
+blocks (name, accent color, logo) and their editing are left as-is (user
+identity editing remains out of scope).
 
 ## Frontend
 
-### New page — `/dashboard/profile` — "Perfil" (R15, R16)
+### Existing page — `/dashboard/profile` — "Mi perfil" (R15, R16)
 
-The page contains a single block: **"Parámetros del Maker"** — the operator's
-budget configuration. No other user data is displayed or edited (name, email,
-password etc. are out of scope).
+The page already exists since `dashboard` with three blocks: **Nombre**,
+**Color de acento**, and **Logotipo**. This feature **adds one block** —
+**"Parámetros del Maker"** — the operator's budget configuration. The existing
+blocks stay untouched; no other user data is added to the page (name, email,
+password editing stays out of scope).
 
-- Protected dashboard page, same layout style as `/dashboard/printers`
-- The block, in order:
-  - **"Moneda por defecto"** selector (ARS/USD) — initialized from
+- Same protected dashboard page, layout style as already used by the page
+- The new block, in order:
+  - **"Moneda por defecto"** selector (six currencies) — initialized from
     `fetchMe()`; on save calls `updateUserCurrency` (PATCH /api/auth/me) and
     updates the displayed default (R16)
-  - Currency toggle (MUI `ToggleButtonGroup`, ARS / USD) that switches which
+  - Currency toggle (MUI `ToggleButtonGroup`, one button per supported
+    currency) that switches which
     currency's five fields are edited; both currencies' data come from one
     `GET /api/budget-parameters` call, kept in local state while editing
   - Five labeled inputs, prefilled from the response (R1, R2): Precio kWh,
@@ -336,16 +374,23 @@ password etc. are out of scope).
 
 ### Dashboard navigation
 
-- Add nav item "Perfil" (icon `PersonIcon`) in a "Configuración" section of
-  the dashboard sidebar `navItems`
-  (`src/app/dashboard/layout.tsx`) (R15)
+No change needed — the sidebar already has a "Mi perfil" entry
+(`PersonOutlineIcon`, bottom of the sidebar, navigating to
+`/dashboard/profile`) since `dashboard`. The `navItems` array is not touched
+by this feature (R15).
 
 ### `api.ts` — New types and functions
 
-```typescript
-export type Currency = 'ARS' | 'USD';
+The `User` interface and `updateProfile` already exist since `dashboard`
+(`User` carries `primary_color` and `logo_url`; `ProfileUpdate` has `name`
+and `primary_color`). This feature extends them.
 
-export interface User { id: string; email: string; name: string; currency: Currency; } // extended
+```typescript
+export type Currency = 'ARS' | 'USD' | 'EUR' | 'BRL' | 'GBP' | 'MXN';
+
+export interface User { id: string; email: string; name: string; primary_color: string | null; logo_url: string | null; currency: Currency; } // extended
+
+export interface ProfileUpdate { name?: string; primary_color?: string | null; currency?: Currency; } // extended
 
 export interface BudgetParameters {
   currency: Currency;
@@ -371,7 +416,7 @@ export interface BudgetParametersUpdate {
 
 fetchBudgetParameters(): Promise<BudgetParametersBundle>          // GET  /api/budget-parameters
 updateBudgetParameters(currency: Currency, payload: BudgetParametersUpdate): Promise<BudgetParameters>  // PUT
-updateUserCurrency(currency: Currency): Promise<User>             // PATCH /api/auth/me
+updateUserCurrency(currency: Currency): Promise<User>             // PATCH /api/auth/me (uses the existing updateProfile)
 ```
 
 ### Budget form (`BudgetForm.tsx`) — R17
@@ -379,8 +424,12 @@ updateUserCurrency(currency: Currency): Promise<User>             // PATCH /api/
 - The currency selector is preselected to the operator's default currency
   (`fetchMe()` from `api.ts`, or the user already cached by `auth-context`),
   instead of the hardcoded `'ARS'`
-- Manual currency switching keeps working; `BudgetCreate`/`BudgetPreviewRequest`
-  payload types change `currency` to `Currency | null` (omit → server default)
+- Manual currency switching keeps working (all six currencies);
+  `BudgetCreate`/`BudgetPreviewRequest` payload types change `currency` to
+  `Currency | null` (omit → server default)
+- Symbols / unit fallbacks: `currencySymbol()` and `MACHINE_DEFAULT_FALLBACKS`
+  in `api.ts` — used by `BudgetForm` and `BudgetBreakdown` for display and for
+  pre-`region_parameters` budgets (NULL snapshots)
 
 ### `data_model.md` follow-up (implementer edits after this feature lands)
 

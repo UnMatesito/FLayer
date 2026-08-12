@@ -13,9 +13,10 @@ printer-profile-driven — out of scope.
 
 GIVEN an authenticated operator who has no `budget_parameters` rows
 WHEN they request `GET /api/budget-parameters`
-THEN the response contains the five parameters for BOTH `ARS` and `USD`
-    with the pre-feature default values (ARS: electricity 140.00,
-    margins 5.00/3.00/4.00/5.00 — USD: electricity 0.15, margins 5.00/3.00/4.00/5.00)
+THEN the response contains the five parameters for ALL SIX currencies
+    (`ARS`, `USD`, `EUR`, `BRL`, `GBP`, `MXN`) with the default values
+    (ARS: electricity 140.00, USD: 0.15, EUR: 0.25, BRL: 0.80, GBP: 0.25,
+    MXN: 2.50; margins always 5.00/3.00/4.00/5.00)
 AND a `budget_parameters` row is created for each `(user, currency)`
 AND each entry is marked `is_default: true`
 
@@ -57,12 +58,13 @@ AND no row is created or modified
 ## R6. Validation — invalid currency
 
 GIVEN the operator requests `PUT /api/budget-parameters/{currency}`
-WHEN `currency` is not exactly `ARS` or `USD`
+WHEN `currency` is not one of the six supported currencies (`ARS`, `USD`,
+    `EUR`, `BRL`, `GBP`, `MXN`)
 THEN the request is rejected with HTTP 422
 AND no row is created or modified
 
 (Note: `GET /api/budget-parameters` takes no currency input — it always
-returns both currencies, so this requirement only applies to `PUT`.)
+returns all six currencies, so this requirement only applies to `PUT`.)
 
 ## R7. Tenant isolation
 
@@ -119,7 +121,8 @@ THEN the budget uses `USD` as today
 
 GIVEN an authenticated operator
 WHEN they request `GET /api/auth/me`
-THEN the response includes `currency` (one of `ARS`, `USD`)
+THEN the response includes `currency` (one of `ARS`, `USD`, `EUR`, `BRL`,
+    `GBP`, `MXN`)
 AND it matches the operator's `users.currency` column (default `ARS`)
 
 ## R14. Update default currency
@@ -128,14 +131,20 @@ GIVEN an authenticated operator
 WHEN they `PATCH /api/auth/me` with `{ "currency": "USD" }`
 THEN `users.currency` is updated to `USD`
 AND `GET /api/auth/me` returns `currency: "USD"` afterwards
-AND a request with any value other than `ARS`/`USD` is rejected with HTTP 422
+AND a request with any value outside the six supported currencies is
+    rejected with HTTP 422
 
-## R15. UI — "Parámetros del Maker" block in the Perfil page
+## R15. UI — "Parámetros del Maker" block in the existing Perfil page
 
-GIVEN the operator opens the Perfil page in the dashboard
+GIVEN the operator opens the Perfil page in the dashboard (the page already
+    exists since `dashboard` — name, accent color, logo blocks)
 WHEN the page loads
-THEN it shows the five parameters for both currencies with an ARS/USD toggle
-    as a block titled "Parámetros del Maker"
+THEN it shows the five parameters for all six currencies with a currency
+    toggle as a new block titled "Parámetros del Maker" (the existing profile
+    blocks remain untouched)
+AND the parameters initially point to the operator's default currency (the
+    toggle starts on `users.currency`), and saving a new default currency
+    switches the visible parameters to that currency
 AND the fields are prefilled from `GET /api/budget-parameters` (R1, R2)
     and can be edited and saved per currency (a "Guardar" action calls
     `PUT /api/budget-parameters/{currency}`)
@@ -158,13 +167,15 @@ GIVEN the operator opens the budget form for an order
 WHEN the currency selector renders
 THEN it is preselected to the operator's default currency (from R13) instead of
     a hardcoded `ARS`
-AND the operator can still switch to the other currency as today
+AND the operator can still switch to any of the six currencies
 
 ## Out of scope
 
 - Registration flow and currency selection at registration → pending feature
-  `registration` (the `users.currency` column exists now, but is only exposed
-  through the Perfil page and the profile endpoint)
+  `registration` (`users.currency` is created by THIS feature and is only
+  exposed through the Perfil page and the profile endpoint; the pending
+  `registration` feature extends the existing `RegisterRequest` to set it at
+  registration time)
 - Currency conversion of any kind
 - Editing the machine parameters (`power_watts`, `lifespan_hours`,
   `spare_parts_cost`) from this page — they belong to printer profiles

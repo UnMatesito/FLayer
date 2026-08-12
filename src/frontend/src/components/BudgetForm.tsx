@@ -12,8 +12,11 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   fetchFilaments, createBudget, updateBudget, previewBudget, fetchPrinters,
+  CURRENCY_OPTIONS, currencySymbol, MACHINE_DEFAULT_FALLBACKS,
+  type Currency,
   type BudgetResponse, type FilamentItemInput, type Filament, type Printer,
 } from '@/app/api';
+import { useAuth } from '@/app/auth-context';
 
 interface FilamentItem {
   product_id: string | null;
@@ -34,7 +37,8 @@ function itemKey(index: number) {
 
 export default function BudgetForm({ open, onClose, orderId, existingBudget }: Props) {
   const queryClient = useQueryClient();
-  const [currency, setCurrency] = useState<'ARS' | 'USD'>(existingBudget?.currency ?? 'ARS');
+  const { user } = useAuth();
+  const [currency, setCurrency] = useState<Currency>(existingBudget?.currency ?? user?.currency ?? 'ARS');
   const [printerId, setPrinterId] = useState(existingBudget?.printer_id ?? '');
   const [items, setItems] = useState<FilamentItem[]>(
     existingBudget?.filament_items?.map((i) => ({
@@ -78,7 +82,7 @@ export default function BudgetForm({ open, onClose, orderId, existingBudget }: P
   });
 
   const buildPayload = useCallback((): {
-    currency: 'ARS' | 'USD';
+    currency: Currency;
     printer_id: string | null;
     filament_items: FilamentItemInput[];
     manual_filament_cost: number | null;
@@ -190,10 +194,13 @@ export default function BudgetForm({ open, onClose, orderId, existingBudget }: P
               <Select<string>
                 value={currency}
                 label="Moneda"
-                onChange={(e) => setCurrency(e.target.value as 'ARS' | 'USD')}
+                onChange={(e) => setCurrency(e.target.value as Currency)}
               >
-                <MenuItem value="ARS">ARS ($)</MenuItem>
-                <MenuItem value="USD">USD (US$)</MenuItem>
+                {CURRENCY_OPTIONS.map((c) => (
+                  <MenuItem key={c.value} value={c.value}>
+                    {c.label}
+                  </MenuItem>
+                ))}
               </Select>
             </FormControl>
             <FormControl size="small" sx={{ minWidth: 220 }}>
@@ -357,51 +364,51 @@ export default function BudgetForm({ open, onClose, orderId, existingBudget }: P
               </p>
               <p className="mb-1 text-xs text-slate">
                 {preview.printer_name ? `Impresora: ${preview.printer_name}` : 'Parámetros por defecto'}
-                {' — '}{preview.power_watts?.toFixed(0) ?? '120'}W, {preview.lifespan_hours?.toFixed(0) ?? '4320'}h,
-                repuestos {preview.currency === 'USD' ? 'US$' : '$'}{preview.spare_parts_cost?.toFixed(2) ?? '150000.00'}
+                {' — '}{preview.power_watts?.toFixed(0) ?? '120'}W, {preview.lifespan_hours?.toFixed(0) ?? MACHINE_DEFAULT_FALLBACKS[preview.currency].lifespan_hours}h,
+                repuestos {currencySymbol(preview.currency)}{preview.spare_parts_cost?.toFixed(2) ?? '150000.00'}
               </p>
               <Table size="small">
                 <TableBody>
                   <TableRow>
                     <TableCell sx={{ fontWeight: 600 }}>Filamento total</TableCell>
-                    <TableCell align="right">{preview.currency === 'USD' ? 'US$' : '$'}{preview.filament_total.toFixed(2)}</TableCell>
+                    <TableCell align="right">{currencySymbol(preview.currency)}{preview.filament_total.toFixed(2)}</TableCell>
                   </TableRow>
                   <TableRow>
                     <TableCell sx={{ fontWeight: 600 }}>Electricidad</TableCell>
-                    <TableCell align="right">{preview.currency === 'USD' ? 'US$' : '$'}{preview.electricity_cost.toFixed(2)}</TableCell>
+                    <TableCell align="right">{currencySymbol(preview.currency)}{preview.electricity_cost.toFixed(2)}</TableCell>
                   </TableRow>
                   <TableRow>
                     <TableCell sx={{ fontWeight: 600 }}>Amortización</TableCell>
-                    <TableCell align="right">{preview.currency === 'USD' ? 'US$' : '$'}{preview.amortization_cost.toFixed(2)}</TableCell>
+                    <TableCell align="right">{currencySymbol(preview.currency)}{preview.amortization_cost.toFixed(2)}</TableCell>
                   </TableRow>
                   <TableRow>
                     <TableCell sx={{ fontWeight: 600 }}>Margen de error ({preview.error_margin_percent}%)</TableCell>
-                    <TableCell align="right">{preview.currency === 'USD' ? 'US$' : '$'}{preview.subtotal_with_error.toFixed(2)}</TableCell>
+                    <TableCell align="right">{currencySymbol(preview.currency)}{preview.subtotal_with_error.toFixed(2)}</TableCell>
                   </TableRow>
                   <TableRow>
                     <TableCell sx={{ fontWeight: 600 }}>Costos extra</TableCell>
-                    <TableCell align="right">{preview.currency === 'USD' ? 'US$' : '$'}{preview.extra_costs.toFixed(2)}</TableCell>
+                    <TableCell align="right">{currencySymbol(preview.currency)}{preview.extra_costs.toFixed(2)}</TableCell>
                   </TableRow>
                   <TableRow>
                     <TableCell sx={{ fontWeight: 600 }}>Multiplicador ({preview.margin_multiplier}x)</TableCell>
-                    <TableCell align="right">{preview.currency === 'USD' ? 'US$' : '$'}{preview.total_before_margin.toFixed(2)}</TableCell>
+                    <TableCell align="right">{currencySymbol(preview.currency)}{preview.total_before_margin.toFixed(2)}</TableCell>
                   </TableRow>
                   {preview.manual_price != null && (
                     <TableRow>
                       <TableCell sx={{ fontWeight: 600 }}>Precio manual</TableCell>
-                      <TableCell align="right">{preview.currency === 'USD' ? 'US$' : '$'}{preview.manual_price.toFixed(2)}</TableCell>
+                      <TableCell align="right">{currencySymbol(preview.currency)}{preview.manual_price.toFixed(2)}</TableCell>
                     </TableRow>
                   )}
                   <TableRow>
                     <TableCell sx={{ fontWeight: 700, fontSize: '1.1rem' }}>Precio final</TableCell>
                     <TableCell align="right" sx={{ fontWeight: 700, fontSize: '1.1rem' }}>
-                      {preview.currency === 'USD' ? 'US$' : '$'}{preview.final_price.toFixed(2)}
+                      {currencySymbol(preview.currency)}{preview.final_price.toFixed(2)}
                     </TableCell>
                   </TableRow>
                   <TableRow>
                     <TableCell sx={{ color: 'text.secondary' }}>Precio ML sugerido</TableCell>
                     <TableCell align="right" sx={{ color: 'text.secondary', fontSize: '0.9rem' }}>
-                      {preview.currency === 'USD' ? 'US$' : '$'}{preview.ml_price.toFixed(2)}
+                      {currencySymbol(preview.currency)}{preview.ml_price.toFixed(2)}
                     </TableCell>
                   </TableRow>
                 </TableBody>

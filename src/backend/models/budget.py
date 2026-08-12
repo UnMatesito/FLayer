@@ -47,6 +47,9 @@ class Budget(Base):
     margin_multiplier: Mapped[float] = mapped_column(
         Numeric(5, 2), nullable=False
     )
+    electricity_price_kwh: Mapped[float | None] = mapped_column(
+        Numeric(12, 2), nullable=True
+    )
     printer_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID, ForeignKey("printers.id"), nullable=True
     )

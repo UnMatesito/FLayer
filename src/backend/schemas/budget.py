@@ -1,10 +1,14 @@
+from datetime import datetime
 from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel, field_validator, model_validator
 
+from backend.schemas.auth import ALL_CURRENCIES
+
 
 VALID_MARGIN_TYPES = {"wholesale", "retail", "keychain"}
+VALID_CURRENCIES = set(ALL_CURRENCIES)
 
 
 class FilamentItemInput(BaseModel):
@@ -31,7 +35,7 @@ class FilamentItemResponse(BaseModel):
 
 
 class BudgetCreate(BaseModel):
-    currency: str = "ARS"
+    currency: str | None = None
     printer_id: UUID | None = None
     manual_filament_cost: float | None = None
     manual_grams: float | None = None
@@ -45,10 +49,9 @@ class BudgetCreate(BaseModel):
 
     @field_validator("currency")
     @classmethod
-    def valid_currency(cls, v: str) -> str:
-        allowed = {"ARS", "USD"}
-        if v not in allowed:
-            raise ValueError("currency must be ARS or USD")
+    def valid_currency(cls, v: str | None) -> str | None:
+        if v is not None and v not in VALID_CURRENCIES:
+            raise ValueError(f"currency must be one of: {", ".join(sorted(VALID_CURRENCIES))}")
         return v
 
     @field_validator("hours")
@@ -130,7 +133,7 @@ class BudgetUpdate(BaseModel):
         if v is not None:
             allowed = {"ARS", "USD"}
             if v not in allowed:
-                raise ValueError("currency must be ARS or USD")
+                raise ValueError(f"currency must be one of: {", ".join(sorted(VALID_CURRENCIES))}")
         return v
 
     @field_validator("hours")
@@ -186,7 +189,7 @@ class BudgetUpdate(BaseModel):
 
 
 class BudgetPreviewRequest(BaseModel):
-    currency: str = "ARS"
+    currency: str | None = None
     printer_id: UUID | None = None
     filament_items: list[FilamentItemInput] = []
     manual_filament_cost: float | None = None
@@ -199,10 +202,9 @@ class BudgetPreviewRequest(BaseModel):
 
     @field_validator("currency")
     @classmethod
-    def valid_currency(cls, v: str) -> str:
-        allowed = {"ARS", "USD"}
-        if v not in allowed:
-            raise ValueError("currency must be ARS or USD")
+    def valid_currency(cls, v: str | None) -> str | None:
+        if v is not None and v not in VALID_CURRENCIES:
+            raise ValueError(f"currency must be one of: {", ".join(sorted(VALID_CURRENCIES))}")
         return v
 
     @field_validator("hours")
@@ -290,3 +292,64 @@ class BudgetResponse(BaseModel):
     updated_at: str
 
     model_config = {"from_attributes": True}
+
+
+class BudgetParametersUpdate(BaseModel):
+    electricity_price_kwh: float
+    error_margin_percent: float
+    margin_multiplier_wholesale: float
+    margin_multiplier_retail: float
+    margin_multiplier_keychain: float
+
+    @field_validator("electricity_price_kwh")
+    @classmethod
+    def electricity_positive(cls, v: float) -> float:
+        if v <= 0 or v > 10000:
+            raise ValueError("electricity_price_kwh must be greater than 0 and at most 10000")
+        return v
+
+    @field_validator("error_margin_percent")
+    @classmethod
+    def error_margin_range(cls, v: float) -> float:
+        if v < 0 or v > 100:
+            raise ValueError("error_margin_percent must be between 0 and 100")
+        return v
+
+    @field_validator("margin_multiplier_wholesale")
+    @classmethod
+    def wholesale_range(cls, v: float) -> float:
+        if v <= 0 or v > 100:
+            raise ValueError("margin_multiplier_wholesale must be greater than 0 and at most 100")
+        return v
+
+    @field_validator("margin_multiplier_retail")
+    @classmethod
+    def retail_range(cls, v: float) -> float:
+        if v <= 0 or v > 100:
+            raise ValueError("margin_multiplier_retail must be greater than 0 and at most 100")
+        return v
+
+    @field_validator("margin_multiplier_keychain")
+    @classmethod
+    def keychain_range(cls, v: float) -> float:
+        if v <= 0 or v > 100:
+            raise ValueError("margin_multiplier_keychain must be greater than 0 and at most 100")
+        return v
+
+
+class BudgetParametersResponse(BaseModel):
+    currency: str
+    electricity_price_kwh: float
+    error_margin_percent: float
+    margin_multiplier_wholesale: float
+    margin_multiplier_retail: float
+    margin_multiplier_keychain: float
+    is_default: bool
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+
+    model_config = {"from_attributes": True}
+
+
+class BudgetParametersBundle(BaseModel):
+    parameters: dict[str, BudgetParametersResponse]

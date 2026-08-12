@@ -186,17 +186,45 @@ export interface Order {
   updated_at: string;
 }
 
+export type Currency = 'ARS' | 'USD' | 'EUR' | 'BRL' | 'GBP' | 'MXN';
+
+export const CURRENCY_OPTIONS: { value: Currency; label: string; symbol: string }[] = [
+  { value: 'ARS', label: 'ARS ($)', symbol: '$' },
+  { value: 'USD', label: 'USD (US$)', symbol: 'US$' },
+  { value: 'EUR', label: 'EUR (€)', symbol: '€' },
+  { value: 'BRL', label: 'BRL (R$)', symbol: 'R$' },
+  { value: 'GBP', label: 'GBP (£)', symbol: '£' },
+  { value: 'MXN', label: 'MXN (MX$)', symbol: 'MX$' },
+];
+
+export function currencySymbol(currency: Currency): string {
+  return CURRENCY_OPTIONS.find((c) => c.value === currency)?.symbol ?? '$';
+}
+
+export const MACHINE_DEFAULT_FALLBACKS: Record<Currency, { lifespan_hours: number; spare_parts_cost: number }> = {
+  ARS: { lifespan_hours: 4320, spare_parts_cost: 150000 },
+  USD: { lifespan_hours: 5000, spare_parts_cost: 400 },
+  EUR: { lifespan_hours: 5000, spare_parts_cost: 400 },
+  BRL: { lifespan_hours: 5000, spare_parts_cost: 2200 },
+  GBP: { lifespan_hours: 5000, spare_parts_cost: 320 },
+  MXN: { lifespan_hours: 5000, spare_parts_cost: 8000 },
+};
+
 export interface User {
   id: string;
   email: string;
   name: string;
+  business_name: string | null;
   primary_color: string | null;
   logo_url: string | null;
+  currency: Currency;
 }
 
 export interface ProfileUpdate {
   name?: string;
+  business_name?: string | null;
   primary_color?: string | null;
+  currency?: Currency;
 }
 
 export interface LoginResponse {
@@ -243,6 +271,50 @@ export async function removeLogo(): Promise<User> {
     throw new Error(err.detail || 'No se pudo quitar el logo');
   }
   return res.json();
+}
+
+export interface BudgetParameters {
+  currency: Currency;
+  electricity_price_kwh: number;
+  error_margin_percent: number;
+  margin_multiplier_wholesale: number;
+  margin_multiplier_retail: number;
+  margin_multiplier_keychain: number;
+  is_default: boolean;
+}
+
+export interface BudgetParametersBundle {
+  parameters: Record<Currency, BudgetParameters>;
+}
+
+export interface BudgetParametersUpdate {
+  electricity_price_kwh: number;
+  error_margin_percent: number;
+  margin_multiplier_wholesale: number;
+  margin_multiplier_retail: number;
+  margin_multiplier_keychain: number;
+}
+
+export async function fetchBudgetParameters(): Promise<BudgetParametersBundle> {
+  const res = await fetch(`${API_BASE}/budget-parameters`, { credentials: 'include' });
+  return handleResponse<BudgetParametersBundle>(res);
+}
+
+export async function updateBudgetParameters(
+  currency: Currency,
+  payload: BudgetParametersUpdate,
+): Promise<BudgetParameters> {
+  const res = await fetch(`${API_BASE}/budget-parameters/${currency}`, {
+    method: 'PUT',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  return handleResponse<BudgetParameters>(res);
+}
+
+export async function updateUserCurrency(currency: Currency): Promise<User> {
+  return updateProfile({ currency });
 }
 
 // Dashboard summary
@@ -720,7 +792,7 @@ export interface FilamentItemResponse {
 }
 
 export interface BudgetCreate {
-  currency: 'ARS' | 'USD';
+  currency: Currency | null;
   printer_id?: string | null;
   filament_items: FilamentItemInput[];
   manual_filament_cost?: number | null;
@@ -734,7 +806,7 @@ export interface BudgetCreate {
 }
 
 export interface BudgetUpdate {
-  currency?: 'ARS' | 'USD';
+  currency?: Currency;
   printer_id?: string | null;
   filament_items?: FilamentItemInput[];
   manual_filament_cost?: number | null;
@@ -751,7 +823,7 @@ export interface BudgetResponse {
   id: string;
   order_id: string;
   version: number;
-  currency: 'ARS' | 'USD';
+  currency: Currency;
   printer_id: string | null;
   printer_name: string | null;
   power_watts: number | null;
