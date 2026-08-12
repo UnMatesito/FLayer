@@ -4,12 +4,13 @@ import { useState } from 'react';
 import {
   Button, Chip, CircularProgress, FormControl, InputLabel, MenuItem,
   Select, Table, TableBody, TableCell, TableContainer, TableHead,
-  TableRow, TablePagination, TextField,
+  TableRow, TextField,
 } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
 import {
   fetchFilaments, fetchStockMovements, fetchSupplies, type Filament, type Supply, type StockMovement,
 } from '@/app/api';
+import Pagination from '@/components/Pagination';
 
 const MOVEMENT_TYPES = ['consumption', 'adjustment', 'reversal'];
 
@@ -46,7 +47,7 @@ function movementItemName(m: StockMovement) {
 
 export default function MovementsPage() {
   const [page, setPage] = useState(0);
-  const [perPage, setPerPage] = useState(20);
+  const [perPage, setPerPage] = useState(50);
   const [movementType, setMovementType] = useState<string>('');
   const [filamentFilter, setFilamentFilter] = useState<string>('');
   const [supplyFilter, setSupplyFilter] = useState<string>('');
@@ -83,6 +84,7 @@ export default function MovementsPage() {
       </div>
 
       <div className="mb-6 card rounded-md border border-line bg-snow p-4">
+        <h1 className="text-[1.25rem] font-semibold mb-2">Filtros</h1>
         <div className="flex flex-wrap gap-2">
           <FormControl size="small" sx={{ minWidth: 160 }}>
             <InputLabel>Tipo</InputLabel>
@@ -157,14 +159,12 @@ export default function MovementsPage() {
                 </TableBody>
               </Table>
             </TableContainer>
-            <TablePagination
-              component="div"
+            <Pagination
               count={data?.total ?? 0}
               page={page}
-              onPageChange={(_, p) => setPage(p)}
+              onPageChange={setPage}
               rowsPerPage={perPage}
-              onRowsPerPageChange={(e) => { setPerPage(parseInt(e.target.value, 10)); setPage(0); }}
-              rowsPerPageOptions={[10, 20, 50]}
+              onRowsPerPageChange={(rows) => { setPerPage(rows); setPage(0); }}
             />
           </>
         )}

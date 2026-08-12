@@ -42,7 +42,7 @@ export default function StoreLink() {
   };
 
   return (
-    <div className="card rounded-md border border-line bg-snow p-3">
+    <div className="card rounded-md border border-line bg-snow p-4">
       <div className="flex flex-col gap-2">
         <div className="flex items-center gap-1">
           <ShareIcon color="primary" />

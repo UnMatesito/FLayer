@@ -14,6 +14,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   fetchSupplies, createSupply, updateSupply, adjustSupply, type Supply, type SupplyCreate,
 } from '@/app/api';
+import Pagination, { usePagination } from '@/components/Pagination';
 
 const styles: Record<string, SxProps<Theme>> = {
   lowStockRow: {
@@ -155,6 +156,7 @@ export default function SuppliesPage() {
     queryKey: ['supplies'],
     queryFn: () => fetchSupplies(),
   });
+  const pagination = usePagination(supplies?.length ?? 0, 50);
 
   if (isLoading) {
     return <div className="flex justify-center p-4"><CircularProgress /></div>;
@@ -178,7 +180,7 @@ export default function SuppliesPage() {
             </TableRow>
           </TableHead>
           <TableBody>
-            {supplies?.map((s) => {
+            {pagination.slice(supplies ?? []).map((s) => {
               const isLow = s.quantity < s.min_stock_warning;
               return (
                 <TableRow key={s.id} hover sx={isLow ? styles.lowStockRow : {}}>
@@ -197,6 +199,13 @@ export default function SuppliesPage() {
             })}
           </TableBody>
         </Table>
+        <Pagination
+          count={supplies?.length ?? 0}
+          page={pagination.page}
+          onPageChange={pagination.setPage}
+          rowsPerPage={pagination.rowsPerPage}
+          onRowsPerPageChange={pagination.onRowsPerPageChange}
+        />
       </div>
 
       <AddSupplyDialog open={dialogOpen} onClose={() => setDialogOpen(false)} />

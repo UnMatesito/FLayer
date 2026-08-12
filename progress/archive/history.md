@@ -208,3 +208,15 @@ Output: commits made per logical group; `app_entry` waiting for human approval.
 - Both deps (`stock_management`, `generate_budget`) done → `reports` now unblocked; `app_entry` still awaiting human approval
 
 Output: dashboard done; repo clean.
+
+## Session 16 — 2026-08-12
+
+**Feature:** `region_parameters` (+ ongoing UX work)
+**Transition:** `spec_ready` → `done`
+
+- Implemented (uncommitted, awaiting split into commits): 6 currencies (EUR/BRL/GBP/MXN per-currency seeds, migration `017` budget_parameters + `018` currencies), `users.currency` + budget parameter upserts, profile block "Parámetros del Maker", BudgetForm preselect, docs/data_model update
+- Reviewer (agent) full traceability R1–R17: 203 passed, coverage api/budget.py 96% / budget_service.py 93% / api/auth.py 97%, tsc clean → verdict APPROVED inline in `progress/impl_region_parameters.md` (no review doc per rule)
+- Also this session (UI polish, not SDD-tracked): shared `Pagination` component (10/50/100, defaults: orders 10, rest 50) applied to orders/filaments/supplies/movements; orders + profile pages 2-column layouts; profile "Información del Maker" card; business_name on User (migration `019`) + browser tab title "Business Name — Flayer"; orders page design pass (card header w/ live count, empty-state invite, outlined type chips)
+- Fixed duplicated `usePagination` hooks-order violation in FilamentsPage (hook after early return)
+
+Output: `region_parameters` marked `done` in `feature_list.json`; `current.md` updated.

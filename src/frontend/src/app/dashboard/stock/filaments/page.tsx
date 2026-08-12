@@ -22,6 +22,7 @@ import {
   type Filament, type FilamentCreate, type FilamentSettings,
 } from '@/app/api';
 import { FilamentIcon } from '@/components/FilamentIcon';
+import Pagination, { usePagination } from '@/components/Pagination';
 
 const styles: Record<string, SxProps<Theme>> = {
   lowStockRow: {
@@ -158,13 +159,14 @@ export default function FilamentsPage() {
     },
   });
 
-  if (isLoading) {
-    return <div className="flex justify-center p-4"><CircularProgress /></div>;
-  }
-
   const visible = showArchived
     ? filaments?.filter((f) => !f.is_active) ?? []
     : filaments?.filter((f) => f.is_active) ?? [];
+  const pagination = usePagination(visible.length, 50);
+
+  if (isLoading) {
+    return <div className="flex justify-center p-4"><CircularProgress /></div>;
+  }
 
   return (
     <div>
@@ -208,7 +210,7 @@ export default function FilamentsPage() {
                 </TableCell>
               </TableRow>
             ) : (
-              visible.map((f) => {
+              pagination.slice(visible).map((f) => {
                 const isLow = f.weight_grams < f.min_stock_warning_grams;
                 return (
                   <TableRow
@@ -263,6 +265,13 @@ export default function FilamentsPage() {
             )}
           </TableBody>
         </Table>
+        <Pagination
+          count={visible.length}
+          page={pagination.page}
+          onPageChange={pagination.setPage}
+          rowsPerPage={pagination.rowsPerPage}
+          onRowsPerPageChange={pagination.onRowsPerPageChange}
+        />
       </div>
 
       {!showArchived && <AddFilamentDialog open={dialogOpen} onClose={() => setDialogOpen(false)} />}

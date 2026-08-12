@@ -6,17 +6,18 @@ import StoreLink from '@/components/StoreLink';
 
 export default function OrdersHubPage() {
   return (
-    <div className="mx-auto flex max-w-[1000px] flex-col gap-3">
+    <div className="mx-auto flex max-w-[1400px] flex-col gap-3">
       <h1 className="text-[1.6rem] font-bold leading-[1.15] tracking-[-0.01em]">Pedidos</h1>
 
-      <StoreLink />
+      <div className="grid grid-cols-1 items-start gap-3 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
+        <div className="flex flex-col gap-3">
+          <StoreLink />
 
-      <div className="card rounded-md border border-line bg-snow p-4">
-        <InternalOrderForm />
-      </div>
+          <div className="card rounded-md border border-line bg-snow p-4">
+            <InternalOrderForm />
+          </div>
+        </div>
 
-      <div className="card rounded-md border border-line bg-snow p-4">
-        <h3 className="mb-2 text-[1.25rem] font-semibold">Todos los pedidos</h3>
         <OrdersTable />
       </div>
     </div>

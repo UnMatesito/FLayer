@@ -123,9 +123,12 @@ export default function InternalOrderForm({ onSuccess }: Props) {
 
   return (
     <form className="max-w-[50rem]" onSubmit={handleSubmit}>
-      <h3 className="mb-2 text-[1.25rem] font-semibold">
+      <h3 className="mb-0.5 text-[1.25rem] font-semibold">
         Nuevo Pedido (Interno)
       </h3>
+      <p className="mb-3 text-[0.8rem] text-slate">
+        Registra un pedido a mano sin pasar por el formulario del cliente.
+      </p>
 
       <div className="flex flex-col gap-2">
         <TextField label="Nombre" value={name} onChange={(e) => setName(e.target.value)} required fullWidth />
@@ -194,7 +197,7 @@ export default function InternalOrderForm({ onSuccess }: Props) {
           </Alert>
         )}
 
-        <Button type="submit" variant="contained" size="large" disabled={!canSubmit || mutation.isPending}
+        <Button type="submit" variant="contained" size="large" fullWidth disabled={!canSubmit || mutation.isPending}
           startIcon={mutation.isPending ? <CircularProgress size={20} /> : undefined}>
           {mutation.isPending ? 'Creando...' : 'Crear Pedido'}
         </Button>

@@ -15,12 +15,15 @@ import {
   CircularProgress,
   IconButton,
   Button,
+  type SxProps,
+  type Theme,
 } from '@mui/material';
 import CheckIcon from '@mui/icons-material/Check';
 import CloseIcon from '@mui/icons-material/Close';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchAllOrders, updateOrderStatus, type Order } from '@/app/api';
 import { getStatusTransitions, statusColor, statusLabel } from '@/utils/order';
+import Pagination, { usePagination } from '@/components/Pagination';
 
 interface StatusCellProps {
   order: Order;
@@ -134,6 +137,7 @@ function StatusCell({ order, transitions }: StatusCellProps) {
         setEditing(true);
       }}
       className="cursor-pointer"
+      title="Cambiar estado"
     >
       <Chip
         label={statusLabel(order.status)}
@@ -144,6 +148,15 @@ function StatusCell({ order, transitions }: StatusCellProps) {
   );
 }
 
+const headCellSx: SxProps<Theme> = {
+    fontSize: '0.72rem',
+    fontWeight: 600,
+    textTransform: 'uppercase',
+    letterSpacing: '0.04em',
+    color: 'text.secondary',
+    whiteSpace: 'nowrap',
+  };
+
 export default function OrdersTable() {
   const router = useRouter();
   const { data: orders, isLoading, error } = useQuery<Order[]>({
@@ -151,81 +164,101 @@ export default function OrdersTable() {
     queryFn: () => fetchAllOrders(),
     refetchInterval: 30_000,
   });
-
-  if (isLoading) {
-    return (
-      <div className="flex justify-center p-4">
-        <CircularProgress />
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <p className="text-sm text-error">
-        Error al cargar pedidos:{' '}
-        {error instanceof Error ? error.message : 'Error desconocido'}
-      </p>
-    );
-  }
-
-  if (!orders || orders.length === 0) {
-    return (
-      <p className="py-4 text-sm text-slate">
-        No hay pedidos.
-      </p>
-    );
-  }
+  const pagination = usePagination(orders?.length ?? 0, 10);
+  const quotingCount = orders?.filter((o) => o.status === 'quoting').length ?? 0;
 
   return (
-    <div className="card rounded-md border border-line bg-snow">
-      <TableContainer>
-        <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>Pedido</TableCell>
-                <TableCell>Cliente</TableCell>
-                <TableCell>Tipo</TableCell>
-                <TableCell>Estado</TableCell>
-                <TableCell>Presupuesto</TableCell>
-                <TableCell>Fecha</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {orders.map((order) => (
-                <TableRow
-                  key={order.id}
-                  hover
-                  onClick={() => router.push(`/dashboard/orders/${order.id}`)}
-                  sx={{ cursor: 'pointer' }}
-                >
-                  <TableCell className="font-mono text-[0.8rem]">
-                    #{order.id.slice(0, 8)}
-                  </TableCell>
-                  <TableCell>
-                    {order.customer_name ?? '—'}
-                  </TableCell>
-              <TableCell>
-                {order.work_type === 'impresion_3d'
-                  ? 'Impresión 3D'
-                  : order.work_type === 'product'
-                  ? 'Producto'
-                  : 'Diseño 3D'}
-              </TableCell>
-              <TableCell onClick={(e) => e.stopPropagation()}>
-                <StatusCell order={order} transitions={getStatusTransitions(order.work_type)} />
-              </TableCell>
-              <TableCell onClick={(e) => e.stopPropagation()}>
-                <BudgetCell orderId={order.id} orderStatus={order.status} workType={order.work_type} hasBudget={order.has_budget ?? false} />
-              </TableCell>
-              <TableCell>
-                {new Date(order.created_at).toLocaleDateString()}
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </TableContainer>
+    <div className="card h-full rounded-md border border-line bg-snow">
+      <div className="flex flex-wrap items-baseline justify-between gap-1 border-b border-line px-4 py-3">
+        <h3 className="text-[1.05rem] font-semibold">Pedidos</h3>
+        {!isLoading && !error && orders && (
+          <p className="text-[0.8rem] text-slate">
+            {orders.length} {orders.length === 1 ? 'pedido' : 'pedidos'} · {quotingCount} en cotización
+          </p>
+        )}
+      </div>
+
+      {isLoading ? (
+        <div className="flex justify-center p-6">
+          <CircularProgress />
+        </div>
+      ) : error ? (
+        <p className="px-4 py-6 text-sm text-error">
+          Error al cargar pedidos:{' '}
+          {error instanceof Error ? error.message : 'Error desconocido'}
+        </p>
+      ) : !orders || orders.length === 0 ? (
+        <div className="flex flex-col items-center gap-1 px-4 py-10 text-center">
+          <p className="text-[0.95rem] font-semibold">No hay pedidos todavía</p>
+          <p className="max-w-[24rem] text-[0.82rem] text-slate">
+            Crea el primero con el formulario de pedido interno o compartiendo tu link
+            de clientes.
+          </p>
+        </div>
+      ) : (
+        <>
+          <TableContainer className="px-2">
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell sx={headCellSx}>Pedido</TableCell>
+                  <TableCell sx={headCellSx}>Cliente</TableCell>
+                  <TableCell sx={headCellSx}>Tipo</TableCell>
+                  <TableCell sx={headCellSx}>Estado</TableCell>
+                  <TableCell sx={headCellSx}>Presupuesto</TableCell>
+                  <TableCell sx={headCellSx}>Fecha</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {pagination.slice(orders).map((order) => (
+                  <TableRow
+                    key={order.id}
+                    hover
+                    onClick={() => router.push(`/dashboard/orders/${order.id}`)}
+                    sx={{ cursor: 'pointer' }}
+                  >
+                    <TableCell className="font-mono text-[0.8rem]">
+                      #{order.id.slice(0, 8)}
+                    </TableCell>
+                    <TableCell className="font-medium">
+                      {order.customer_name ?? '—'}
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        label={
+                          order.work_type === 'impresion_3d'
+                            ? 'Impresión 3D'
+                            : order.work_type === 'product'
+                            ? 'Producto'
+                            : 'Diseño 3D'
+                        }
+                        size="small"
+                        variant="outlined"
+                      />
+                    </TableCell>
+                    <TableCell onClick={(e) => e.stopPropagation()}>
+                      <StatusCell order={order} transitions={getStatusTransitions(order.work_type)} />
+                    </TableCell>
+                    <TableCell onClick={(e) => e.stopPropagation()}>
+                      <BudgetCell orderId={order.id} orderStatus={order.status} workType={order.work_type} hasBudget={order.has_budget ?? false} />
+                    </TableCell>
+                    <TableCell className="text-[0.8rem] text-slate">
+                      {new Date(order.created_at).toLocaleDateString()}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+          <Pagination
+            count={orders.length}
+            page={pagination.page}
+            onPageChange={pagination.setPage}
+            rowsPerPage={pagination.rowsPerPage}
+            onRowsPerPageChange={pagination.onRowsPerPageChange}
+          />
+        </>
+      )}
     </div>
   );
 }
