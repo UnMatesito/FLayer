@@ -10,6 +10,7 @@ import {
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { createPublicOrder, fetchPublicProducts, type FileInfo, type LineItem } from '@/app/api';
 import ProductSelector from '@/components/ProductSelector';
+import { FlayerLogo } from '@/components/FlayerLogo';
 
 export default function OrderForm() {
   const searchParams = useSearchParams();
@@ -112,6 +113,27 @@ export default function OrderForm() {
     () => lineItems.reduce((sum, item) => sum + item.quantity * item.unit_price, 0),
     [lineItems]
   );
+
+  if (!token) {
+    return (
+      <div className="mx-auto max-w-[56.25rem] p-4">
+        <div className="card rounded-lg border border-line bg-snow p-6 sm:p-8">
+          <FlayerLogo size={28} />
+          <p className="mb-2 mt-4 font-mono text-xs font-medium uppercase tracking-widest text-primary">
+            Enlace privado
+          </p>
+          <h1 className="text-[1.5rem] font-semibold tracking-tight">
+            Este formulario se comparte de forma privada
+          </h1>
+          <p className="mt-3 max-w-md text-sm leading-relaxed text-slate">
+            El taller comparte el formulario de pedido con sus clientes mediante
+            un enlace con token. Si llegaste aquí sin ese enlace, pídele al
+            taller el enlace para realizar tu pedido.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   if (mutation.isSuccess) {
     return (
