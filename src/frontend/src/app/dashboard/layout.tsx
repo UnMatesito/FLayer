@@ -27,6 +27,7 @@ import LightModeIcon from '@mui/icons-material/LightMode';
 import BrightnessAutoIcon from '@mui/icons-material/BrightnessAuto';
 import { PrinterIcon } from '@/components/PrinterIcon';
 import { FilamentIcon } from '@/components/FilamentIcon';
+import { FlayerLogo } from '@/components/FlayerLogo';
 import { useQuery } from '@tanstack/react-query';
 import ProtectedRoute from '@/app/protected-route';
 import { useAuth } from '@/app/auth-context';
@@ -81,11 +82,7 @@ function Logotype({ url }: { url: string | null }) {
   if (url) {
     return <img src={url} alt="Logotipo del taller" className="block h-[28px] max-w-[180px] object-contain" />;
   }
-  return (
-    <span className="text-[1.1rem] font-bold tracking-[0.01em]">
-      Flayer
-    </span>
-  );
+  return <FlayerLogo />;
 }
 
 function SchemeToggle({ color = 'inherit' }: { color?: 'inherit' | 'primary' }) {

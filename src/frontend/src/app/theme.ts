@@ -56,7 +56,7 @@ declare module '@mui/material/Typography' {
   }
 }
 
-export const EMBER = '#E4572E';
+export const EMBER = '#FF8400';
 export const PLATE = '#E9EBEE';
 export const SNOW = '#F9FAFB';
 export const INK = '#111827';

@@ -503,7 +503,7 @@ export default function ProfilePage() {
             <TextField
               value={hex}
               onChange={(e) => setHex(e.target.value)}
-              placeholder="#E4572E"
+              placeholder="#FF8400"
               size="small"
               error={!!hexError}
               slotProps={{ htmlInput: { className: 'font-mono' }, inputLabel: { shrink: true } }}

@@ -12,8 +12,8 @@
      to 0.5rem makes p-2 == MUI p:2 (16px), gap-3 == spacing(3) (24px), etc. */
   --spacing: 0.5rem;
 
-  --color-primary: var(--mui-palette-primary-main, #e4572e);
-  --color-ember: #e4572e;
+  --color-primary: var(--mui-palette-primary-main, #ff8400);
+  --color-ember: #ff8400;
   --color-ink: var(--mui-palette-text-primary, #111827);
   --color-slate: var(--mui-palette-text-secondary, #4a5058);
   --color-plate: var(--mui-palette-background-default, #e9ebee);
@@ -45,3 +45,5 @@
     box-shadow: none;
   }
 }
+
+
