@@ -220,3 +220,25 @@ Output: dashboard done; repo clean.
 - Fixed duplicated `usePagination` hooks-order violation in FilamentsPage (hook after early return)
 
 Output: `region_parameters` marked `done` in `feature_list.json`; `current.md` updated.
+
+## Session 17 — 2026-08-12
+
+**Feature:** `brand_identity` (manual pass) + `create_order` R7 (hardening)
+**Transition:** brand_identity `in_progress` → `done`; create_order `spec_ready` → `done`
+
+- brand_identity manual pass completed:
+  - Hero restructured: full-width `bg-plate` section, nozzle SVG (evenodd cutout), rounded bar, responsive `sm`/`lg`
+  - FlayerLogo component + SVG assets (iso_black, iso_white, logo)
+  - Dashboard layout: Logotype in sidebar + app bar
+  - Logo cache-bust fix: `storage_service.py` `get_file_url` appends `?v={mtime}`
+  - Manual entries updated: removed "Panel del taller", added "Pedidos" + "Productos"
+  - Cleaned up unused CSS animations (print-line-strip, nozzle-fade)
+- create_order R7 store-token hardening implemented:
+  - `public_store.py`: `token=None` → 404 "Invalid store token" (removed `ANONYMOUS_USER_ID`)
+  - `orders.py`: removed anonymous user fabrication (user not found → 404)
+  - `StoreTokenFactory` created, 4 new 404 tests (missing/unknown token for orders + products)
+  - Fixed 3 logo URL assertions for cache-bust param
+  - 207/207 tests pass
+- Specs updated: brand_identity (renamed from app_entry), create_order R7 tasks marked done, dash_enhancement new spec
+
+Output: both features marked `done` in `feature_list.json`; ready to commit.

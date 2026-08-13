@@ -1,8 +1,8 @@
 # Project State
 
-**Current feature:** none
-**Status:** dashboard done; next features pending human decision
-**Active tasks:** none
+**Current feature:** none (brand_identity + create_order done)
+**Status:** brand_identity DONE + create_order R7 DONE; ready to commit
+**Next:** `dash_enhancement` or `email_notifications`
 
 ## Architecture
 
@@ -18,8 +18,10 @@ FastAPI + Next.js 16 + PostgreSQL (Docker) + MUI v7. SDD workflow (spec → code
 
 ## Relevant files
 
-- `specs/dashboard/{requirements,design,tasks}.md`
-- `progress/current.md`
+- `specs/brand_identity/{requirements,design,tasks}.md`
+- `specs/create_order/{requirements,design,tasks}.md`
+- `progress/impl_brand_identity.md`
+- `progress/review_brand_identity.md`
 
 ## Blockers
 
@@ -27,4 +29,4 @@ None.
 
 ## Next
 
-Human decision: approve `app_entry` spec (→ implementer) or start `reports`.
+`dash_enhancement` (favicon + branding) or `email_notifications`. See `feature_list.json` for dependency graph.
