@@ -52,8 +52,12 @@ def delete_file(path: str) -> None:
         pass
 
 
-def get_file_url(path: str) -> str:
-    return f"/{path}"
+def get_file_url(path: str, *, cache_bust: bool = False) -> str:
+    url = f"/{path}"
+    if cache_bust:
+        mtime = int(Path(path).stat().st_mtime)
+        url = f"{url}?v={mtime}"
+    return url
 
 
 def _ext_from_content_type(content_type: str | None) -> str:

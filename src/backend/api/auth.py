@@ -34,7 +34,7 @@ COOKIE_KEY = "access_token"
 
 
 def _user_response(user: User) -> UserResponse:
-    logo_url = storage_service.get_file_url(user.logo_path) if user.logo_path else None
+    logo_url = storage_service.get_file_url(user.logo_path, cache_bust=True) if user.logo_path else None
     return UserResponse(
         id=user.id,
         email=user.email,
