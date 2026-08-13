@@ -20,3 +20,16 @@
   - [ ] `test_customer_reused_by_email` (design decision, no direct R — document anyway)
 
 Estimated total: ~8h
+
+## Revision 2026-08-12 — store-token hardening (R7)
+
+- [x] `api/public_store.py`: `resolve_user_id_from_token` — token `None` → 404
+      "Invalid store token" (identical to unknown token); remove
+      `ANONYMOUS_USER_ID` (R7)
+- [x] `api/orders.py`: `create_public_order` — remove the anonymous-user
+      fabrication branch; missing user → 404, never fabricate (R7)
+- [x] Tests: `StoreTokenFactory` + fixture; update the four 201 tests
+      (`impresion3d`, `diseno3d`, `reused_by_email` ×2) to attach a valid
+      token; new missing-token / unknown-token → 404 tests for
+      `/api/public/orders` and `/api/public/products` (R7)
+- [x] Verify: backend `pytest` passes — updated + new tests (R7)

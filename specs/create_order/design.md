@@ -60,3 +60,28 @@ This feature calls `email_service.send_order_received(order)` but
 `email_notifications`. Here, a simple mock/interface is used:
 `EmailService.send(template, to, context)` with real implementation
 injected later. Tests for this feature mock `EmailService`.
+
+## Store-token hardening (R7, revision 2026-08-12)
+
+The public endpoints were originally designed to accept token-less intake via
+`ANONYMOUS_USER_ID` in `public_store.resolve_user_id_from_token`. Human
+decision: intake is only via the shared store link (token) or manual entry —
+the anonymous mode is plumbing for a flow that no longer exists and it
+fabricates user rows. Defense-in-depth closes it:
+
+- `public_store.py` — `resolve_user_id_from_token`: `token=None` → 404
+  "Invalid store token", same response as an unknown token (no scraping
+  signal). `ANONYMOUS_USER_ID` removed.
+- `orders.py` — `create_public_order`: drop the fabricated-anonymous-user
+  branch (lines 172–182); a token whose user is missing → 404, never fabricate.
+- `products.py` — `list_public_products` needs no local change (it routes
+  through the shared resolver, which now 404s token-less calls).
+- Store-token endpoints (owner-only), internal endpoints (cookie auth), email
+  flow: untouched.
+
+**Test impact**: the three schema-level 422 tests (invalid email, empty name,
+>10 files) validate before the handler runs, so they stay token-less and keep
+passing. The four 201 tests in `TestCreateOrderPublic` must attach a valid
+store token (new `StoreTokenFactory` + fixture). New tests: missing-token →
+404 and unknown-token → 404 for both `/api/public/orders` and
+`/api/public/products`.

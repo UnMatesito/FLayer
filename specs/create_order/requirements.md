@@ -1,5 +1,8 @@
 # Requirements — create_order
 
+> Revision 2026-08-12: R7 (store-token hardening) appended; the base feature
+> (R1–R6) is done.
+
 ## R1. Public form — 3D Printing type
 
 GIVEN a customer accesses `/order-form`
@@ -47,6 +50,18 @@ WHEN the operator opens the "Active Orders" table
 THEN the new order appears with: ID, customer, work type, status
      "new", creation date
 AND it is sorted by creation date descending by default
+
+## R7. Public intake requires a store token (hardening, 2026-08-12)
+
+GIVEN a request to `POST /api/public/orders` or `GET /api/public/products`
+WHEN the request carries no store token or an unknown store token
+THEN the backend responds 404 "Invalid store token" — identical response in
+    both cases, no signal about which case occurred
+AND no order is created, no products are listed, and no anonymous user row is
+    fabricated
+AND when a token resolves to a user that does not exist, the same 404 applies —
+    no user is created on the fly
+AND intake with a valid store token works exactly as before
 
 ## Out of scope for this feature
 
