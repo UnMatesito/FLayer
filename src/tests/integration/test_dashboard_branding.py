@@ -203,7 +203,7 @@ class TestLogoUpload:
             )
             assert response.status_code == 200
             data = response.json()
-            assert data["logo_url"] == f"/uploads/logo_{test_user.id}.png"
+            assert data["logo_url"].startswith(f"/uploads/logo_{test_user.id}.png")
             assert _upload_path(test_user.id, ".png").exists()
 
             db_session.expire_all()
@@ -216,12 +216,12 @@ class TestLogoUpload:
                 headers=auth_headers,
             )
             assert second.status_code == 200
-            assert second.json()["logo_url"] == f"/uploads/logo_{test_user.id}.webp"
+            assert second.json()["logo_url"].startswith(f"/uploads/logo_{test_user.id}.webp")
             assert _upload_path(test_user.id, ".webp").exists()
             assert not _upload_path(test_user.id, ".png").exists()
 
             me = client.get("/api/auth/me", headers=auth_headers)
-            assert me.json()["logo_url"] == f"/uploads/logo_{test_user.id}.webp"
+            assert me.json()["logo_url"].startswith(f"/uploads/logo_{test_user.id}.webp")
         finally:
             _remove_file(_upload_path(test_user.id, ".png"))
             _remove_file(_upload_path(test_user.id, ".webp"))

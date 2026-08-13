@@ -6,15 +6,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.models.store_token import StoreToken
 
-ANONYMOUS_USER_ID = UUID("00000000-0000-0000-0000-000000000001")
-
 
 async def resolve_user_id_from_token(
     token: str | None,
     db: AsyncSession,
 ) -> UUID:
     if token is None:
-        return ANONYMOUS_USER_ID
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Invalid store token",
+        )
 
     result = await db.execute(
         select(StoreToken).where(StoreToken.token == token)

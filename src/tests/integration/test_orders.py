@@ -1,3 +1,4 @@
+import pytest
 from sqlalchemy import select
 
 from backend.models.customer import Customer
@@ -5,11 +6,24 @@ from backend.models.order import Order
 from tests.factories.customer_factory import CustomerFactory
 from tests.factories.order_factory import OrderFactory
 from tests.factories.schema_factories import OrderCreateFactory, PublicOrderCreateFactory
+from tests.factories.store_token_factory import StoreTokenFactory
+
+
+@pytest.fixture
+def store_token_user(db_session, test_user):
+    return StoreTokenFactory.create(session=db_session, user_id=test_user.id)
+
+
+@pytest.fixture
+def store_token(store_token_user):
+    return store_token_user.token
 
 
 class TestCreateOrderPublic:
-    def test_create_order_impresion3d_valid(self, client, db_session):
-        body = PublicOrderCreateFactory.build(work_type="impresion_3d")
+    def test_create_order_impresion3d_valid(self, client, db_session, store_token):
+        body = PublicOrderCreateFactory.build(
+            work_type="impresion_3d", token=store_token
+        )
         resp = client.post("/api/public/orders", json=body.model_dump(mode="json"))
         assert resp.status_code == 201
         data = resp.json()
@@ -25,30 +39,32 @@ class TestCreateOrderPublic:
         order = result.scalar_one_or_none()
         assert order is not None
 
-    def test_create_order_diseno3d_valid(self, client, db_session):
-        body = PublicOrderCreateFactory.build(work_type="diseno_3d")
+    def test_create_order_diseno3d_valid(self, client, db_session, store_token):
+        body = PublicOrderCreateFactory.build(
+            work_type="diseno_3d", token=store_token
+        )
         resp = client.post("/api/public/orders", json=body.model_dump(mode="json"))
         assert resp.status_code == 201
         data = resp.json()
         assert data["work_type"] == "diseno_3d"
         assert data["status"] == "new"
 
-    def test_create_order_invalid_email(self, client):
-        body = PublicOrderCreateFactory.build()
+    def test_create_order_invalid_email(self, client, store_token):
+        body = PublicOrderCreateFactory.build(token=store_token)
         payload = body.model_dump(mode="json")
         payload["customer"]["email"] = "not-an-email"
         resp = client.post("/api/public/orders", json=payload)
         assert resp.status_code == 422
 
-    def test_create_order_empty_name(self, client):
-        body = PublicOrderCreateFactory.build()
+    def test_create_order_empty_name(self, client, store_token):
+        body = PublicOrderCreateFactory.build(token=store_token)
         payload = body.model_dump(mode="json")
         payload["customer"]["name"] = "   "
         resp = client.post("/api/public/orders", json=payload)
         assert resp.status_code == 422
 
-    def test_create_order_file_too_large(self, client):
-        body = PublicOrderCreateFactory.build()
+    def test_create_order_file_too_large(self, client, store_token):
+        body = PublicOrderCreateFactory.build(token=store_token)
         payload = body.model_dump(mode="json")
         payload["files"] = [
             {"filename": f"part{i}.stl", "url": f"https://drive.google.com/part{i}.stl"}
@@ -57,8 +73,8 @@ class TestCreateOrderPublic:
         resp = client.post("/api/public/orders", json=payload)
         assert resp.status_code == 422
 
-    def test_customer_reused_by_email(self, client, db_session):
-        body = PublicOrderCreateFactory.build()
+    def test_customer_reused_by_email(self, client, db_session, store_token):
+        body = PublicOrderCreateFactory.build(token=store_token)
         payload = body.model_dump(mode="json")
         resp1 = client.post("/api/public/orders", json=payload)
         assert resp1.status_code == 201
@@ -74,6 +90,32 @@ class TestCreateOrderPublic:
         result = db_session.execute(select(Customer).where(Customer.email == body.customer.email))
         customers = list(result.scalars().all())
         assert len(customers) == 1
+
+
+class TestPublicOrderTokenRequired:
+    def test_missing_token_returns_404(self, client):
+        body = PublicOrderCreateFactory.build(token=None)
+        resp = client.post("/api/public/orders", json=body.model_dump(mode="json"))
+        assert resp.status_code == 404
+        assert resp.json()["detail"] == "Invalid store token"
+
+    def test_unknown_token_returns_404(self, client):
+        body = PublicOrderCreateFactory.build(token="nonexistent_token_abc123")
+        resp = client.post("/api/public/orders", json=body.model_dump(mode="json"))
+        assert resp.status_code == 404
+        assert resp.json()["detail"] == "Invalid store token"
+
+
+class TestPublicProductsTokenRequired:
+    def test_missing_token_returns_404(self, client):
+        resp = client.get("/api/public/products")
+        assert resp.status_code == 404
+        assert resp.json()["detail"] == "Invalid store token"
+
+    def test_unknown_token_returns_404(self, client):
+        resp = client.get("/api/public/products?token=nonexistent_token_abc123")
+        assert resp.status_code == 404
+        assert resp.json()["detail"] == "Invalid store token"
 
 
 class TestCreateOrderInternal:

@@ -7,6 +7,7 @@ from tests.factories.schema_factories import (
     OrderCreateFactory,
     PublicOrderCreateFactory,
 )
+from tests.factories.store_token_factory import StoreTokenFactory
 from tests.factories.user_factory import UserFactory
 
 __all__ = [
@@ -18,5 +19,6 @@ __all__ = [
     "OrderFactory",
     "OrderNoteFactory",
     "PublicOrderCreateFactory",
+    "StoreTokenFactory",
     "UserFactory",
 ]

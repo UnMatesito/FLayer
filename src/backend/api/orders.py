@@ -172,14 +172,10 @@ async def create_public_order(
     result = await db.execute(select(User).where(User.id == user_id))
     user = result.scalar_one_or_none()
     if user is None:
-        user = User(
-            id=user_id,
-            email="anonymous@flayer.com",
-            name="Anonymous",
-            hashed_password="",
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Invalid store token",
         )
-        db.add(user)
-        await db.flush()
 
     customer = await _get_or_create_customer(
         db, user_id, body.customer.name, body.customer.email, body.customer.phone
