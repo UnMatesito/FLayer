@@ -127,3 +127,19 @@ R2 ← test_create_order_invalid_email
 ```
 
 The reviewer rejects if any `R<n>` does not have a test, without exceptions.
+
+## Cross-feature change requests
+
+When the human asks for a change to a feature that is NOT the one currently in
+flight (or to a `done` feature), the change never gets smuggled into the active
+feature's spec. It lands in the target feature's own docs:
+
+- Extend that feature's `requirements.md` (new R, dated revision) + `design.md`
+  and `tasks.md` as needed; the base requirements stay intact
+- Flip its status in `feature_list.json` back to `spec_ready` — if it now
+  carries spec'd, un-implemented work, it re-enters the pipeline
+- Record the move in `progress/current.md`
+
+Example (2026-08-12): the store-token hardening request went to `create_order`
+as R7 with its own design/tasks sections, and `create_order` went from `done`
+back to `spec_ready`.
