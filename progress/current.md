@@ -1,11 +1,22 @@
 # Current
 
-**Feature:** none — brand_identity + create_order DONE
+**Feature:** none in flight — `create_order` closed.
+
+**create_order:** DONE — R8-R24 revision implemented, reviewer APPROVED (re-review
+2026-09-09), manual Layer-3 verification completed by the human; marked `done`
+in `feature_list.json`.
+
+**generate_budget:** DONE — R12-R15 revision reviewer APPROVED 2026-09-09
+(1 rejection for missing R11 traceability + untested R13-R15 frontend clauses →
+fixed with R11 entries + Vitest/Testing Library frontend tests → re-review
+APPROVED). Marked `done` in `feature_list.json`.
 
 ## Done this session
 
 - `brand_identity`: DONE → hero restructured (full-width bg-plate, nozzle SVG with evenodd cutout, rounded bar, responsive sm/lg), logo cache-bust fix (storage_service.py `?v={mtime}`), manual updated (removed "Panel del taller", added "Pedidos" + "Productos"). Build clean, committed.
 - `create_order`: DONE → R7 store-token hardening implemented: `public_store.py` token=None → 404 (removed ANONYMOUS_USER_ID), `orders.py` removed anonymous user fabrication (user not found → 404), `StoreTokenFactory` created, 4 new 404 tests (missing/unknown token for orders + products), existing tests updated with valid tokens. 207/207 tests pass.
+- `create_order`: spec revision prepared 2026-09-09 (R8-R24) for order category selection, print service checkboxes, dimensions, delivery type, and operator delivery-cost capture after posting; amended before approval so delivery-cost capture uses only `embalaje` + `Precio Envio` and `3d printing` defaults selected for `print` orders. Status remains `spec_ready`; pending human approval before implementation.
+- `generate_budget` / `region_parameters`: spec revision implemented 2026-09-09 for per-budget earnings margin presets/custom value, post-processing costs, ML price removal, and removing regional margin multipliers. `generate_budget` is `in_progress` pending review; `region_parameters` contract changes are implemented and remain `done`.
 
 ## Context (prior sessions, all committed)
 
@@ -22,7 +33,10 @@
 
 ## Pending features
 
+- `create_order` (spec_ready — 2026-09-09 order category/delivery revision pending approval; delivery-cost capture uses only `embalaje` + `Precio Envio` and `print` defaults to `3d printing`; `generate_budget` remains active in-progress)
 - `registration` (no deps beyond done auth — deferred registration UI, includes currency at registration)
 - `email_notifications` (depends on `order_status`)
 - `reports` (depends on `dashboard`) — dep done, unblocked
 - `dash_enhancement` (spec_ready — favicon + branding; depends on `brand_identity` — now unblocked)
+- `multi_language` (pending — added to feature_list 2026-09-09; language selection in user settings; depends on `authentication`, `dashboard`)
+- `export_final_budget` (pending — added to feature_list 2026-09-09; export of the final budget; depends on `generate_budget`)

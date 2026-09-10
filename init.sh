@@ -10,6 +10,28 @@ if [ "$IN_PROGRESS" -gt 1 ]; then
   exit 1
 fi
 
+# 1b. Feature list must use known statuses and valid dependency names.
+python3 - <<'PY'
+import json
+import sys
+
+allowed = {"pending", "spec_ready", "in_progress", "done", "cancelled"}
+data = json.load(open("feature_list.json"))
+features = data.get("features", [])
+names = {feature.get("name") for feature in features}
+
+for feature in features:
+    name = feature.get("name")
+    status = feature.get("status")
+    if status not in allowed:
+        print(f"❌ ERROR: feature '{name}' has invalid status '{status}'.")
+        sys.exit(1)
+    for dependency in feature.get("depends_on", []):
+        if dependency not in names:
+            print(f"❌ ERROR: feature '{name}' depends on unknown feature '{dependency}'.")
+            sys.exit(1)
+PY
+
 # 2. Every feature that went through the spec step must have complete specs
 #    (excludes 'pending' and 'cancelled' — cancelled features never had specs)
 FEATURES=$(python3 -c "

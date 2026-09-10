@@ -33,6 +33,8 @@ Objective criteria for "this is good". If not met, it cannot advance.
 
 `init.sh` must fail if:
 - There are 2+ features with `"status": "in_progress"`
+- A feature has an unknown status
+- A feature depends on a name missing from `feature_list.json`
 - A feature with `"sdd": true` doesn't have the 3 files in `specs/<feature>/`
 - A feature with `"status": "in_progress"` doesn't have `progress/impl_<feature>.md`
 - Tests don't pass

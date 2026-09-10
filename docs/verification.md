@@ -53,6 +53,8 @@ Mailpit (email testing) at `http://localhost:8025` — SMTP on `localhost:1025`.
 Run before any session and before marking a feature `done`:
 
 - Only 1 feature `in_progress` at a time
+- Every feature status is one of `pending`, `spec_ready`, `in_progress`, `done`, `cancelled`
+- Every dependency in `depends_on` names an existing feature
 - Every feature with `sdd: true` has its 3 spec files
 - Every feature `in_progress` has `progress/impl_<feature>.md`
 - `pytest` passes completely

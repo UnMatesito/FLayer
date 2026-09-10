@@ -242,3 +242,40 @@ Output: `region_parameters` marked `done` in `feature_list.json`; `current.md` u
 - Specs updated: brand_identity (renamed from app_entry), create_order R7 tasks marked done, dash_enhancement new spec
 
 Output: both features marked `done` in `feature_list.json`; ready to commit.
+
+## Session 18 — 2026-09-09
+
+**Feature:** `generate_budget` (R12–R15 margin/post-processing revision) + `create_order` (R8–R24 revision approval)
+**Transition:** `generate_budget` `in_progress` → `done`; `create_order` `spec_ready` (approved, awaiting pipeline)
+
+- generate_budget review rejected (first pass): R11 missing from R→test traceability map; R13–R15 frontend requirement clauses had no automated tests (no frontend test harness existed)
+- Implementer follow-up fixed all findings: added R11 traceability entries; added minimal Vitest + Testing Library harness (`vitest.config.ts`, `vitest.setup.ts`, deps in `package.json`, `pnpm test`) and component tests for BudgetForm (R13 preset buttons ↔ numeric margin input + custom `6` behavior; R14 post-processing toggle-off zero submit; R15 no ML price line) and BudgetBreakdown (R15)
+- Re-review APPROVED 2026-09-09: 214 backend tests passed (88% coverage), `pnpm test` 5 passed, tsc clean, build clean; fresh inline `## Reviewer verdict` appended to `progress/impl_generate_budget.md`; rejection record retained in `progress/review_generate_budget.md`
+- create_order spec revision (R8–R24) prepared and amended (delivery-cost = `embalaje` + `Precio Envio` only; `3d printing` defaults selected for `print`); human APPROVED
+
+Output: `generate_budget` marked `done`; `create_order` advanced to `in_progress` (implementation).
+
+## Session 19 — 2026-09-09
+
+**Feature:** `create_order` (R8-R24 revision)
+**Transition:** `in_progress` → `done`
+
+- Implemented approved R8-R24 revision via implementer (TDD, task by task):
+  - Backend: migration `021_add_order_intake_fields` (7 columns + backfill + check constraints, no `peso`), model/schema validators (category, min one print service, product forces services false, delivery type), `PATCH /api/orders/{id}/delivery-cost` (401/404/409/422), `GET /api/orders/{id}` returns new fields
+  - Frontend: `OrderForm.tsx` category-first rewrite (`print`/`product`, `3d printing` default-selected, dimensions helper text, delivery selector), internal form mirrored, `DeliveryCostDialog` (embalaje + Precio Envio only), order detail shows `Agregar costo de Entrega` only for `Delivery` orders; Vitest tests (OrderForm, DeliveryCostDialog, order detail page)
+  - Tests: backend 230 passed, frontend 22 passed; coverage orders.py 74%/model 100%/schemas 98%; tsc clean, build clean, ruff clean
+- Reviewer rejected once (R18/R19 button visibility untested) → fixed with `dashboard/orders/[id]/page.test.tsx` → re-review APPROVED 2026-09-09 (inline verdict in `progress/impl_create_order.md`; rejection record in `progress/review_create_order.md`)
+- Human completed manual Layer-3 verification (migration `021` upgrade + delivery-cost endpoint behavior + form/detail flow) → feature closed
+
+Output: `create_order` marked `done` in `feature_list.json`.
+
+## Session 20 — 2026-09-09
+
+**Feature:** `order_status` (budget-gate revision) + feature list additions
+**Transition:** no feature status change (order_status remains `done`)
+
+- order_status revision: `quoting → printing` now rejected with 409 when the order has no generated budget (R8/R9 in `specs/order_status`); guard runs before filament lookup/stock deduction; order detail disables "Iniciar impresión" until a budget exists
+- Tests: no-budget rejection, budget-present transition, stock printing tests updated with budget fixtures
+- Feature list: added `multi_language` (pending; depends on authentication, dashboard) and `export_final_budget` (pending; depends on generate_budget)
+
+Output: all work committed (generate_budget + region_parameters revision, order_status budget gate, create_order R8-R24, meta/feature-list).

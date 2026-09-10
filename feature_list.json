@@ -98,6 +98,21 @@
         "dashboard",
         "brand_identity"
       ]
+    },
+    {
+      "name": "multi_language",
+      "status": "pending",
+      "depends_on": [
+        "authentication",
+        "dashboard"
+      ]
+    },
+    {
+      "name": "export_final_budget",
+      "status": "pending",
+      "depends_on": [
+        "generate_budget"
+      ]
     }
   ]
 }
