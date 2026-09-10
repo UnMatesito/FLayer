@@ -15,6 +15,7 @@ test:
 
 lint:
 	poetry run ruff check backend/ tests/
+	poetry run ruff --fix backend/ tests/
 
 reset-db:
 	docker exec flayer-db psql -U flayer -d postgres -c "DROP DATABASE IF EXISTS flayer WITH (FORCE);"
