@@ -1,118 +1,21 @@
 {
   "features": [
-    {
-      "name": "authentication",
-      "status": "done",
-      "depends_on": []
-    },
-    {
-      "name": "registration",
-      "status": "pending",
-      "depends_on": [
-        "authentication"
-      ]
-    },
-    {
-      "name": "create_order",
-      "status": "done",
-      "depends_on": [
-        "authentication"
-      ]
-    },
-    {
-      "name": "order_status",
-      "status": "done",
-      "depends_on": [
-        "create_order"
-      ]
-    },
-    {
-      "name": "generate_budget",
-      "status": "done",
-      "depends_on": [
-        "create_order"
-      ]
-    },
-    {
-      "name": "region_parameters",
-      "status": "done",
-      "depends_on": []
-    },
-    {
-      "name": "stock_management",
-      "status": "done",
-      "depends_on": [
-        "order_status"
-      ]
-    },
-    {
-      "name": "product_management",
-      "status": "done",
-      "depends_on": [
-        "create_order"
-      ]
-    },
-    {
-      "name": "arquiminis",
-      "status": "cancelled",
-      "depends_on": [
-        "product_management"
-      ]
-    },
-    {
-      "name": "email_notifications",
-      "status": "pending",
-      "depends_on": [
-        "order_status"
-      ]
-    },
-    {
-      "name": "printer_profiles",
-      "status": "done",
-      "depends_on": []
-    },
-    {
-      "name": "dashboard",
-      "status": "done",
-      "depends_on": [
-        "stock_management",
-        "generate_budget"
-      ]
-    },
-    {
-      "name": "brand_identity",
-      "status": "done",
-      "depends_on": []
-    },
-    {
-      "name": "reports",
-      "status": "pending",
-      "depends_on": [
-        "dashboard"
-      ]
-    },
-    {
-      "name": "dash_enhancement",
-      "status": "spec_ready",
-      "depends_on": [
-        "dashboard",
-        "brand_identity"
-      ]
-    },
-    {
-      "name": "multi_language",
-      "status": "pending",
-      "depends_on": [
-        "authentication",
-        "dashboard"
-      ]
-    },
-    {
-      "name": "export_final_budget",
-      "status": "pending",
-      "depends_on": [
-        "generate_budget"
-      ]
-    }
+    { "name": "authentication", "status": "done", "depends_on": [] },
+    { "name": "registration", "status": "pending", "depends_on": [ "authentication" ] },
+    { "name": "create_order", "status": "done", "depends_on": [ "authentication" ] },
+    { "name": "order_status", "status": "done", "depends_on": [ "create_order" ] },
+    { "name": "generate_budget", "status": "done", "depends_on": [ "create_order" ] },
+    { "name": "region_parameters", "status": "done", "depends_on": [] },
+    { "name": "stock_management", "status": "done", "depends_on": [ "order_status" ] },
+    { "name": "product_management", "status": "done", "depends_on": [ "create_order" ] },
+    { "name": "arquiminis", "status": "cancelled", "depends_on": [ "product_management" ] },
+    { "name": "email_notifications", "status": "pending", "depends_on": [ "order_status" ] },
+    { "name": "printer_profiles", "status": "done", "depends_on": [] },
+    { "name": "dashboard", "status": "done", "depends_on": [ "stock_management" ] },
+    { "name": "brand_identity", "status": "done", "depends_on": [] },
+    { "name": "reports", "status": "pending", "depends_on": [ "dashboard" ] },
+    { "name": "dash_enhancement", "status": "spec_ready", "depends_on": [ "dashboard", "brand_identity" ] },
+    { "name": "multi_language", "status": "pending", "depends_on": [ "authentication" ] },
+    { "name": "export_final_budget", "status": "pending", "depends_on": [ "generate_budget" ] }
   ]
 }
