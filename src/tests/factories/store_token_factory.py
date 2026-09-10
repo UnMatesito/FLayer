@@ -2,7 +2,6 @@ import uuid
 from datetime import datetime
 
 import factory
-from factory import Faker
 
 from backend.models.store_token import StoreToken
 

@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, field_validator
 
 
 VALID_MOVEMENT_TYPES = {"consumption", "adjustment", "reversal"}

@@ -2,22 +2,14 @@ import uuid
 from datetime import datetime
 
 import factory
-from factory import Faker
 
 from backend.models.filament import Filament
 from backend.models.stock_movement import StockMovement
 from backend.models.supply import Supply
 
 
-import uuid
-from datetime import datetime
 
-import factory
-from factory import Faker
 
-from backend.models.filament import Filament
-from backend.models.stock_movement import StockMovement
-from backend.models.supply import Supply
 
 
 class FilamentFactory(factory.Factory):

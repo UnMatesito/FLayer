@@ -1,9 +1,6 @@
-.PHONY: dev setup backend frontend install test lint reset-db
+.PHONY: dev backend frontend install test lint reset-db
 
 dev:
-	poetry run uvicorn backend.main:app --reload --port 8000 & cd frontend && pnpm dev
-
-setup:
 	poetry run alembic upgrade head
 	poetry run python -m backend.scripts.seed
 	poetry run uvicorn backend.main:app --reload --port 8000 & cd frontend && pnpm dev
