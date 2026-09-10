@@ -5,10 +5,13 @@ import { useSearchParams } from 'next/navigation';
 import {
   TextField, Button, RadioGroup,
   FormControlLabel, Radio, Alert, CircularProgress,
-  FormControl, FormLabel,
+  FormControl, FormLabel, Checkbox,
 } from '@mui/material';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { createPublicOrder, fetchPublicProducts, type FileInfo, type LineItem } from '@/app/api';
+import {
+  createPublicOrder, fetchPublicProducts, DELIVERY_TYPE_OPTIONS,
+  type DeliveryType, type FileInfo, type LineItem, type OrderCategory,
+} from '@/app/api';
 import ProductSelector from '@/components/ProductSelector';
 import { FlayerLogo } from '@/components/FlayerLogo';
 
@@ -19,27 +22,37 @@ export default function OrderForm() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
-  const [workType, setWorkType] = useState<'impresion_3d' | 'diseno_3d' | 'product'>('impresion_3d');
+  const [orderCategory, setOrderCategory] = useState<'' | OrderCategory>('');
+  const [needsPrinting, setNeedsPrinting] = useState(true);
+  const [needsModelling, setNeedsModelling] = useState(false);
+  const [dimensions, setDimensions] = useState('');
+  const [deliveryType, setDeliveryType] = useState<'' | DeliveryType>('');
   const [description, setDescription] = useState('');
   const [fileUrl, setFileUrl] = useState('');
   const [fileName, setFileName] = useState('');
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const productsQuery = useQuery({
     queryKey: ['public-products', token],
     queryFn: () => fetchPublicProducts(token),
-    enabled: workType === 'product',
+    enabled: orderCategory === 'product',
   });
 
   const descriptionText = useMemo(() => {
-    if (workType === 'product') {
+    if (orderCategory === 'product') {
       if (lineItems.length === 0) return '';
       const items = lineItems.map((item) => `${item.quantity}x ${item.name}`).join(', ');
       const desc = description.trim();
       return desc ? `${items} — ${desc}` : items;
     }
     return description.trim();
-  }, [workType, lineItems, description]);
+  }, [orderCategory, lineItems, description]);
+
+  const workType = useMemo(() => {
+    if (orderCategory === 'product') return 'product' as const;
+    return needsPrinting ? ('impresion_3d' as const) : ('diseno_3d' as const);
+  }, [orderCategory, needsPrinting]);
 
   const addProduct = (product: { id: string; name: string; price: number; stock_quantity: number }) => {
     setLineItems((prev) => {
@@ -79,14 +92,44 @@ export default function OrderForm() {
       token?: string;
       files?: FileInfo[];
       line_items?: LineItem[];
+      order_category: OrderCategory;
+      needs_3d_printing: boolean;
+      needs_3d_modelling: boolean;
+      dimensions?: string | null;
+      type_of_delivery: DeliveryType;
     }) => createPublicOrder(data),
   });
 
+  const handleCategoryChange = (value: OrderCategory) => {
+    setOrderCategory(value);
+    setSubmitError(null);
+    if (value === 'product') {
+      setLineItems([]);
+    } else {
+      setNeedsPrinting(true);
+      setNeedsModelling(false);
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!orderCategory) {
+      setSubmitError('Elegí una categoría para continuar.');
+      return;
+    }
+    if (orderCategory === 'print' && !needsPrinting && !needsModelling) {
+      setSubmitError('Seleccioná al menos un servicio de impresión.');
+      return;
+    }
+    if (!deliveryType) {
+      setSubmitError('Elegí el tipo de entrega.');
+      return;
+    }
+
     const files: FileInfo[] | undefined =
       fileUrl && fileName ? [{ filename: fileName, url: fileUrl }] : undefined;
 
+    setSubmitError(null);
     mutation.mutate({
       customer: { name: name.trim(), email, phone },
       work_type: workType,
@@ -94,6 +137,11 @@ export default function OrderForm() {
       token,
       files,
       line_items: lineItems.length > 0 ? lineItems : undefined,
+      order_category: orderCategory,
+      needs_3d_printing: orderCategory === 'print' && needsPrinting,
+      needs_3d_modelling: orderCategory === 'print' && needsModelling,
+      dimensions: dimensions.trim() || null,
+      type_of_delivery: deliveryType,
     });
   };
 
@@ -101,11 +149,16 @@ export default function OrderForm() {
     setName('');
     setEmail('');
     setPhone('');
-    setWorkType('impresion_3d');
+    setOrderCategory('');
+    setNeedsPrinting(true);
+    setNeedsModelling(false);
+    setDimensions('');
+    setDeliveryType('');
     setDescription('');
     setFileUrl('');
     setFileName('');
     setLineItems([]);
+    setSubmitError(null);
     mutation.reset();
   };
 
@@ -158,80 +211,117 @@ export default function OrderForm() {
         <TextField label="Teléfono" value={phone} onChange={(e) => setPhone(e.target.value)} fullWidth />
 
         <FormControl>
-          <FormLabel>Tipo de trabajo</FormLabel>
-          <RadioGroup value={workType} onChange={(e) => {
-            setWorkType(e.target.value as 'impresion_3d' | 'diseno_3d' | 'product');
-            setLineItems([]);
-          }}>
-            <FormControlLabel value="impresion_3d" control={<Radio />} label="Impresión 3D" />
-            <FormControlLabel value="diseno_3d" control={<Radio />} label="Diseño 3D" />
+          <FormLabel>Categoría</FormLabel>
+          <RadioGroup value={orderCategory} onChange={(e) => handleCategoryChange(e.target.value as OrderCategory)}>
+            <FormControlLabel value="print" control={<Radio />} label="Impresión" />
             <FormControlLabel value="product" control={<Radio />} label="Producto" />
           </RadioGroup>
         </FormControl>
 
-        {workType === 'product' ? (
-          <>
-            {productsQuery.isLoading ? (
-              <div className="flex justify-center p-4">
-                <CircularProgress />
-              </div>
-            ) : productsQuery.isError ? (
-              <Alert severity="error">Error al cargar productos. Intenta de nuevo.</Alert>
-            ) : productsQuery.data && productsQuery.data.length > 0 ? (
-              <ProductSelector
-                products={productsQuery.data}
-                lineItems={lineItems}
-                selectedIds={selectedIds}
-                onAdd={addProduct}
-                onUpdateQuantity={updateQuantity}
-                onRemove={removeProduct}
+        {orderCategory === 'print' && (
+          <FormControl>
+            <FormLabel>Servicios de impresión</FormLabel>
+            <RadioGroup aria-label="Servicios de impresión">
+              <FormControlLabel
+                control={<Checkbox checked={needsPrinting} onChange={(e) => setNeedsPrinting(e.target.checked)} />}
+                label="3d printing"
               />
-            ) : (
-              <Alert severity="info">No hay productos disponibles en este momento.</Alert>
-            )}
+              <FormControlLabel
+                control={<Checkbox checked={needsModelling} onChange={(e) => setNeedsModelling(e.target.checked)} />}
+                label="3d modelling"
+              />
+            </RadioGroup>
+          </FormControl>
+        )}
 
-            {lineItems.length > 0 && (
-              <Alert severity="info" icon={false}>
-                <p className="text-sm font-semibold text-slate">Resumen del pedido:</p>
-                {lineItems.map((item) => (
-                  <p key={item.product_id} className="text-sm text-slate">
-                    {item.quantity}× {item.name} — ${(item.quantity * item.unit_price).toFixed(2)}
-                  </p>
-                ))}
-                <p className="mt-0.5 text-sm font-bold text-slate">
-                  Total: ${totalAmount.toFixed(2)}
-                </p>
-              </Alert>
+        {orderCategory && (
+          <>
+            {orderCategory === 'product' ? (
+              <>
+                {productsQuery.isLoading ? (
+                  <div className="flex justify-center p-4">
+                    <CircularProgress />
+                  </div>
+                ) : productsQuery.isError ? (
+                  <Alert severity="error">Error al cargar productos. Intenta de nuevo.</Alert>
+                ) : productsQuery.data && productsQuery.data.length > 0 ? (
+                  <ProductSelector
+                    products={productsQuery.data}
+                    lineItems={lineItems}
+                    selectedIds={selectedIds}
+                    onAdd={addProduct}
+                    onUpdateQuantity={updateQuantity}
+                    onRemove={removeProduct}
+                  />
+                ) : (
+                  <Alert severity="info">No hay productos disponibles en este momento.</Alert>
+                )}
+
+                {lineItems.length > 0 && (
+                  <Alert severity="info" icon={false}>
+                    <p className="text-sm font-semibold text-slate">Resumen del pedido:</p>
+                    {lineItems.map((item) => (
+                      <p key={item.product_id} className="text-sm text-slate">
+                        {item.quantity}× {item.name} — ${(item.quantity * item.unit_price).toFixed(2)}
+                      </p>
+                    ))}
+                    <p className="mt-0.5 text-sm font-bold text-slate">
+                      Total: ${totalAmount.toFixed(2)}
+                    </p>
+                  </Alert>
+                )}
+
+                <TextField
+                  label="Notas adicionales"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  multiline
+                  rows={2}
+                  fullWidth
+                />
+              </>
+            ) : (
+              <TextField
+                label="Descripción"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                required
+                multiline
+                rows={4}
+                fullWidth
+              />
             )}
 
             <TextField
-              label="Notas adicionales"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              multiline
-              rows={2}
+              label="Dimensions"
+              value={dimensions}
+              onChange={(e) => setDimensions(e.target.value)}
+              helperText="largo x ancho x alto en mm (De la pieza mas grande)"
               fullWidth
             />
+
+            <FormControl>
+              <FormLabel>Type of Delivery</FormLabel>
+              <RadioGroup value={deliveryType} onChange={(e) => setDeliveryType(e.target.value as DeliveryType)}>
+                {DELIVERY_TYPE_OPTIONS.map((opt) => (
+                  <FormControlLabel key={opt.value} value={opt.value} control={<Radio />} label={opt.label} />
+                ))}
+              </RadioGroup>
+            </FormControl>
+
+            <p className="text-sm font-medium text-slate">
+              Archivo (opcional) — Enlace a Drive, WeTransfer, etc.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <TextField label="Nombre del archivo" value={fileName} onChange={(e) => setFileName(e.target.value)} size="small" sx={{ flex: 1 }} />
+              <TextField label="URL del archivo" value={fileUrl} onChange={(e) => setFileUrl(e.target.value)} size="small" sx={{ flex: 2 }} />
+            </div>
           </>
-        ) : (
-          <TextField
-            label="Descripción"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            required
-            multiline
-            rows={4}
-            fullWidth
-          />
         )}
 
-        <p className="text-sm font-medium text-slate">
-          Archivo (opcional) — Enlace a Drive, WeTransfer, etc.
-        </p>
-        <div className="flex flex-wrap gap-2">
-          <TextField label="Nombre del archivo" value={fileName} onChange={(e) => setFileName(e.target.value)} size="small" sx={{ flex: 1 }} />
-          <TextField label="URL del archivo" value={fileUrl} onChange={(e) => setFileUrl(e.target.value)} size="small" sx={{ flex: 2 }} />
-        </div>
+        {submitError && (
+          <Alert severity="error">{submitError}</Alert>
+        )}
 
         {mutation.isError && (
           <Alert severity="error">

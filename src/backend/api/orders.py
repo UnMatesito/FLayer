@@ -12,7 +12,13 @@ from backend.models.customer import Customer
 from backend.models.order import Order
 from backend.models.product import FixedProduct
 from backend.models.user import User
-from backend.schemas.order import OrderCreate, OrderResponse, PublicOrderCreate
+from backend.schemas.order import (
+    DeliveryCostUpdate,
+    OrderCreate,
+    OrderDetailResponse,
+    OrderResponse,
+    PublicOrderCreate,
+)
 from backend.services.email_service import email_service
 
 router = APIRouter()
@@ -28,7 +34,7 @@ async def _validate_line_items(
     for item in line_items_data:
         query = select(FixedProduct).where(
             FixedProduct.id == UUID(item["product_id"]),
-            FixedProduct.is_active == True,
+            FixedProduct.is_active.is_(True),
         )
         if user_filter and user_id is not None:
             query = query.where(FixedProduct.user_id == user_id)
@@ -58,7 +64,7 @@ async def _validate_fixed_product(
 ) -> float:
     query = select(FixedProduct).where(
         FixedProduct.id == fixed_product_id,
-        FixedProduct.is_active == True,
+        FixedProduct.is_active.is_(True),
     )
     if user_filter and user_id is not None:
         query = query.where(FixedProduct.user_id == user_id)
@@ -115,6 +121,11 @@ async def _create_order_record(
     fixed_product_id: UUID | None,
     line_items_data: list[dict] | None,
     total: float | None,
+    order_category: str,
+    needs_3d_printing: bool,
+    needs_3d_modelling: bool,
+    dimensions: str | None,
+    type_of_delivery: str,
 ) -> Order:
     order = Order(
         user_id=user_id,
@@ -127,6 +138,11 @@ async def _create_order_record(
         fixed_product_id=fixed_product_id,
         line_items=line_items_data,
         total=total,
+        order_category=order_category,
+        needs_3d_printing=needs_3d_printing,
+        needs_3d_modelling=needs_3d_modelling,
+        dimensions=dimensions,
+        type_of_delivery=type_of_delivery,
     )
     db.add(order)
     await db.commit()
@@ -200,6 +216,11 @@ async def create_public_order(
         fixed_product_id=body.fixed_product_id,
         line_items_data=line_items_data,
         total=total,
+        order_category=body.order_category,
+        needs_3d_printing=body.needs_3d_printing,
+        needs_3d_modelling=body.needs_3d_modelling,
+        dimensions=body.dimensions,
+        type_of_delivery=body.type_of_delivery,
     )
 
     if not body.skip_client_notification:
@@ -238,6 +259,11 @@ async def create_internal_order(
         fixed_product_id=body.fixed_product_id,
         line_items_data=line_items_data,
         total=total,
+        order_category=body.order_category,
+        needs_3d_printing=body.needs_3d_printing,
+        needs_3d_modelling=body.needs_3d_modelling,
+        dimensions=body.dimensions,
+        type_of_delivery=body.type_of_delivery,
     )
 
     if not body.skip_client_notification:
@@ -283,3 +309,37 @@ async def list_orders(
         order.customer_name = customer_names.get(order.customer_id)
 
     return list(orders)
+
+
+@router.patch("/api/orders/{order_id}/delivery-cost", response_model=OrderDetailResponse)
+async def update_delivery_cost(
+    order_id: UUID,
+    body: DeliveryCostUpdate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> Order:
+    result = await db.execute(
+        select(Order).where(Order.id == order_id, Order.user_id == current_user.id)
+    )
+    order = result.scalar_one_or_none()
+    if order is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
+
+    if order.type_of_delivery != "Delivery":
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Delivery cost can only be set for orders with type_of_delivery 'Delivery'",
+        )
+
+    order.delivery_embalaje = body.embalaje
+    order.delivery_precio_envio = body.precio_envio
+    await db.commit()
+    await db.refresh(order)
+
+    result = await db.execute(
+        select(Customer).where(Customer.id == order.customer_id)
+    )
+    customer = result.scalar_one_or_none()
+    order.customer_name = customer.name if customer else ""
+    order.customer_email = customer.email if customer else ""
+    return order

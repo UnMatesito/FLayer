@@ -144,6 +144,15 @@ export interface CustomerData {
 
 export type WorkType = 'impresion_3d' | 'diseno_3d' | 'product';
 
+export type OrderCategory = 'print' | 'product';
+
+export type DeliveryType = 'Presencial acordado' | 'Delivery';
+
+export const DELIVERY_TYPE_OPTIONS: { value: DeliveryType; label: string }[] = [
+  { value: 'Presencial acordado', label: 'Presencial acordado' },
+  { value: 'Delivery', label: 'Delivery' },
+];
+
 export interface LineItem {
   product_id: string;
   name: string;
@@ -158,6 +167,11 @@ export interface OrderPayload {
   token?: string;
   files?: FileInfo[];
   line_items?: LineItem[];
+  order_category: OrderCategory;
+  needs_3d_printing: boolean;
+  needs_3d_modelling: boolean;
+  dimensions?: string | null;
+  type_of_delivery: DeliveryType;
 }
 
 export interface InternalOrderPayload extends OrderPayload {
@@ -176,6 +190,13 @@ export interface Order {
   files: { filename: string; url: string }[] | null;
   status: string;
   client_notified: boolean;
+  order_category: OrderCategory;
+  needs_3d_printing: boolean;
+  needs_3d_modelling: boolean;
+  dimensions?: string | null;
+  type_of_delivery: DeliveryType;
+  delivery_embalaje?: number | null;
+  delivery_precio_envio?: number | null;
   filament_id?: string | null;
   grams_estimated?: number | null;
   fixed_product_id?: string | null;
@@ -504,6 +525,28 @@ export async function updateOrderStatus(
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error(err.detail || 'Failed to update order status');
+  }
+  return res.json();
+}
+
+export interface DeliveryCostPayload {
+  embalaje: number;
+  precio_envio: number;
+}
+
+export async function updateDeliveryCost(
+  orderId: string,
+  payload: DeliveryCostPayload,
+): Promise<OrderDetail> {
+  const res = await fetch(`${API_BASE}/orders/${orderId}/delivery-cost`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+    credentials: 'include',
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Failed to save delivery cost');
   }
   return res.json();
 }

@@ -8,6 +8,7 @@ import {
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
+import LocalShippingIcon from '@mui/icons-material/LocalShipping';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import ProtectedRoute from '@/app/protected-route';
 import {
@@ -16,6 +17,7 @@ import {
 } from '@/app/api';
 import BudgetForm from '@/components/BudgetForm';
 import BudgetBreakdown from '@/components/BudgetBreakdown';
+import DeliveryCostDialog from '@/components/DeliveryCostDialog';
 import { statusColor, statusLabel, workTypeLabel, getStatusActions } from '@/utils/order';
 
 export default function OrderDetailPage() {
@@ -23,6 +25,7 @@ export default function OrderDetailPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [budgetFormOpen, setBudgetFormOpen] = useState(false);
+  const [deliveryCostOpen, setDeliveryCostOpen] = useState(false);
 
   const { data: order, isLoading, error } = useQuery<OrderDetail>({
     queryKey: ['order', id],
@@ -108,6 +111,29 @@ export default function OrderDetailPage() {
               <TableRow>
                 <TableCell className="font-semibold">Tipo de Trabajo</TableCell>
                 <TableCell>{workTypeLabel(order.work_type)}</TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell className="font-semibold">Categoría</TableCell>
+                <TableCell>{order.order_category === 'print' ? 'Impresión' : 'Producto'}</TableCell>
+              </TableRow>
+              {order.order_category === 'print' && (
+                <TableRow>
+                  <TableCell className="font-semibold">Servicios</TableCell>
+                  <TableCell>
+                    {order.needs_3d_printing ? '3d printing, ' : ''}
+                    {order.needs_3d_modelling ? '3d modelling, ' : ''}
+                  </TableCell>
+                </TableRow>
+              )}
+              {order.dimensions && (
+                <TableRow>
+                  <TableCell className="font-semibold">Dimensiones</TableCell>
+                  <TableCell className="font-mono">{order.dimensions}</TableCell>
+                </TableRow>
+              )}
+              <TableRow>
+                <TableCell className="font-semibold">Entrega</TableCell>
+                <TableCell>{order.type_of_delivery}</TableCell>
               </TableRow>
               <TableRow>
                 <TableCell className="font-semibold">Descripción</TableCell>
@@ -218,6 +244,30 @@ export default function OrderDetailPage() {
             )}
           </div>
         )}
+
+        {order.type_of_delivery === 'Delivery' && (
+          <div className="mt-3 card rounded-md border border-line bg-snow p-4">
+            <div className="mb-2 flex items-center justify-between">
+              <h3 className="text-[1.25rem] font-semibold">Costo de Entrega</h3>
+              <Button
+                variant="outlined"
+                size="small"
+                startIcon={<LocalShippingIcon />}
+                onClick={() => setDeliveryCostOpen(true)}
+              >
+                Agregar costo de Entrega
+              </Button>
+            </div>
+            {order.delivery_embalaje != null || order.delivery_precio_envio != null ? (
+              <div className="text-sm text-slate">
+                <p>Embalaje: ${order.delivery_embalaje ?? '—'}</p>
+                <p>Precio de envío: ${order.delivery_precio_envio ?? '—'}</p>
+              </div>
+            ) : (
+              <p className="text-sm text-slate">Todavía no se cargó el costo de entrega.</p>
+            )}
+          </div>
+        )}
       </div>
 
       <BudgetForm
@@ -225,6 +275,14 @@ export default function OrderDetailPage() {
         onClose={() => setBudgetFormOpen(false)}
         orderId={id}
         existingBudget={budget ?? null}
+      />
+
+      <DeliveryCostDialog
+        open={deliveryCostOpen}
+        orderId={id}
+        initialEmbalaje={order.delivery_embalaje}
+        initialPrecioEnvio={order.delivery_precio_envio}
+        onClose={() => setDeliveryCostOpen(false)}
       />
     </ProtectedRoute>
   );

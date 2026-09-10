@@ -35,6 +35,32 @@ DB: PostgreSQL · ORM: SQLAlchemy 2.0 (async) · Migrations: Alembic
 - Amounts: `DECIMAL(12,2)`, never `FLOAT`
 - Variable configs (slicer JSON, price matrix): `JSONB`
 
+## `orders` (intake columns, `create_order`)
+
+Intake fields owned by `create_order` (R8–R24, 2026-09-09):
+
+- `order_category TEXT NOT NULL DEFAULT 'print'` — `print` | `product`
+  (CHECK `ck_orders_order_category_valid`)
+- `needs_3d_printing BOOLEAN NOT NULL DEFAULT false`
+- `needs_3d_modelling BOOLEAN NOT NULL DEFAULT false`
+- `dimensions TEXT NULL` — free-text, helper reference
+  `largo x ancho x alto en mm (De la pieza mas grande)`
+- `type_of_delivery TEXT NOT NULL DEFAULT 'Presencial acordado'` —
+  `Presencial acordado` | `Delivery` (CHECK `ck_orders_delivery_type_valid`)
+- `delivery_embalaje DECIMAL(12,2) NULL` — CHECK >= 0
+  (`ck_orders_delivery_embalaje_non_negative`)
+- `delivery_precio_envio DECIMAL(12,2) NULL` — CHECK >= 0
+  (`ck_orders_delivery_envio_non_negative`)
+
+Rules: `print` orders require at least one of `needs_3d_printing` /
+`needs_3d_modelling`; `product` orders force both print-service booleans to
+`false` server-side. `delivery_embalaje` / `delivery_precio_envio` are settable
+only for `type_of_delivery = 'Delivery'` (operator endpoint
+`PATCH /api/orders/{id}/delivery-cost`). Migration `021` backfills existing rows
+with `order_category='print'`, `type_of_delivery='Presencial acordado'`, and
+booleans derived from `work_type` (`impresion_3d` → printing, `diseno_3d` →
+modelling).
+
 ## Relationship Diagram (High Level)
 
 ```

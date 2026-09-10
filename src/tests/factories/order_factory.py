@@ -19,6 +19,13 @@ class OrderFactory(factory.Factory):
     files = None
     status = "new"
     client_notified = False
+    order_category = "print"
+    needs_3d_printing = False
+    needs_3d_modelling = False
+    dimensions = None
+    type_of_delivery = "Presencial acordado"
+    delivery_embalaje = None
+    delivery_precio_envio = None
     created_at = factory.LazyFunction(datetime.now)
     updated_at = factory.LazyFunction(datetime.now)
 

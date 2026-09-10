@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import ForeignKey, Numeric, String, Text, func
+from sqlalchemy import CheckConstraint, ForeignKey, Numeric, String, Text, func, text
 from sqlalchemy import JSON
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import UUID
@@ -12,6 +12,15 @@ from backend.database import Base
 
 class Order(Base):
     __tablename__ = "orders"
+    __table_args__ = (
+        CheckConstraint("order_category IN ('print', 'product')", name="ck_orders_order_category_valid"),
+        CheckConstraint(
+            "type_of_delivery IN ('Presencial acordado', 'Delivery')",
+            name="ck_orders_delivery_type_valid",
+        ),
+        CheckConstraint("delivery_embalaje >= 0", name="ck_orders_delivery_embalaje_non_negative"),
+        CheckConstraint("delivery_precio_envio >= 0", name="ck_orders_delivery_envio_non_negative"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
@@ -21,6 +30,21 @@ class Order(Base):
     files: Mapped[list[dict[str, Any]] | None] = mapped_column(JSON, default=None)
     status: Mapped[str] = mapped_column(String(50), ForeignKey("order_statuses.name"), nullable=False, default="new")
     client_notified: Mapped[bool] = mapped_column(default=False)
+    order_category: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="print", server_default="print"
+    )
+    needs_3d_printing: Mapped[bool] = mapped_column(
+        nullable=False, default=False, server_default=text("false")
+    )
+    needs_3d_modelling: Mapped[bool] = mapped_column(
+        nullable=False, default=False, server_default=text("false")
+    )
+    dimensions: Mapped[str | None] = mapped_column(Text, nullable=True)
+    type_of_delivery: Mapped[str] = mapped_column(
+        String(30), nullable=False, default="Presencial acordado", server_default="Presencial acordado"
+    )
+    delivery_embalaje: Mapped[float | None] = mapped_column(Numeric(12, 2), nullable=True)
+    delivery_precio_envio: Mapped[float | None] = mapped_column(Numeric(12, 2), nullable=True)
     filament_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID, ForeignKey("filaments.id"), nullable=True
     )

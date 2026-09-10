@@ -25,21 +25,31 @@ class OrderCreateFactory(factory.Factory):
     class Meta:
         model = OrderCreate
 
-    work_type = "impresion_3d"
+    work_type = factory.Iterator(["impresion_3d", "diseno_3d"])
     customer = factory.SubFactory(CustomerCreateFactory)
     description = Faker("sentence")
     files = None
     skip_client_notification = False
     status = None
+    order_category = factory.LazyAttribute(lambda o: "print")
+    needs_3d_printing = factory.LazyAttribute(lambda o: o.work_type == "impresion_3d")
+    needs_3d_modelling = factory.LazyAttribute(lambda o: o.work_type == "diseno_3d")
+    dimensions = None
+    type_of_delivery = "Presencial acordado"
 
 
 class PublicOrderCreateFactory(factory.Factory):
     class Meta:
         model = PublicOrderCreate
 
-    work_type = "impresion_3d"
+    work_type = factory.Iterator(["impresion_3d", "diseno_3d"])
     customer = factory.SubFactory(CustomerCreateFactory)
     description = Faker("sentence")
     files = None
     token = None
     skip_client_notification = False
+    order_category = factory.LazyAttribute(lambda o: "print")
+    needs_3d_printing = factory.LazyAttribute(lambda o: o.work_type == "impresion_3d")
+    needs_3d_modelling = factory.LazyAttribute(lambda o: o.work_type == "diseno_3d")
+    dimensions = None
+    type_of_delivery = "Presencial acordado"

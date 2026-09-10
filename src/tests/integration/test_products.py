@@ -1,7 +1,5 @@
 import io
 
-import pytest
-
 
 def test_create_product_valid(client, auth_headers):
     response = client.post(
@@ -182,6 +180,8 @@ def test_order_with_fixed_product_id_sets_total(client, auth_headers, test_produ
             "work_type": "product",
             "description": "Order for fixed product",
             "fixed_product_id": str(test_product.id),
+            "order_category": "product",
+            "type_of_delivery": "Presencial acordado",
         },
         headers=auth_headers,
     )
@@ -207,6 +207,8 @@ def test_order_references_nonexistent_product_rejected(client, auth_headers, db_
             "work_type": "product",
             "description": "Order for nonexistent product",
             "fixed_product_id": "00000000-0000-0000-0000-000000000000",
+            "order_category": "product",
+            "type_of_delivery": "Presencial acordado",
         },
         headers=auth_headers,
     )
