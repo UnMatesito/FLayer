@@ -35,6 +35,7 @@ COOKIE_KEY = "access_token"
 
 def _user_response(user: User) -> UserResponse:
     logo_url = storage_service.get_file_url(user.logo_path, cache_bust=True) if user.logo_path else None
+    favicon_url = storage_service.get_file_url(user.favicon_path, cache_bust=True) if user.favicon_path else None
     return UserResponse(
         id=user.id,
         email=user.email,
@@ -42,6 +43,7 @@ def _user_response(user: User) -> UserResponse:
         business_name=user.business_name,
         primary_color=user.primary_color,
         logo_url=logo_url,
+        favicon_url=favicon_url,
         currency=user.currency,
     )
 
@@ -220,6 +222,40 @@ async def delete_logo(
     if current_user.logo_path:
         storage_service.delete_file(current_user.logo_path)
         current_user.logo_path = None
+        await db.commit()
+        await db.refresh(current_user)
+    return _user_response(current_user)
+
+
+@router.post("/me/favicon", response_model=UserResponse)
+async def upload_favicon(
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_verified_user),
+    db: AsyncSession = Depends(get_db),
+) -> UserResponse:
+    try:
+        storage_service.validate_image(file)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(e))
+
+    if current_user.favicon_path:
+        storage_service.delete_file(current_user.favicon_path)
+
+    path = await storage_service.save_favicon(file, current_user.id)
+    current_user.favicon_path = path
+    await db.commit()
+    await db.refresh(current_user)
+    return _user_response(current_user)
+
+
+@router.delete("/me/favicon", response_model=UserResponse)
+async def delete_favicon(
+    current_user: User = Depends(get_verified_user),
+    db: AsyncSession = Depends(get_db),
+) -> UserResponse:
+    if current_user.favicon_path:
+        storage_service.delete_file(current_user.favicon_path)
+        current_user.favicon_path = None
         await db.commit()
         await db.refresh(current_user)
     return _user_response(current_user)

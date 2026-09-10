@@ -8,6 +8,7 @@ import { useAuth } from '../auth-context';
 import { fetchDashboardSummary, type DashboardKpis, type DashboardSummary } from '../api';
 import LayerBarChart from '@/components/LayerBarChart';
 import { statusColor, statusLabel, workTypeLabel } from '@/utils/order';
+import { DashboardUnavailableState } from './unavailable-state';
 
 function formatMoney(value: number): string {
   return `$${value.toLocaleString('es-AR', { maximumFractionDigits: 0 })}`;
@@ -27,7 +28,10 @@ function statusSentence(kpis: DashboardKpis): string {
   if (kpis.low_stock_supplies > 0) {
     parts.push(`${kpis.low_stock_supplies} ${kpis.low_stock_supplies === 1 ? 'insumo' : 'insumos'} por reponer`);
   }
-  return parts.length > 0 ? parts.join(' · ') : 'nada en cola y el stock al día';
+  if (kpis.low_stock_products > 0) {
+    parts.push(`${kpis.low_stock_products} ${kpis.low_stock_products === 1 ? 'producto' : 'productos'} sin stock`);
+  }
+  return parts.length > 0 ? parts.join(' · ') : 'nada en cola y el stock normal';
 }
 
 function greeting(firstName: string, kpis: DashboardKpis): string {
@@ -128,8 +132,8 @@ function DashboardBody({ summary, name }: { summary: DashboardSummary; name: str
         />
         <KpiCell
           label="Stock bajo"
-          value={String(kpis.low_stock_filaments + kpis.low_stock_supplies)}
-          sub={`${kpis.low_stock_filaments} fil · ${kpis.low_stock_supplies} insumo${kpis.low_stock_supplies === 1 ? '' : 's'}`}
+          value={String(kpis.low_stock_products + kpis.low_stock_filaments + kpis.low_stock_supplies)}
+          sub={`${kpis.low_stock_products} prod · ${kpis.low_stock_filaments} fil · ${kpis.low_stock_supplies} insumo${kpis.low_stock_supplies === 1 ? '' : 's'}`}
         />
       </div>
 
@@ -184,10 +188,18 @@ function DashboardBody({ summary, name }: { summary: DashboardSummary; name: str
                 Ir a stock
               </Button>
             </div>
-            {summary.low_stock.filaments.length === 0 && summary.low_stock.supplies.length === 0 ? (
-              <p className="py-2 text-[0.9rem] text-slate">Todo por encima del mínimo.</p>
+            {summary.low_stock.items.length === 0 ? (
+              <p className="py-2 text-[0.9rem] text-slate">Stock normal: todo por encima del mínimo.</p>
             ) : (
               <>
+                {summary.low_stock.products.map((p) => (
+                  <div key={p.id} className="flex justify-between gap-2 border-b border-line py-1.25 last:border-b-0">
+                    <p className="truncate text-[0.85rem]">Producto · {p.name}</p>
+                    <p className="whitespace-nowrap font-mono text-[0.72rem] text-slate">
+                      {p.stock_quantity}/{p.threshold} uds.
+                    </p>
+                  </div>
+                ))}
                 {summary.low_stock.filaments.map((f) => (
                   <div key={f.id} className="flex justify-between gap-2 border-b border-line py-1.25 last:border-b-0">
                     <p className="truncate text-[0.85rem]">{f.color_name}</p>
@@ -259,12 +271,7 @@ export default function DashboardPage() {
         {isLoading ? (
           <SummarySkeleton />
         ) : isError || !data ? (
-          <div className="flex flex-col items-center gap-1.5 py-8">
-            <p className="text-sm text-slate">No se pudo cargar la vista general.</p>
-            <Button variant="outlined" onClick={() => refetch()}>
-              Reintentar
-            </Button>
-          </div>
+          <DashboardUnavailableState onRetry={() => void refetch()} />
         ) : (
           <DashboardBody summary={data} name={user?.name ?? ''} />
         )}

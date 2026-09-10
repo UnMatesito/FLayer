@@ -17,6 +17,7 @@ import {
   type BudgetMarginType, type BudgetResponse, type FilamentItemInput, type Filament, type Printer,
 } from '@/app/api';
 import { useAuth } from '@/app/auth-context';
+import { normalizeApiError, normalizeBudgetMarginError } from '@/app/error-normalizer';
 
 interface FilamentItem {
   product_id: string | null;
@@ -77,6 +78,7 @@ export default function BudgetForm({ open, onClose, orderId, existingBudget }: P
 
   const [preview, setPreview] = useState<BudgetResponse | null>(null);
   const [previewError, setPreviewError] = useState<string | null>(null);
+  const [marginError, setMarginError] = useState<string | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const { data: filaments } = useQuery<Filament[]>({
@@ -114,7 +116,7 @@ export default function BudgetForm({ open, onClose, orderId, existingBudget }: P
           grams: i.grams,
         }));
     const parsedMargin = parseFloat(marginMultiplier);
-    const effectiveMargin = Number.isFinite(parsedMargin) ? parsedMargin : 0;
+    const effectiveMargin = Number.isFinite(parsedMargin) && parsedMargin > 0 ? parsedMargin : 0;
     return {
       currency,
       printer_id: printerId || null,
@@ -145,7 +147,7 @@ export default function BudgetForm({ open, onClose, orderId, existingBudget }: P
         setPreview(result);
       } catch (err) {
         setPreview(null);
-        setPreviewError(err instanceof Error ? err.message : 'Error en previsualización');
+        setPreviewError(normalizeApiError(err, 'Error en previsualización'));
       }
     }, 500);
     return () => {
@@ -166,7 +168,20 @@ export default function BudgetForm({ open, onClose, orderId, existingBudget }: P
       queryClient.invalidateQueries({ queryKey: ['orders'] });
       onClose();
     },
+    onError: (err: unknown) => setPreviewError(normalizeApiError(err, 'No se pudo guardar el presupuesto')),
   });
+
+  const submitBudget = () => {
+    const parsed = Number(marginMultiplier);
+    if (!marginMultiplier.trim() || !Number.isFinite(parsed) || parsed <= 0) {
+      const message = normalizeBudgetMarginError({ detail: [{ loc: ['body', 'margin_multiplier'], msg: 'invalid' }] });
+      setMarginError(message);
+      setPreviewError(message);
+      return;
+    }
+    setMarginError(null);
+    saveMutation.mutate();
+  };
 
   const addItem = () => {
     setItems((prev) => [...prev, { product_id: null, product_name: null, grams: 100 }]);
@@ -404,11 +419,12 @@ export default function BudgetForm({ open, onClose, orderId, existingBudget }: P
               label="Multiplicador"
               type="number"
               value={marginMultiplier}
-              onChange={(e) => setMarginMultiplier(e.target.value)}
+              onChange={(e) => { setMarginMultiplier(e.target.value); setMarginError(null); }}
               size="small"
               sx={{ width: 240 }}
               slotProps={{ htmlInput: { min: 0.01, max: 100, step: 0.1 } }}
-              helperText="Los botones son referencias; otros valores válidos se usan como personalizado."
+              error={!!marginError}
+              helperText={marginError ?? 'Los botones son referencias; otros valores válidos se usan como personalizado.'}
             />
             <p className="mt-1 text-xs text-slate">
               Referencia: {selectedMarginOption ? `${selectedMarginOption.label} ${selectedMarginOption.reference}` : 'Personalizado'}
@@ -510,7 +526,7 @@ export default function BudgetForm({ open, onClose, orderId, existingBudget }: P
         <Button onClick={onClose} disabled={saveMutation.isPending}>Cancelar</Button>
         <Button
           variant="contained"
-          onClick={() => saveMutation.mutate()}
+          onClick={submitBudget}
           disabled={saveMutation.isPending}
           startIcon={saveMutation.isPending ? <CircularProgress size={18} /> : undefined}
         >

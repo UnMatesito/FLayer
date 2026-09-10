@@ -279,3 +279,37 @@ Output: `create_order` marked `done` in `feature_list.json`.
 - Feature list: added `multi_language` (pending; depends on authentication, dashboard) and `export_final_budget` (pending; depends on generate_budget)
 
 Output: all work committed (generate_budget + region_parameters revision, order_status budget gate, create_order R8-R24, meta/feature-list).
+
+## Session 21 — 2026-09-10
+
+**Feature:** `dash_enhancement`
+**Transition:** `spec_ready` → `in_progress` → `done`
+
+- Spec revised: expanded from favicon-only to 30 requirements (R1-R30) covering favicon, global feedback popups, closeable low-stock notifications, table-card filters, unified Historial movement filtering, error pages/error normalization, responsive CRUD drawers, creative detail cards, full responsive pass, and Hallmark audit
+- Implementation: backend (favicon column/endpoints, low-stock products, unified movement API, dashboard summary extensions), frontend (feedback provider, error normalizer, favicon wiring, Perfil card, inline filters, unified Historial multi-select, CRUD drawers, detail card redesign, 404/503/error states, responsive patterns)
+- Tests: 239 backend tests pass, 40 frontend tests pass, `npx tsc --noEmit` clean, `npm run build` clean
+- Reviewer: APPROVED (2026-09-10) with note that 5 browser-viewport verification tasks (R28-R29) remain open for manual human pass
+
+Output: `dash_enhancement` marked `done` in `feature_list.json`.
+
+## Session 22 — 2026-09-10
+
+**Feature:** `dash_enhancement` (post-closeout DB fix)
+**Transition:** none (`done` unchanged)
+
+- Reported `ProgrammingError: column users.favicon_path does not exist` at login on the dev DB (running server had the new ORM model, Dev DB was missing the column)
+- Root cause: favicon column was added to the `User` model + an inline `ALTER TABLE ... IF NOT EXISTS` band-aid in `main.py`, but no alembic migration was written (repo convention: every schema change ships a migration; dev DB was tracked at `021`)
+- Fix: added alembic `022_add_user_favicon` (adds nullable `users.favicon_path`, chained on `021`), ran `poetry run alembic upgrade head` (dev DB now `022`), removed the redundant inline ALTER from `main.py`
+- Verified: login ORM query now succeeds (no column error); only pre-existing auth rejection remains
+
+Output: dev DB reconciled via migration `022`.
+
+## Session 23 — 2026-09-10
+
+**Feature:** `dash_enhancement` (favicon disappears on navigation)
+**Transition:** none (`done` unchanged)
+
+- Reported: after uploading a custom favicon it disappears when navigating between pages
+- Root cause: `AuthProvider` applied the favicon only when `user.favicon_url` changed, but Next.js re-renders `<head>` from route metadata on every client-side navigation (restoring the default `icons.icon: '/logo.svg'` from `layout.tsx`), so the favicon reverted and nothing re-applied it
+- Fix: `auth-context.tsx` now depends on `usePathname()` — the favicon (and browser title) re-apply on every route change
+- Added regression test simulating a head wipe + navigation; 41 frontend tests pass, `tsc` clean, production build clean

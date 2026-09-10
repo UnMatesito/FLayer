@@ -14,6 +14,7 @@ class KpisResponse(BaseModel):
     budgeted_value_quoting: float
     low_stock_filaments: int
     low_stock_supplies: int
+    low_stock_products: int = 0
     printers_active: int
     maintenance_month: int
 

@@ -1,9 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
-  Button, Chip, CircularProgress, Dialog, DialogActions,
-  DialogContent, DialogTitle, FormControl, IconButton, InputLabel, MenuItem,
+  Button, Chip, CircularProgress, Drawer, FormControl, IconButton, InputLabel, MenuItem,
   Select, Table, TableBody, TableCell, TableHead, TableRow, TextField, Tooltip,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
@@ -15,6 +14,8 @@ import {
   fetchSupplies, createSupply, updateSupply, adjustSupply, type Supply, type SupplyCreate,
 } from '@/app/api';
 import Pagination, { usePagination } from '@/components/Pagination';
+import { useDashboardFeedback } from '../../feedback';
+import { normalizeApiError } from '@/app/error-normalizer';
 
 const styles: Record<string, SxProps<Theme>> = {
   lowStockRow: {
@@ -25,8 +26,9 @@ const styles: Record<string, SxProps<Theme>> = {
 
 const SUPPLY_UNITS = ['liters', 'units', 'kg', 'meters', 'ml', 'pieces'];
 
-function AddSupplyDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+function AddSupplyDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
   const queryClient = useQueryClient();
+  const feedback = useDashboardFeedback();
   const [form, setForm] = useState<SupplyCreate>({ name: '', quantity: 1, unit: 'units', min_stock_warning: 1 });
 
   const mutation = useMutation({
@@ -36,13 +38,18 @@ function AddSupplyDialog({ open, onClose }: { open: boolean; onClose: () => void
       queryClient.invalidateQueries({ queryKey: ['low-stock'] });
       onClose();
       setForm({ name: '', quantity: 1, unit: 'units', min_stock_warning: 1 });
+      feedback.success('Insumo guardado');
     },
+    onError: (err: unknown) => feedback.error(normalizeApiError(err, 'No se pudo crear el insumo')),
   });
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>Agregar Insumo</DialogTitle>
-      <DialogContent>
+    <Drawer anchor="right" open={open} onClose={onClose} slotProps={{ paper: { sx: { width: { xs: '100vw', sm: 430 }, maxWidth: '100vw' } } }}>
+      <div className="flex h-full flex-col">
+      <div className="border-b border-line px-3 py-2">
+        <h3 className="text-[1.15rem] font-semibold">Agregar Insumo</h3>
+      </div>
+      <div className="flex-1 overflow-y-auto p-3">
         <div className="mt-2 flex flex-col gap-2">
           <TextField label="Nombre" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} fullWidth required />
           <TextField label="Cantidad" type="number" value={form.quantity} onChange={(e) => setForm({ ...form, quantity: Number(e.target.value) })} fullWidth />
@@ -54,19 +61,21 @@ function AddSupplyDialog({ open, onClose }: { open: boolean; onClose: () => void
           </FormControl>
           <TextField label="Stock mínimo de advertencia" type="number" value={form.min_stock_warning} onChange={(e) => setForm({ ...form, min_stock_warning: Number(e.target.value) })} fullWidth />
         </div>
-      </DialogContent>
-      <DialogActions>
+      </div>
+      <div className="flex justify-end gap-1 border-t border-line p-2">
         <Button onClick={onClose}>Cancelar</Button>
         <Button onClick={() => mutation.mutate()} variant="contained" disabled={!form.name || mutation.isPending}>
           {mutation.isPending ? 'Guardando...' : 'Guardar'}
         </Button>
-      </DialogActions>
-    </Dialog>
+      </div>
+      </div>
+    </Drawer>
   );
 }
 
 function QuantityStepper({ supply }: { supply: Supply }) {
   const queryClient = useQueryClient();
+  const feedback = useDashboardFeedback();
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState(String(supply.quantity));
 
@@ -80,7 +89,9 @@ function QuantityStepper({ supply }: { supply: Supply }) {
     mutationFn: (delta: number) => adjustSupply(supply.id, { delta }),
     onSuccess: () => {
       refresh();
+      feedback.success('Stock ajustado');
     },
+    onError: (err: unknown) => feedback.error(normalizeApiError(err, 'No se pudo ajustar el stock')),
   });
 
   const saveMutation = useMutation({
@@ -88,7 +99,9 @@ function QuantityStepper({ supply }: { supply: Supply }) {
     onSuccess: () => {
       refresh();
       setEditing(false);
+      feedback.success('Stock ajustado');
     },
+    onError: (err: unknown) => feedback.error(normalizeApiError(err, 'No se pudo ajustar el stock')),
   });
 
   return (
@@ -151,12 +164,22 @@ function QuantityStepper({ supply }: { supply: Supply }) {
 
 export default function SuppliesPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const [stockFilter, setStockFilter] = useState<'all' | 'low' | 'ok'>('all');
 
   const { data: supplies, isLoading } = useQuery<Supply[]>({
     queryKey: ['supplies'],
     queryFn: () => fetchSupplies(),
   });
-  const pagination = usePagination(supplies?.length ?? 0, 50);
+  const visible = (supplies ?? [])
+    .filter((s) => s.name.toLowerCase().includes(search.toLowerCase()) || s.unit.toLowerCase().includes(search.toLowerCase()))
+    .filter((s) => stockFilter === 'all' || (stockFilter === 'low' ? s.quantity < s.min_stock_warning : s.quantity >= s.min_stock_warning));
+  const lowCount = supplies?.filter((s) => s.quantity < s.min_stock_warning).length ?? 0;
+  const pagination = usePagination(visible.length, 50);
+
+  useEffect(() => {
+    pagination.setPage(0);
+  }, [search, stockFilter]);
 
   if (isLoading) {
     return <div className="flex justify-center p-4"><CircularProgress /></div>;
@@ -170,6 +193,21 @@ export default function SuppliesPage() {
       </div>
 
       <div className="card rounded-md border border-line bg-snow">
+        <div className="flex flex-wrap items-center gap-2 border-b border-line p-3">
+          <TextField size="small" label="Buscar insumo" value={search} onChange={(e) => setSearch(e.target.value)} sx={{ minWidth: { xs: '100%', sm: 240 } }} />
+          <FormControl size="small" sx={{ minWidth: 150 }}>
+            <InputLabel>Stock</InputLabel>
+            <Select value={stockFilter} label="Stock" onChange={(e) => setStockFilter(e.target.value as typeof stockFilter)}>
+              <MenuItem value="all">Todos</MenuItem>
+              <MenuItem value="low">Stock bajo</MenuItem>
+              <MenuItem value="ok">OK</MenuItem>
+            </Select>
+          </FormControl>
+          <Button size="small" onClick={() => { setSearch(''); setStockFilter('all'); }}>Limpiar filtros</Button>
+          <p className="ml-auto text-[0.8rem] text-slate">{visible.length} resultados · {lowCount} stock bajo</p>
+          {lowCount === 0 && <p className="basis-full text-[0.82rem] text-slate">Stock normal: todos los insumos están por encima del mínimo.</p>}
+        </div>
+        <div className="overflow-x-auto">
         <Table>
           <TableHead>
             <TableRow>
@@ -180,7 +218,13 @@ export default function SuppliesPage() {
             </TableRow>
           </TableHead>
           <TableBody>
-            {pagination.slice(supplies ?? []).map((s) => {
+            {visible.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={4} align="center" className="py-8 text-slate">
+                  {search || stockFilter !== 'all' ? 'Insumos no tiene resultados con los filtros activos.' : 'No hay insumos registrados.'}
+                </TableCell>
+              </TableRow>
+            ) : pagination.slice(visible).map((s) => {
               const isLow = s.quantity < s.min_stock_warning;
               return (
                 <TableRow key={s.id} hover sx={isLow ? styles.lowStockRow : {}}>
@@ -199,8 +243,9 @@ export default function SuppliesPage() {
             })}
           </TableBody>
         </Table>
+        </div>
         <Pagination
-          count={supplies?.length ?? 0}
+          count={visible.length}
           page={pagination.page}
           onPageChange={pagination.setPage}
           rowsPerPage={pagination.rowsPerPage}
@@ -208,7 +253,7 @@ export default function SuppliesPage() {
         />
       </div>
 
-      <AddSupplyDialog open={dialogOpen} onClose={() => setDialogOpen(false)} />
+      <AddSupplyDrawer open={dialogOpen} onClose={() => setDialogOpen(false)} />
     </div>
   );
 }

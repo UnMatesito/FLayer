@@ -7,6 +7,7 @@ from tests.factories.budget_factory import BudgetFactory
 from tests.factories.customer_factory import CustomerFactory
 from tests.factories.order_factory import OrderFactory
 from tests.factories.printer_factory import PrinterFactory, PrinterMaintenanceFactory
+from tests.factories.product_factory import FixedProductFactory
 from tests.factories.stock_factories import FilamentFactory, SupplyFactory
 from tests.factories.user_factory import UserFactory
 
@@ -81,6 +82,8 @@ class TestSummaryKpis:
             quantity=0.5, min_stock_warning=1.0,
         )
         SupplyFactory.create(session=db_session, user_id=test_user.id, quantity=5.0)
+        low_product = FixedProductFactory.create(session=db_session, user_id=test_user.id, name="Producto sin stock", stock_quantity=0)
+        FixedProductFactory.create(session=db_session, user_id=test_user.id, name="Producto sano", stock_quantity=2)
 
         active_1 = PrinterFactory.create(session=db_session, user_id=test_user.id, name="One")
         active_2 = PrinterFactory.create(session=db_session, user_id=test_user.id, name="Two")
@@ -106,6 +109,7 @@ class TestSummaryKpis:
         assert kpis["budgeted_value_quoting"] == 1000.0
         assert kpis["low_stock_filaments"] == 1
         assert kpis["low_stock_supplies"] == 1
+        assert kpis["low_stock_products"] == 1
         assert kpis["printers_active"] == 2
         assert kpis["maintenance_month"] == 2
 
@@ -117,6 +121,17 @@ class TestSummaryKpis:
         assert len(data["recent_orders"]) == 5
         assert data["low_stock"]["filaments"][0]["color_name"].startswith("PLA")
         assert data["low_stock"]["supplies"][0]["name"].startswith("Isopropyl")
+        assert data["low_stock"]["products"] == [{
+            "id": str(low_product.id),
+            "name": "Producto sin stock",
+            "stock_quantity": 0.0,
+            "threshold": 1.0,
+        }]
+        product_item = next(item for item in data["low_stock"]["items"] if item["type"] == "product")
+        assert product_item["label"] == "Producto sin stock"
+        assert product_item["current_stock"] == 0.0
+        assert product_item["threshold"] == 1.0
+        assert product_item["href"] == f"/dashboard/products/{low_product.id}"
         assert len(data["printers"]) == 2
         assert data["printers"][0]["maintenance_month"] == 1
 
@@ -174,12 +189,15 @@ class TestTenantIsolation:
             "budgeted_value_quoting": 0.0,
             "low_stock_filaments": 0,
             "low_stock_supplies": 0,
+            "low_stock_products": 0,
             "printers_active": 0,
             "maintenance_month": 0,
         }
         assert data["recent_orders"] == []
         assert data["low_stock"]["filaments"] == []
         assert data["low_stock"]["supplies"] == []
+        assert data["low_stock"]["products"] == []
+        assert data["low_stock"]["items"] == []
         assert data["printers"] == []
         assert all(point["orders"] == 0 and point["revenue"] == 0.0 for point in data["activity"])
 
@@ -373,6 +391,14 @@ class TestLowStock:
             session=db_session, user_id=test_user.id,
             name="Insumo sano", quantity=5.0, min_stock_warning=1.0,
         )
+        low_product = FixedProductFactory.create(
+            session=db_session, user_id=test_user.id,
+            name="Producto bajo", stock_quantity=0,
+        )
+        FixedProductFactory.create(
+            session=db_session, user_id=test_user.id,
+            name="Producto archivado bajo", stock_quantity=0, is_active=False,
+        )
 
         token = _token_for(test_user)
         client.cookies.set("access_token", token)
@@ -390,6 +416,13 @@ class TestLowStock:
             "unit": low_supply.unit,
             "min_stock_warning": 1.0,
         }]
+        assert data["low_stock"]["products"] == [{
+            "id": str(low_product.id),
+            "name": "Producto bajo",
+            "stock_quantity": 0.0,
+            "threshold": 1.0,
+        }]
+        assert {item["type"] for item in data["low_stock"]["items"]} == {"product", "filament", "supply"}
 
         never_low_user = UserFactory.create(session=db_session, name="Never Low")
         never_low_token = _token_for(never_low_user)
@@ -397,6 +430,8 @@ class TestLowStock:
         empty = client.get("/api/dashboard/summary").json()
         assert empty["low_stock"]["filaments"] == []
         assert empty["low_stock"]["supplies"] == []
+        assert empty["low_stock"]["products"] == []
+        assert empty["low_stock"]["items"] == []
 
 
 class TestPrinterBay:

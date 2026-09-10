@@ -51,6 +51,7 @@ class UserResponse(BaseModel):
     business_name: str | None = None
     primary_color: str | None = None
     logo_url: str | None = None
+    favicon_url: str | None = None
     currency: Currency = "ARS"
 
     model_config = {"from_attributes": True}

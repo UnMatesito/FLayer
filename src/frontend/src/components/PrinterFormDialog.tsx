@@ -5,10 +5,7 @@ import {
   Autocomplete,
   Button,
   Chip,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
+  Drawer,
   TextField,
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -22,6 +19,8 @@ import {
   type PrinterUpdate,
 } from '@/app/api';
 import { PrinterImage } from '@/components/PrinterImage';
+import { useDashboardFeedback } from '@/app/dashboard/feedback';
+import { normalizeApiError } from '@/app/error-normalizer';
 
 const NOZZLE_PRESETS = ['0.2', '0.4', '0.6', '0.8'];
 
@@ -61,6 +60,7 @@ export function PrinterFormDialog({
   printer?: Printer;
 }) {
   const queryClient = useQueryClient();
+  const feedback = useDashboardFeedback();
   const [form, setForm] = useState<FormState>(toForm(printer));
   const [error, setError] = useState('');
 
@@ -104,16 +104,25 @@ export function PrinterFormDialog({
       if (printer) queryClient.invalidateQueries({ queryKey: ['printer', printer.id] });
       onClose();
       setError('');
+      feedback.success(isEdit ? 'Impresora guardada' : 'Impresora creada');
     },
-    onError: (err: Error) => setError(err.message),
+    onError: (err: unknown) => {
+      const message = normalizeApiError(err, 'No se pudo guardar la impresora');
+      setError(message);
+      feedback.error(message);
+    },
   });
 
   const set = (patch: Partial<FormState>) => setForm((f) => ({ ...f, ...patch }));
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>{isEdit ? 'Editar impresora' : 'Agregar impresora'}</DialogTitle>
-      <DialogContent>
+    <Drawer anchor="right" open={open} onClose={onClose} slotProps={{ paper: { sx: { width: { xs: '100vw', sm: 500 }, maxWidth: '100vw' } } }}>
+      <div className="flex h-full flex-col">
+      <div className="border-b border-line px-3 py-2">
+        <h3 className="text-[1.15rem] font-semibold">{isEdit ? 'Editar impresora' : 'Agregar impresora'}</h3>
+        <p className="text-sm text-slate">Panel lateral para no perder el contexto de la grilla.</p>
+      </div>
+      <div className="flex-1 overflow-y-auto p-3">
         <div className="mt-1 flex flex-col gap-2">
           {error && <p className="text-sm text-error">{error}</p>}
           <TextField
@@ -219,8 +228,8 @@ export function PrinterFormDialog({
             fullWidth multiline rows={2}
           />
         </div>
-      </DialogContent>
-      <DialogActions>
+      </div>
+      <div className="flex justify-end gap-1 border-t border-line p-2">
         <Button onClick={onClose}>Cancelar</Button>
         <Button
           onClick={() => mutation.mutate()}
@@ -229,7 +238,8 @@ export function PrinterFormDialog({
         >
           {mutation.isPending ? 'Guardando...' : 'Guardar'}
         </Button>
-      </DialogActions>
-    </Dialog>
+      </div>
+      </div>
+    </Drawer>
   );
 }

@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel, field_validator
@@ -188,6 +189,37 @@ class PaginatedStockMovements(BaseModel):
     per_page: int
 
 
+class MovementItemOption(BaseModel):
+    key: str
+    id: UUID
+    type: Literal["product", "filament", "supply"]
+    type_label: str
+    label: str
+
+
+class UnifiedMovementResponse(BaseModel):
+    id: UUID
+    source: Literal["product", "stock_movement"]
+    item_id: UUID
+    item_type: Literal["product", "filament", "supply"]
+    item_type_label: str
+    item_name: str
+    movement_type: str
+    quantity: float
+    unit: str
+    order_id: UUID | None = None
+    created_by_user_id: UUID
+    metadata: dict
+    created_at: datetime
+
+
+class PaginatedUnifiedMovements(BaseModel):
+    items: list[UnifiedMovementResponse]
+    total: int
+    page: int
+    per_page: int
+
+
 class StockMovementFilter(BaseModel):
     filament_id: UUID | None = None
     movement_type: str | None = None
@@ -213,6 +245,25 @@ class LowStockSupply(BaseModel):
     min_stock_warning: float
 
 
+class LowStockProduct(BaseModel):
+    id: UUID
+    name: str
+    stock_quantity: float
+    threshold: float = 1
+
+
+class LowStockItem(BaseModel):
+    id: UUID
+    type: Literal["product", "filament", "supply"]
+    label: str
+    current_stock: float
+    threshold: float
+    unit: str
+    href: str
+
+
 class LowStockResponse(BaseModel):
     filaments: list[LowStockFilament]
     supplies: list[LowStockSupply]
+    products: list[LowStockProduct] = []
+    items: list[LowStockItem] = []

@@ -23,6 +23,9 @@ const overpassMono = Overpass_Mono({
 export const metadata: Metadata = {
   title: 'Flayer',
   description: '3D printing order management',
+  icons: {
+    icon: '/logo.svg',
+  },
 };
 
 export default function RootLayout({

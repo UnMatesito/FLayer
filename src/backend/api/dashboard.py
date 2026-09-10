@@ -13,7 +13,7 @@ from backend.schemas.dashboard import (
     PrinterBayItem,
     RecentOrderItem,
 )
-from backend.schemas.stock import LowStockFilament, LowStockResponse, LowStockSupply
+from backend.schemas.stock import LowStockFilament, LowStockItem, LowStockProduct, LowStockResponse, LowStockSupply
 from backend.services.dashboard_service import dashboard_service
 
 router = APIRouter()
@@ -33,6 +33,8 @@ async def get_dashboard_summary(
         low_stock=LowStockResponse(
             filaments=[LowStockFilament(**f) for f in data["low_stock"]["filaments"]],
             supplies=[LowStockSupply(**s) for s in data["low_stock"]["supplies"]],
+            products=[LowStockProduct(**p) for p in data["low_stock"]["products"]],
+            items=[LowStockItem(**item) for item in data["low_stock"]["items"]],
         ),
         printers=[PrinterBayItem(**p) for p in data["printers"]],
     )

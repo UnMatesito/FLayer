@@ -16,6 +16,7 @@ class User(Base):
     hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
     primary_color: Mapped[str | None] = mapped_column(String(7), nullable=True)
     logo_path: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    favicon_path: Mapped[str | None] = mapped_column(String(500), nullable=True)
     currency: Mapped[str] = mapped_column(String(3), nullable=False, server_default="ARS")
 
     __table_args__ = (

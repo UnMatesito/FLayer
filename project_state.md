@@ -1,8 +1,8 @@
 # Project State
 
 **Current feature:** none (brand_identity + create_order done)
-**Status:** brand_identity DONE + create_order R7 DONE; ready to commit
-**Next:** `dash_enhancement` or `email_notifications`
+**Status:** `dash_enhancement` DONE; ready to commit
+**Next:** `registration`, `email_notifications`, `reports`, `multi_language`, or `export_final_budget`
 
 ## Architecture
 
@@ -18,10 +18,8 @@ FastAPI + Next.js 16 + PostgreSQL (Docker) + MUI v7. SDD workflow (spec → code
 
 ## Relevant files
 
-- `specs/brand_identity/{requirements,design,tasks}.md`
-- `specs/create_order/{requirements,design,tasks}.md`
-- `progress/impl_brand_identity.md`
-- `progress/review_brand_identity.md`
+- `specs/dash_enhancement/{requirements,design,tasks}.md`
+- `progress/impl_dash_enhancement.md`
 
 ## Blockers
 
@@ -29,4 +27,4 @@ None.
 
 ## Next
 
-`dash_enhancement` (favicon + branding) or `email_notifications`. See `feature_list.json` for dependency graph.
+`registration` (no deps beyond auth — deferred registration UI), `email_notifications` (depends on `order_status`), `reports` (depends on `dashboard`), `multi_language` (depends on `authentication` + `dashboard`), or `export_final_budget` (depends on `generate_budget`). See `feature_list.json` for dependency graph.

@@ -1,6 +1,6 @@
 # Current
 
-**Feature:** none in flight — `create_order` closed.
+**Feature:** none in flight — `dash_enhancement` closed.
 
 **create_order:** DONE — R8-R24 revision implemented, reviewer APPROVED (re-review
 2026-09-09), manual Layer-3 verification completed by the human; marked `done`
@@ -37,6 +37,6 @@ APPROVED). Marked `done` in `feature_list.json`.
 - `registration` (no deps beyond done auth — deferred registration UI, includes currency at registration)
 - `email_notifications` (depends on `order_status`)
 - `reports` (depends on `dashboard`) — dep done, unblocked
-- `dash_enhancement` (spec_ready — favicon + branding; depends on `brand_identity` — now unblocked)
+- `dash_enhancement` (done — reviewer APPROVED 2026-09-10; custom favicon, global feedback popups, closeable low-stock popup notifications plus persistent product/filament/Insumo low-stock visibility, table-card filters, unified Historial movement filtering, error pages/error normalization, responsive CRUD drawers, creative detail cards, full responsive pass, and Hallmark audit; 5 browser-viewport verification tasks open for manual human pass)
 - `multi_language` (pending — added to feature_list 2026-09-09; language selection in user settings; depends on `authentication`, `dashboard`)
 - `export_final_budget` (pending — added to feature_list 2026-09-09; export of the final budget; depends on `generate_budget`)

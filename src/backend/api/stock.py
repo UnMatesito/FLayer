@@ -2,12 +2,14 @@ import logging
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.api.deps import get_current_user
 from backend.database import get_db
 from backend.models.filament import Filament
+from backend.models.product import FixedProduct
+from backend.models.product_stock_movement import ProductStockMovement
 from backend.models.stock_movement import StockMovement
 from backend.models.supply import Supply
 from backend.models.user import User
@@ -18,9 +20,13 @@ from backend.schemas.stock import (
     FilamentResponse,
     FilamentUpdate,
     LowStockFilament,
+    LowStockItem,
+    LowStockProduct,
     LowStockResponse,
     LowStockSupply,
+    MovementItemOption,
     PaginatedStockMovements,
+    PaginatedUnifiedMovements,
     StockMovementResponse,
     SupplyAdjustRequest,
     SupplyAdjustResponse,
@@ -28,12 +34,15 @@ from backend.schemas.stock import (
     SupplyResponse,
     SupplyUpdate,
     VALID_MOVEMENT_TYPES,
+    UnifiedMovementResponse,
 )
 from backend.services.stock_service import stock_service
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+ITEM_TYPE_LABELS = {"product": "Producto", "filament": "Filamento", "supply": "Insumo"}
 
 
 @router.get("/api/filaments", response_model=list[FilamentResponse])
@@ -359,6 +368,168 @@ async def list_stock_movements(
     )
 
 
+@router.get("/api/stock/movement-items", response_model=list[MovementItemOption])
+async def list_movement_items(
+    q: str | None = Query(None),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> list[MovementItemOption]:
+    needle = q.strip().lower() if q else ""
+    products = (
+        await db.execute(
+            select(FixedProduct).where(FixedProduct.user_id == current_user.id).order_by(FixedProduct.name.asc())
+        )
+    ).scalars().all()
+    filaments = (
+        await db.execute(select(Filament).where(Filament.user_id == current_user.id).order_by(Filament.color_name.asc()))
+    ).scalars().all()
+    supplies = (
+        await db.execute(select(Supply).where(Supply.user_id == current_user.id).order_by(Supply.name.asc()))
+    ).scalars().all()
+
+    options: list[MovementItemOption] = []
+    for product in products:
+        options.append(MovementItemOption(key=f"product:{product.id}", id=product.id, type="product", type_label="Producto", label=product.name))
+    for filament in filaments:
+        options.append(MovementItemOption(key=f"filament:{filament.id}", id=filament.id, type="filament", type_label="Filamento", label=filament.color_name))
+    for supply in supplies:
+        options.append(MovementItemOption(key=f"supply:{supply.id}", id=supply.id, type="supply", type_label="Insumo", label=supply.name))
+    if needle:
+        options = [option for option in options if needle in option.label.lower() or needle in option.type_label.lower()]
+    return options
+
+
+def _parse_item_keys(item_keys: list[str] | None) -> tuple[set[UUID], set[UUID], set[UUID]]:
+    product_ids: set[UUID] = set()
+    filament_ids: set[UUID] = set()
+    supply_ids: set[UUID] = set()
+    for raw in item_keys or []:
+        values = [part.strip() for part in raw.split(",") if part.strip()]
+        for value in values:
+            try:
+                item_type, item_id = value.split(":", 1)
+                parsed = UUID(item_id)
+            except ValueError as exc:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                    detail="item_keys must use product:<id>, filament:<id> or supply:<id>",
+                ) from exc
+            if item_type == "product":
+                product_ids.add(parsed)
+            elif item_type == "filament":
+                filament_ids.add(parsed)
+            elif item_type == "supply":
+                supply_ids.add(parsed)
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                    detail="item_keys must use product:<id>, filament:<id> or supply:<id>",
+                )
+    return product_ids, filament_ids, supply_ids
+
+
+@router.get("/api/stock/movements/unified", response_model=PaginatedUnifiedMovements)
+async def list_unified_movements(
+    item_keys: list[str] | None = Query(None),
+    movement_type: str | None = Query(None),
+    order_id: UUID | None = Query(None),
+    date_from: str | None = Query(None),
+    date_to: str | None = Query(None),
+    page: int = Query(1, ge=1),
+    per_page: int = Query(20, ge=1, le=100),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> PaginatedUnifiedMovements:
+    if movement_type is not None and movement_type not in VALID_MOVEMENT_TYPES:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=f"Invalid movement_type. Must be one of: {', '.join(sorted(VALID_MOVEMENT_TYPES))}",
+        )
+
+    product_ids, filament_ids, supply_ids = _parse_item_keys(item_keys)
+    has_item_filter = bool(product_ids or filament_ids or supply_ids)
+    rows: list[UnifiedMovementResponse] = []
+
+    if not has_item_filter or product_ids:
+        product_query = select(ProductStockMovement, FixedProduct.name).join(
+            FixedProduct, FixedProduct.id == ProductStockMovement.product_id
+        ).where(ProductStockMovement.user_id == current_user.id)
+        if product_ids:
+            product_query = product_query.where(ProductStockMovement.product_id.in_(product_ids))
+        if movement_type is not None:
+            product_query = product_query.where(ProductStockMovement.movement_type == movement_type)
+        if order_id is not None:
+            product_query = product_query.where(ProductStockMovement.order_id == order_id)
+        if date_from is not None:
+            product_query = product_query.where(ProductStockMovement.created_at >= date_from)
+        if date_to is not None:
+            product_query = product_query.where(ProductStockMovement.created_at <= date_to)
+        for movement, product_name in (await db.execute(product_query)).all():
+            rows.append(
+                UnifiedMovementResponse(
+                    id=movement.id,
+                    source="product",
+                    item_id=movement.product_id,
+                    item_type="product",
+                    item_type_label="Producto",
+                    item_name=product_name,
+                    movement_type=movement.movement_type,
+                    quantity=float(movement.quantity),
+                    unit="uds.",
+                    order_id=movement.order_id,
+                    created_by_user_id=movement.created_by_user_id,
+                    metadata={"product_id": str(movement.product_id), "notes": movement.notes},
+                    created_at=movement.created_at,
+                )
+            )
+
+    if not has_item_filter or filament_ids or supply_ids:
+        stock_query = select(StockMovement, Filament.color_name, Supply.name, Supply.unit).outerjoin(
+            Filament, Filament.id == StockMovement.filament_id
+        ).outerjoin(Supply, Supply.id == StockMovement.supply_id).where(StockMovement.user_id == current_user.id)
+        if filament_ids and supply_ids:
+            stock_query = stock_query.where(or_(StockMovement.filament_id.in_(filament_ids), StockMovement.supply_id.in_(supply_ids)))
+        elif filament_ids:
+            stock_query = stock_query.where(StockMovement.filament_id.in_(filament_ids))
+        elif supply_ids:
+            stock_query = stock_query.where(StockMovement.supply_id.in_(supply_ids))
+        if movement_type is not None:
+            stock_query = stock_query.where(StockMovement.movement_type == movement_type)
+        if order_id is not None:
+            stock_query = stock_query.where(StockMovement.order_id == order_id)
+        if date_from is not None:
+            stock_query = stock_query.where(StockMovement.created_at >= date_from)
+        if date_to is not None:
+            stock_query = stock_query.where(StockMovement.created_at <= date_to)
+        for movement, filament_name, supply_name, supply_unit in (await db.execute(stock_query)).all():
+            is_supply = movement.supply_id is not None
+            item_id = movement.supply_id if is_supply else movement.filament_id
+            if item_id is None:
+                continue
+            rows.append(
+                UnifiedMovementResponse(
+                    id=movement.id,
+                    source="stock_movement",
+                    item_id=item_id,
+                    item_type="supply" if is_supply else "filament",
+                    item_type_label="Insumo" if is_supply else "Filamento",
+                    item_name=supply_name if is_supply else filament_name,
+                    movement_type=movement.movement_type,
+                    quantity=float(movement.quantity if is_supply else movement.quantity_grams),
+                    unit=movement.unit or supply_unit or "g",
+                    order_id=movement.order_id,
+                    created_by_user_id=movement.created_by_user_id,
+                    metadata={"stock_movement_id": str(movement.id), "notes": movement.notes},
+                    created_at=movement.created_at,
+                )
+            )
+
+    rows.sort(key=lambda row: row.created_at, reverse=True)
+    total = len(rows)
+    start = (page - 1) * per_page
+    return PaginatedUnifiedMovements(items=rows[start:start + per_page], total=total, page=page, per_page=per_page)
+
+
 @router.get("/api/stock/low-stock", response_model=LowStockResponse)
 async def get_low_stock(
     current_user: User = Depends(get_current_user),
@@ -382,6 +553,52 @@ async def get_low_stock(
     )
     low_supplies = supply_result.scalars().all()
 
+    product_result = await db.execute(
+        select(FixedProduct).where(
+            FixedProduct.user_id == current_user.id,
+            FixedProduct.is_active == True,
+            FixedProduct.stock_quantity < 1,
+        )
+    )
+    low_products = product_result.scalars().all()
+
+    filament_items = [
+        LowStockItem(
+            id=f.id,
+            type="filament",
+            label=f.color_name,
+            current_stock=float(f.weight_grams),
+            threshold=float(f.min_stock_warning_grams),
+            unit="g",
+            href=f"/dashboard/stock/filaments/{f.id}",
+        )
+        for f in low_filaments
+    ]
+    supply_items = [
+        LowStockItem(
+            id=s.id,
+            type="supply",
+            label=s.name,
+            current_stock=float(s.quantity),
+            threshold=float(s.min_stock_warning),
+            unit=s.unit,
+            href="/dashboard/stock/supplies",
+        )
+        for s in low_supplies
+    ]
+    product_items = [
+        LowStockItem(
+            id=p.id,
+            type="product",
+            label=p.name,
+            current_stock=float(p.stock_quantity),
+            threshold=1,
+            unit="uds.",
+            href=f"/dashboard/products/{p.id}",
+        )
+        for p in low_products
+    ]
+
     return LowStockResponse(
         filaments=[
             LowStockFilament(
@@ -402,4 +619,14 @@ async def get_low_stock(
             )
             for s in low_supplies
         ],
+        products=[
+            LowStockProduct(
+                id=p.id,
+                name=p.name,
+                stock_quantity=float(p.stock_quantity),
+                threshold=1,
+            )
+            for p in low_products
+        ],
+        items=[*product_items, *filament_items, *supply_items],
     )

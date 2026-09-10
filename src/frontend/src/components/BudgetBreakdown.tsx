@@ -132,7 +132,7 @@ export default function BudgetBreakdown({ budget }: Props) {
       </Table>
 
       <div className="mt-1 flex items-center justify-between rounded-md bg-primary p-2 text-[var(--mui-palette-primary-contrastText)]">
-        <h3 className="text-[1.25rem] font-bold">Precio final pieza</h3>
+        <h3 className="text-[1.25rem] font-bold">Precio final</h3>
         <h3 className="text-[1.25rem] font-bold">
           {sym}{budget.final_price.toFixed(2)}
         </h3>

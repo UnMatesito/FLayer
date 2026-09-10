@@ -8,6 +8,7 @@ from backend.models.customer import Customer
 from backend.models.filament import Filament
 from backend.models.order import Order
 from backend.models.printer import Printer, PrinterMaintenance
+from backend.models.product import FixedProduct
 from backend.models.supply import Supply
 
 ACTIVITY_DAYS = 14
@@ -142,6 +143,15 @@ class DashboardService:
                 )
             )
         ).scalars().all()
+        low_products = (
+            await db.execute(
+                select(FixedProduct).where(
+                    FixedProduct.user_id == user_id,
+                    FixedProduct.is_active == True,  # noqa: E712
+                    FixedProduct.stock_quantity < 1,
+                )
+            )
+        ).scalars().all()
 
         # 5. Printer bay: active printers with their monthly maintenance count.
         maintenance_subq = (
@@ -183,6 +193,7 @@ class DashboardService:
                 "budgeted_value_quoting": month_row.budgeted_value_quoting,
                 "low_stock_filaments": len(low_filaments),
                 "low_stock_supplies": len(low_supplies),
+                "low_stock_products": len(low_products),
                 "printers_active": len(printer_rows),
                 "maintenance_month": sum(p["maintenance_month"] for p in printers),
             },
@@ -207,6 +218,53 @@ class DashboardService:
                         "min_stock_warning": float(s.min_stock_warning),
                     }
                     for s in low_supplies
+                ],
+                "products": [
+                    {
+                        "id": p.id,
+                        "name": p.name,
+                        "stock_quantity": float(p.stock_quantity),
+                        "threshold": 1,
+                    }
+                    for p in low_products
+                ],
+                "items": [
+                    *[
+                        {
+                            "id": p.id,
+                            "type": "product",
+                            "label": p.name,
+                            "current_stock": float(p.stock_quantity),
+                            "threshold": 1,
+                            "unit": "uds.",
+                            "href": f"/dashboard/products/{p.id}",
+                        }
+                        for p in low_products
+                    ],
+                    *[
+                        {
+                            "id": f.id,
+                            "type": "filament",
+                            "label": f.color_name,
+                            "current_stock": float(f.weight_grams),
+                            "threshold": float(f.min_stock_warning_grams),
+                            "unit": "g",
+                            "href": f"/dashboard/stock/filaments/{f.id}",
+                        }
+                        for f in low_filaments
+                    ],
+                    *[
+                        {
+                            "id": s.id,
+                            "type": "supply",
+                            "label": s.name,
+                            "current_stock": float(s.quantity),
+                            "threshold": float(s.min_stock_warning),
+                            "unit": s.unit,
+                            "href": "/dashboard/stock/supplies",
+                        }
+                        for s in low_supplies
+                    ],
                 ],
             },
             "printers": printers,

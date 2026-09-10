@@ -4,7 +4,7 @@ import { useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import {
   Button, Chip, CircularProgress, Alert, TextField, Dialog, DialogTitle,
-  DialogContent, DialogActions, Avatar, Table, TableBody, TableCell,
+  DialogContent, DialogActions, Avatar, Table, TableBody, TableCell, Drawer,
   TableContainer, TableHead, TableRow,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
@@ -16,9 +16,12 @@ import {
   fetchProductStockMovements, adjustProductStock,
   type Product, type ProductUpdate, type ProductStockMovement,
 } from '@/app/api';
+import { useDashboardFeedback } from '../../feedback';
+import { normalizeApiError } from '@/app/error-normalizer';
 
-function EditProductDialog({ open, onClose, product }: { open: boolean; onClose: () => void; product: Product }) {
+function EditProductDrawer({ open, onClose, product }: { open: boolean; onClose: () => void; product: Product }) {
   const queryClient = useQueryClient();
+  const feedback = useDashboardFeedback();
   const [form, setForm] = useState<ProductUpdate>({
     name: product.name,
     price: product.price,
@@ -32,16 +35,25 @@ function EditProductDialog({ open, onClose, product }: { open: boolean; onClose:
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['product', product.id] });
       queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ['low-stock'] });
       onClose();
       setError('');
+      feedback.success('Producto guardado');
     },
-    onError: (err: Error) => setError(err.message),
+    onError: (err: unknown) => {
+      const message = normalizeApiError(err, 'No se pudo guardar el producto');
+      setError(message);
+      feedback.error(message);
+    },
   });
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>Editar Producto</DialogTitle>
-      <DialogContent>
+    <Drawer anchor="right" open={open} onClose={onClose} slotProps={{ paper: { sx: { width: { xs: '100vw', sm: 460 }, maxWidth: '100vw' } } }}>
+      <div className="flex h-full flex-col">
+      <div className="border-b border-line px-3 py-2">
+        <h3 className="text-[1.15rem] font-semibold">Editar producto</h3>
+      </div>
+      <div className="flex-1 overflow-y-auto p-3">
         <div className="mt-1 flex flex-col gap-2">
           {error && <p className="text-sm text-error">{error}</p>}
           <TextField
@@ -73,19 +85,21 @@ function EditProductDialog({ open, onClose, product }: { open: boolean; onClose:
             slotProps={{ htmlInput: { min: 0, step: 1 } }}
           />
         </div>
-      </DialogContent>
-      <DialogActions>
+      </div>
+      <div className="flex justify-end gap-1 border-t border-line p-2">
         <Button onClick={onClose}>Cancelar</Button>
         <Button onClick={() => mutation.mutate()} variant="contained" disabled={!form.name?.trim() || mutation.isPending}>
           {mutation.isPending ? 'Guardando...' : 'Guardar'}
         </Button>
-      </DialogActions>
-    </Dialog>
+      </div>
+      </div>
+    </Drawer>
   );
 }
 
 function AdjustStockDialog({ open, onClose, product }: { open: boolean; onClose: () => void; product: Product }) {
   const queryClient = useQueryClient();
+  const feedback = useDashboardFeedback();
   const [delta, setDelta] = useState('');
   const [notes, setNotes] = useState('');
   const [error, setError] = useState('');
@@ -101,8 +115,13 @@ function AdjustStockDialog({ open, onClose, product }: { open: boolean; onClose:
       setDelta('');
       setNotes('');
       setError('');
+      feedback.success('Stock ajustado');
     },
-    onError: (err: Error) => setError(err.message),
+    onError: (err: unknown) => {
+      const message = normalizeApiError(err, 'No se pudo ajustar el stock');
+      setError(message);
+      feedback.error(message);
+    },
   });
 
   return (
@@ -160,6 +179,7 @@ export default function ProductDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const queryClient = useQueryClient();
+  const feedback = useDashboardFeedback();
   const [editDialog, setEditDialog] = useState(false);
   const [adjustDialog, setAdjustDialog] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -183,8 +203,11 @@ export default function ProductDetailPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
       queryClient.invalidateQueries({ queryKey: ['product', id] });
+      queryClient.invalidateQueries({ queryKey: ['low-stock'] });
+      feedback.success('Producto archivado');
       router.push('/dashboard/products');
     },
+    onError: (err: unknown) => feedback.error(normalizeApiError(err, 'No se pudo archivar el producto')),
   });
 
   const restoreMutation = useMutation({
@@ -192,7 +215,10 @@ export default function ProductDetailPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
       queryClient.invalidateQueries({ queryKey: ['product', id] });
+      queryClient.invalidateQueries({ queryKey: ['low-stock'] });
+      feedback.success('Producto restaurado');
     },
+    onError: (err: unknown) => feedback.error(normalizeApiError(err, 'No se pudo restaurar el producto')),
   });
 
   const uploadMutation = useMutation({
@@ -203,8 +229,13 @@ export default function ProductDetailPage() {
       setSelectedFile(null);
       setUploadError('');
       if (fileInputRef.current) fileInputRef.current.value = '';
+      feedback.success('Imagen actualizada');
     },
-    onError: (err: Error) => setUploadError(err.message),
+    onError: (err: unknown) => {
+      const message = normalizeApiError(err, 'No se pudo subir la imagen');
+      setUploadError(message);
+      feedback.error(message);
+    },
   });
 
   if (isLoading) {
@@ -224,8 +255,24 @@ export default function ProductDetailPage() {
     <div>
       <Button startIcon={<ArrowBackIcon />} onClick={() => router.back()} sx={{ mb: 2 }}>Volver</Button>
 
-      <div className="mb-3 card rounded-md border border-line bg-snow p-4">
-        <div className="mb-3 flex items-start justify-between">
+      <div className="mb-3 overflow-hidden card rounded-md border border-line bg-snow">
+        <div className="grid grid-cols-1 lg:grid-cols-[280px_minmax(0,1fr)]">
+          <div className="bg-plate p-4">
+            {product.image_url ? (
+              <Avatar src={product.image_url} alt={product.name} variant="rounded" sx={{ width: '100%', height: 220 }} />
+            ) : (
+              <div className="flex h-[220px] items-center justify-center rounded-md border-2 border-dashed border-line">
+                <p className="text-sm text-slate">Sin imagen</p>
+              </div>
+            )}
+            <div className="mt-2 rounded-md bg-snow p-2">
+              <p className="text-xs uppercase tracking-[0.08em] text-slate">Stock operativo</p>
+              <p className="font-mono text-[2.2rem] font-semibold leading-none">{product.stock_quantity}</p>
+              {product.stock_quantity < 1 ? <Chip label="Sin stock" size="small" color="warning" /> : <Chip label="Disponible" size="small" color="success" variant="outlined" />}
+            </div>
+          </div>
+          <div className="p-4">
+        <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
           <div>
             <h2 className="text-[1.5rem] font-semibold">{product.name}</h2>
             {product.description && (
@@ -251,12 +298,12 @@ export default function ProductDetailPage() {
 
         <hr className="mb-3 border-line" />
 
-        <div className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-3">
-          <div>
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="rounded-md border border-line p-2">
             <p className="mb-0.5 text-xs text-slate">Precio</p>
-            <p className="font-medium">${Number(product.price).toFixed(2)}</p>
+            <p className="font-mono text-[1.35rem] font-semibold">${Number(product.price).toFixed(2)}</p>
           </div>
-          <div>
+          <div className="rounded-md border border-line p-2">
             <p className="mb-0.5 text-xs text-slate">Stock</p>
             <div className="font-medium">
               {product.stock_quantity}
@@ -265,17 +312,19 @@ export default function ProductDetailPage() {
               )}
             </div>
           </div>
-          <div>
+          <div className="rounded-md border border-line p-2">
             <p className="mb-0.5 text-xs text-slate">Estado</p>
             <Chip label={product.is_active ? 'Activo' : 'Archivado'} size="small" color={product.is_active ? 'success' : 'default'} />
           </div>
-          <div>
+          <div className="rounded-md border border-line p-2">
             <p className="mb-0.5 text-xs text-slate">Creado</p>
             <p className="font-medium">{new Date(product.created_at).toLocaleDateString()}</p>
           </div>
-          <div>
+          <div className="rounded-md border border-line p-2 sm:col-span-2 xl:col-span-4">
             <p className="mb-0.5 text-xs text-slate">Actualizado</p>
             <p className="font-medium">{new Date(product.updated_at).toLocaleDateString()}</p>
+          </div>
+        </div>
           </div>
         </div>
       </div>
@@ -355,7 +404,7 @@ export default function ProductDetailPage() {
         )}
       </div>
 
-      <EditProductDialog open={editDialog} onClose={() => setEditDialog(false)} product={product} />
+      <EditProductDrawer open={editDialog} onClose={() => setEditDialog(false)} product={product} />
       <AdjustStockDialog open={adjustDialog} onClose={() => setAdjustDialog(false)} product={product} />
     </div>
   );

@@ -430,6 +430,132 @@ def test_low_stock_supply_detected(client, auth_headers, test_low_stock_supply):
     assert str(test_low_stock_supply.id) in supply_ids
 
 
+def test_low_stock_includes_products_filaments_and_supplies(client, auth_headers, db_session, test_user):
+    from tests.factories.product_factory import FixedProductFactory
+    from tests.factories.stock_factories import FilamentFactory, SupplyFactory
+
+    product = FixedProductFactory.create(session=db_session, user_id=test_user.id, name="Kit sin stock", stock_quantity=0)
+    FixedProductFactory.create(session=db_session, user_id=test_user.id, name="Kit sano", stock_quantity=1)
+    filament = FilamentFactory.create(session=db_session, user_id=test_user.id, color_name="PLA bajo", weight_grams=10, min_stock_warning_grams=200)
+    supply = SupplyFactory.create(session=db_session, user_id=test_user.id, name="Alcohol bajo", quantity=0.2, min_stock_warning=1)
+
+    response = client.get("/api/stock/low-stock", headers=auth_headers)
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["products"] == [{
+        "id": str(product.id),
+        "name": "Kit sin stock",
+        "stock_quantity": 0.0,
+        "threshold": 1.0,
+    }]
+    assert str(filament.id) in [item["id"] for item in data["filaments"]]
+    assert str(supply.id) in [item["id"] for item in data["supplies"]]
+    items_by_type = {item["type"]: item for item in data["items"]}
+    assert items_by_type["product"]["label"] == "Kit sin stock"
+    assert items_by_type["product"]["unit"] == "uds."
+    assert items_by_type["filament"]["threshold"] == 200.0
+    assert items_by_type["supply"]["unit"] == supply.unit
+
+
+def test_low_stock_no_rows_returns_empty_collection(client, auth_headers, db_session, test_user):
+    from tests.factories.product_factory import FixedProductFactory
+    from tests.factories.stock_factories import FilamentFactory, SupplyFactory
+
+    FixedProductFactory.create(session=db_session, user_id=test_user.id, stock_quantity=1)
+    FilamentFactory.create(session=db_session, user_id=test_user.id, weight_grams=500, min_stock_warning_grams=200)
+    SupplyFactory.create(session=db_session, user_id=test_user.id, quantity=2, min_stock_warning=1)
+
+    response = client.get("/api/stock/low-stock", headers=auth_headers)
+
+    assert response.status_code == 200
+    assert response.json()["products"] == []
+    assert response.json()["items"] == []
+
+
+def test_unified_movement_options_include_product_filament_and_supply(client, auth_headers, db_session, test_user):
+    from tests.factories.product_factory import FixedProductFactory
+    from tests.factories.stock_factories import FilamentFactory, SupplyFactory
+
+    product = FixedProductFactory.create(session=db_session, user_id=test_user.id, name="Miniatura")
+    filament = FilamentFactory.create(session=db_session, user_id=test_user.id, color_name="PLA Rojo")
+    supply = SupplyFactory.create(session=db_session, user_id=test_user.id, name="Alcohol IPA")
+
+    response = client.get("/api/stock/movement-items", headers=auth_headers)
+
+    assert response.status_code == 200
+    by_key = {item["key"]: item for item in response.json()}
+    assert by_key[f"product:{product.id}"]["type_label"] == "Producto"
+    assert by_key[f"product:{product.id}"]["label"] == "Miniatura"
+    assert by_key[f"filament:{filament.id}"]["type_label"] == "Filamento"
+    assert by_key[f"supply:{supply.id}"]["type_label"] == "Insumo"
+
+
+def test_unified_movements_filter_mixed_keys_and_preserve_metadata(client, auth_headers, db_session, test_user):
+    from backend.models.product_stock_movement import ProductStockMovement
+    from tests.factories.product_factory import FixedProductFactory
+    from tests.factories.stock_factories import FilamentFactory, StockMovementFactory, SupplyFactory
+
+    product = FixedProductFactory.create(session=db_session, user_id=test_user.id, name="Llavero", stock_quantity=3)
+    filament = FilamentFactory.create(session=db_session, user_id=test_user.id, color_name="PLA Azul")
+    supply = SupplyFactory.create(session=db_session, user_id=test_user.id, name="Bolsa", unit="units")
+    product_movement = ProductStockMovement(
+        user_id=test_user.id,
+        product_id=product.id,
+        movement_type="adjustment",
+        quantity=2,
+        created_by_user_id=test_user.id,
+        notes="alta",
+    )
+    db_session.add(product_movement)
+    filament_movement = StockMovementFactory.create(
+        session=db_session,
+        user_id=test_user.id,
+        created_by_user_id=test_user.id,
+        filament_id=filament.id,
+        movement_type="consumption",
+        quantity_grams=-20,
+        notes="impresión",
+    )
+    supply_movement = StockMovementFactory.create(
+        session=db_session,
+        user_id=test_user.id,
+        created_by_user_id=test_user.id,
+        filament_id=None,
+        supply_id=supply.id,
+        movement_type="adjustment",
+        quantity=1,
+        unit="units",
+        notes="conteo",
+    )
+    db_session.flush()
+
+    response = client.get(
+        f"/api/stock/movements/unified?item_keys=product:{product.id}&item_keys=filament:{filament.id}&item_keys=supply:{supply.id}",
+        headers=auth_headers,
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["total"] == 3
+    by_id = {item["id"]: item for item in data["items"]}
+    assert by_id[str(product_movement.id)]["source"] == "product"
+    assert by_id[str(product_movement.id)]["item_type_label"] == "Producto"
+    assert by_id[str(product_movement.id)]["item_name"] == "Llavero"
+    assert by_id[str(filament_movement.id)]["item_type"] == "filament"
+    assert by_id[str(filament_movement.id)]["item_type_label"] == "Filamento"
+    assert by_id[str(supply_movement.id)]["item_type"] == "supply"
+    assert by_id[str(supply_movement.id)]["item_type_label"] == "Insumo"
+
+    empty = client.get(
+        f"/api/stock/movements/unified?item_keys=product:{product.id}&movement_type=reversal",
+        headers=auth_headers,
+    )
+    assert empty.status_code == 200
+    assert empty.json()["items"] == []
+    assert empty.json()["total"] == 0
+
+
 def test_invalid_movement_type_rejected(client, auth_headers):
     response = client.get(
         "/api/stock-movements?movement_type=invalid_type",

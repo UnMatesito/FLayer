@@ -194,4 +194,17 @@ describe('BudgetForm', () => {
     expect(screen.queryByText(/MercadoLibre/i)).toBeNull();
     expect(screen.queryByText(/ML suggested/i)).toBeNull();
   });
+
+  it('R22 renders a readable Spanish margin error for an empty multiplier without object text', async () => {
+    const user = userEvent.setup();
+    renderForm();
+
+    const input = screen.getByLabelText('Multiplicador') as HTMLInputElement;
+    await user.clear(input);
+    await user.click(screen.getByRole('button', { name: 'Guardar' }));
+
+    expect(screen.getAllByText('El margen de ganancia debe ser un número válido mayor a 0.').length).toBeGreaterThan(0);
+    expect(document.body.textContent).not.toContain('[object Object]');
+    expect(api.createBudget).not.toHaveBeenCalled();
+  });
 });

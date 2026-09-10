@@ -1,6 +1,6 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   createContext,
   useCallback,
@@ -22,10 +22,22 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+export function applyFavicon(url: string | null | undefined): void {
+  const href = url || '/logo.svg';
+  let link = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
+  if (!link) {
+    link = document.createElement('link');
+    link.rel = 'icon';
+    document.head.appendChild(link);
+  }
+  link.href = href;
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
     fetchMe()
@@ -36,7 +48,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     document.title = user?.business_name ? `${user.business_name} - Flayer` : 'Flayer';
-  }, [user?.business_name]);
+  }, [user?.business_name, pathname]);
+
+  useEffect(() => {
+    applyFavicon(user?.favicon_url);
+  }, [user?.favicon_url, pathname]);
 
   const login = useCallback(async (email: string, password: string) => {
     const res = await apiLogin(email, password);

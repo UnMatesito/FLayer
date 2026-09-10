@@ -1,4 +1,11 @@
+import { normalizeApiError } from './error-normalizer';
+
 const API_BASE = '/api';
+
+async function errorFromResponse(res: Response, fallback: string): Promise<Error> {
+  const detail = await res.json().catch(() => ({ status: res.status, statusText: res.statusText }));
+  return new Error(normalizeApiError(detail, fallback));
+}
 
 export interface FilamentSettings {
   recommended_nozzle_temp_min?: number | null;
@@ -111,6 +118,37 @@ export interface PaginatedStockMovements {
   per_page: number;
 }
 
+export interface MovementItemOption {
+  key: string;
+  id: string;
+  type: 'product' | 'filament' | 'supply';
+  type_label: string;
+  label: string;
+}
+
+export interface UnifiedMovement {
+  id: string;
+  source: 'product' | 'stock_movement';
+  item_id: string;
+  item_type: 'product' | 'filament' | 'supply';
+  item_type_label: string;
+  item_name: string;
+  movement_type: string;
+  quantity: number;
+  unit: string;
+  order_id: string | null;
+  created_by_user_id: string;
+  metadata: Record<string, unknown>;
+  created_at: string;
+}
+
+export interface PaginatedUnifiedMovements {
+  items: UnifiedMovement[];
+  total: number;
+  page: number;
+  per_page: number;
+}
+
 export interface LowStockFilament {
   id: string;
   color_name: string;
@@ -126,9 +164,28 @@ export interface LowStockSupply {
   min_stock_warning: number;
 }
 
+export interface LowStockProduct {
+  id: string;
+  name: string;
+  stock_quantity: number;
+  threshold: number;
+}
+
+export interface LowStockItem {
+  id: string;
+  type: 'product' | 'filament' | 'supply';
+  label: string;
+  current_stock: number;
+  threshold: number;
+  unit: string;
+  href: string;
+}
+
 export interface LowStockResponse {
   filaments: LowStockFilament[];
   supplies: LowStockSupply[];
+  products: LowStockProduct[];
+  items: LowStockItem[];
 }
 
 export interface FileInfo {
@@ -238,6 +295,7 @@ export interface User {
   business_name: string | null;
   primary_color: string | null;
   logo_url: string | null;
+  favicon_url: string | null;
   currency: Currency;
 }
 
@@ -261,8 +319,7 @@ export async function updateProfile(payload: ProfileUpdate): Promise<User> {
     credentials: 'include',
   });
   if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.detail || 'No se pudo guardar el perfil');
+    throw await errorFromResponse(res, 'No se pudo guardar el perfil');
   }
   return res.json();
 }
@@ -276,8 +333,7 @@ export async function uploadLogo(file: File): Promise<User> {
     credentials: 'include',
   });
   if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.detail || 'No se pudo subir el logo');
+    throw await errorFromResponse(res, 'No se pudo subir el logo');
   }
   return res.json();
 }
@@ -288,8 +344,32 @@ export async function removeLogo(): Promise<User> {
     credentials: 'include',
   });
   if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.detail || 'No se pudo quitar el logo');
+    throw await errorFromResponse(res, 'No se pudo quitar el logo');
+  }
+  return res.json();
+}
+
+export async function uploadFavicon(file: File): Promise<User> {
+  const formData = new FormData();
+  formData.append('file', file);
+  const res = await fetch(`${API_BASE}/auth/me/favicon`, {
+    method: 'POST',
+    body: formData,
+    credentials: 'include',
+  });
+  if (!res.ok) {
+    throw await errorFromResponse(res, 'No se pudo subir el favicon');
+  }
+  return res.json();
+}
+
+export async function removeFavicon(): Promise<User> {
+  const res = await fetch(`${API_BASE}/auth/me/favicon`, {
+    method: 'DELETE',
+    credentials: 'include',
+  });
+  if (!res.ok) {
+    throw await errorFromResponse(res, 'No se pudo quitar el favicon');
   }
   return res.json();
 }
@@ -341,6 +421,7 @@ export interface DashboardKpis {
   budgeted_value_quoting: number;
   low_stock_filaments: number;
   low_stock_supplies: number;
+  low_stock_products: number;
   printers_active: number;
   maintenance_month: number;
 }
@@ -380,7 +461,7 @@ export interface DashboardSummary {
 
 export async function fetchDashboardSummary(): Promise<DashboardSummary> {
   const res = await fetch(`${API_BASE}/dashboard/summary`, { credentials: 'include' });
-  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail || 'Failed to fetch summary');
+  if (!res.ok) throw await errorFromResponse(res, 'No se pudo cargar la vista general');
   return res.json();
 }
 
@@ -392,8 +473,7 @@ export async function login(email: string, password: string): Promise<LoginRespo
     credentials: 'include',
   });
   if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.detail || 'Login failed');
+    throw await errorFromResponse(res, 'No se pudo iniciar sesión');
   }
   return res.json();
 }
@@ -406,8 +486,7 @@ export async function verifyOtp(code: string): Promise<void> {
     credentials: 'include',
   });
   if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.detail || 'OTP verification failed');
+    throw await errorFromResponse(res, 'No se pudo verificar el código');
   }
 }
 
@@ -417,8 +496,7 @@ export async function sendOtp(): Promise<void> {
     credentials: 'include',
   });
   if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.detail || 'Failed to send OTP');
+    throw await errorFromResponse(res, 'No se pudo enviar el código');
   }
 }
 
@@ -448,8 +526,7 @@ export async function createPublicOrder(
     body: JSON.stringify(payload),
   });
   if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.detail || 'Failed to create order');
+    throw await errorFromResponse(res, 'No se pudo crear el pedido');
   }
   return res.json();
 }
@@ -464,8 +541,7 @@ export async function createInternalOrder(
     credentials: 'include',
   });
   if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.detail || 'Failed to create order');
+    throw await errorFromResponse(res, 'No se pudo crear el pedido');
   }
   return res.json();
 }
@@ -475,8 +551,7 @@ export async function fetchAllOrders(): Promise<Order[]> {
     credentials: 'include',
   });
   if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.detail || 'Failed to fetch orders');
+    throw await errorFromResponse(res, 'No se pudieron cargar los pedidos');
   }
   return res.json();
 }
@@ -501,8 +576,7 @@ export async function fetchOrderDetail(orderId: string): Promise<OrderDetail> {
     credentials: 'include',
   });
   if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.detail || 'Failed to fetch order detail');
+    throw await errorFromResponse(res, 'No se pudo cargar el pedido');
   }
   return res.json();
 }
@@ -523,8 +597,7 @@ export async function updateOrderStatus(
     credentials: 'include',
   });
   if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.detail || 'Failed to update order status');
+    throw await errorFromResponse(res, 'No se pudo cambiar el estado');
   }
   return res.json();
 }
@@ -545,8 +618,7 @@ export async function updateDeliveryCost(
     credentials: 'include',
   });
   if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.detail || 'Failed to save delivery cost');
+    throw await errorFromResponse(res, 'No se pudo guardar el costo de entrega');
   }
   return res.json();
 }
@@ -555,7 +627,7 @@ export async function fetchFilaments(includeInactive = false): Promise<Filament[
   const res = await fetch(`${API_BASE}/filaments?include_inactive=${includeInactive}`, {
     credentials: 'include',
   });
-  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail || 'Failed to fetch filaments');
+  if (!res.ok) throw await errorFromResponse(res, 'No se pudieron cargar los filamentos');
   return res.json();
 }
 
@@ -566,13 +638,13 @@ export async function createFilament(payload: FilamentCreate): Promise<Filament>
     body: JSON.stringify(payload),
     credentials: 'include',
   });
-  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail || 'Failed to create filament');
+  if (!res.ok) throw await errorFromResponse(res, 'No se pudo crear el filamento');
   return res.json();
 }
 
 export async function fetchFilament(id: string): Promise<Filament> {
   const res = await fetch(`${API_BASE}/filaments/${id}`, { credentials: 'include' });
-  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail || 'Failed to fetch filament');
+  if (!res.ok) throw await errorFromResponse(res, 'No se pudo cargar el filamento');
   return res.json();
 }
 
@@ -583,7 +655,7 @@ export async function updateFilament(id: string, payload: FilamentUpdate): Promi
     body: JSON.stringify(payload),
     credentials: 'include',
   });
-  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail || 'Failed to update filament');
+  if (!res.ok) throw await errorFromResponse(res, 'No se pudo actualizar el filamento');
   return res.json();
 }
 
@@ -594,7 +666,7 @@ export async function adjustFilamentWeight(id: string, payload: FilamentAdjust):
     body: JSON.stringify(payload),
     credentials: 'include',
   });
-  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail || 'Failed to adjust weight');
+  if (!res.ok) throw await errorFromResponse(res, 'No se pudo ajustar el peso');
   return res.json();
 }
 
@@ -602,7 +674,7 @@ export async function fetchSupplies(includeInactive = false): Promise<Supply[]> 
   const res = await fetch(`${API_BASE}/supplies?include_inactive=${includeInactive}`, {
     credentials: 'include',
   });
-  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail || 'Failed to fetch supplies');
+  if (!res.ok) throw await errorFromResponse(res, 'No se pudieron cargar los insumos');
   return res.json();
 }
 
@@ -613,7 +685,7 @@ export async function createSupply(payload: SupplyCreate): Promise<Supply> {
     body: JSON.stringify(payload),
     credentials: 'include',
   });
-  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail || 'Failed to create supply');
+  if (!res.ok) throw await errorFromResponse(res, 'No se pudo crear el insumo');
   return res.json();
 }
 
@@ -624,7 +696,7 @@ export async function updateSupply(id: string, payload: SupplyUpdate): Promise<S
     body: JSON.stringify(payload),
     credentials: 'include',
   });
-  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail || 'Failed to update supply');
+  if (!res.ok) throw await errorFromResponse(res, 'No se pudo actualizar el insumo');
   return res.json();
 }
 
@@ -646,7 +718,7 @@ export async function adjustSupply(id: string, payload: SupplyAdjust): Promise<S
     body: JSON.stringify(payload),
     credentials: 'include',
   });
-  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail || 'Failed to adjust supply');
+  if (!res.ok) throw await errorFromResponse(res, 'No se pudo ajustar el insumo');
   return res.json();
 }
 
@@ -665,13 +737,41 @@ export async function fetchStockMovements(params?: {
     Object.entries(params).forEach(([k, v]) => { if (v !== undefined) qs.set(k, String(v)); });
   }
   const res = await fetch(`${API_BASE}/stock-movements?${qs}`, { credentials: 'include' });
-  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail || 'Failed to fetch movements');
+  if (!res.ok) throw await errorFromResponse(res, 'No se pudo cargar el historial');
+  return res.json();
+}
+
+export async function fetchMovementItems(q?: string): Promise<MovementItemOption[]> {
+  const qs = q ? `?q=${encodeURIComponent(q)}` : '';
+  const res = await fetch(`${API_BASE}/stock/movement-items${qs}`, { credentials: 'include' });
+  if (!res.ok) throw await errorFromResponse(res, 'No se pudieron cargar los elementos del historial');
+  return res.json();
+}
+
+export async function fetchUnifiedMovements(params?: {
+  item_keys?: string[];
+  movement_type?: string;
+  order_id?: string;
+  date_from?: string;
+  date_to?: string;
+  page?: number;
+  per_page?: number;
+}): Promise<PaginatedUnifiedMovements> {
+  const qs = new URLSearchParams();
+  if (params) {
+    Object.entries(params).forEach(([k, v]) => {
+      if (Array.isArray(v)) v.forEach((item) => qs.append(k, item));
+      else if (v !== undefined) qs.set(k, String(v));
+    });
+  }
+  const res = await fetch(`${API_BASE}/stock/movements/unified?${qs}`, { credentials: 'include' });
+  if (!res.ok) throw await errorFromResponse(res, 'No se pudo cargar el historial');
   return res.json();
 }
 
 export async function fetchLowStock(): Promise<LowStockResponse> {
   const res = await fetch(`${API_BASE}/stock/low-stock`, { credentials: 'include' });
-  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail || 'Failed to fetch low stock');
+  if (!res.ok) throw await errorFromResponse(res, 'No se pudo cargar el stock bajo');
   return res.json();
 }
 
@@ -680,8 +780,7 @@ export async function fetchOrderStatuses(): Promise<OrderStatus[]> {
     credentials: 'include',
   });
   if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.detail || 'Failed to fetch order statuses');
+    throw await errorFromResponse(res, 'No se pudieron cargar los estados');
   }
   return res.json();
 }
@@ -740,13 +839,13 @@ export async function fetchProducts(showInactive = false): Promise<Product[]> {
   const res = await fetch(`${API_BASE}/products?show_inactive=${showInactive}`, {
     credentials: 'include',
   });
-  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail || 'Failed to fetch products');
+  if (!res.ok) throw await errorFromResponse(res, 'No se pudieron cargar los productos');
   return res.json();
 }
 
 export async function fetchProduct(id: string): Promise<Product> {
   const res = await fetch(`${API_BASE}/products/${id}`, { credentials: 'include' });
-  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail || 'Failed to fetch product');
+  if (!res.ok) throw await errorFromResponse(res, 'No se pudo cargar el producto');
   return res.json();
 }
 
@@ -757,7 +856,7 @@ export async function createProduct(payload: ProductCreate): Promise<Product> {
     body: JSON.stringify(payload),
     credentials: 'include',
   });
-  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail || 'Failed to create product');
+  if (!res.ok) throw await errorFromResponse(res, 'No se pudo crear el producto');
   return res.json();
 }
 
@@ -768,7 +867,7 @@ export async function updateProduct(id: string, payload: ProductUpdate): Promise
     body: JSON.stringify(payload),
     credentials: 'include',
   });
-  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail || 'Failed to update product');
+  if (!res.ok) throw await errorFromResponse(res, 'No se pudo actualizar el producto');
   return res.json();
 }
 
@@ -780,7 +879,7 @@ export async function uploadProductImage(id: string, file: File): Promise<Produc
     body: formData,
     credentials: 'include',
   });
-  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail || 'Failed to upload image');
+  if (!res.ok) throw await errorFromResponse(res, 'No se pudo subir la imagen');
   return res.json();
 }
 
@@ -788,7 +887,7 @@ export async function fetchProductStockMovements(id: string): Promise<ProductSto
   const res = await fetch(`${API_BASE}/products/${id}/stock-movements`, {
     credentials: 'include',
   });
-  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail || 'Failed to fetch stock movements');
+  if (!res.ok) throw await errorFromResponse(res, 'No se pudieron cargar los movimientos de stock');
   return res.json();
 }
 
@@ -799,7 +898,7 @@ export async function adjustProductStock(id: string, payload: ProductStockAdjust
     body: JSON.stringify(payload),
     credentials: 'include',
   });
-  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail || 'Failed to adjust stock');
+  if (!res.ok) throw await errorFromResponse(res, 'No se pudo ajustar el stock');
   return res.json();
 }
 
@@ -808,7 +907,7 @@ export async function deleteProduct(id: string): Promise<Product> {
     method: 'DELETE',
     credentials: 'include',
   });
-  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail || 'Failed to delete product');
+  if (!res.ok) throw await errorFromResponse(res, 'No se pudo archivar el producto');
   return res.json();
 }
 
@@ -925,8 +1024,7 @@ export interface BudgetResponse {
 
 async function handleResponse<T>(res: Response): Promise<T> {
   if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.detail || 'Request failed');
+    throw await errorFromResponse(res, 'No se pudo completar la operación');
   }
   return res.json();
 }
@@ -970,8 +1068,7 @@ export async function fetchPublicProducts(token?: string): Promise<Product[]> {
   const params = token ? `?token=${encodeURIComponent(token)}` : '';
   const res = await fetch(`${API_BASE}/public/products${params}`);
   if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.detail || 'Failed to fetch products');
+    throw await errorFromResponse(res, 'No se pudieron cargar los productos');
   }
   return res.json();
 }
@@ -979,8 +1076,7 @@ export async function fetchPublicProducts(token?: string): Promise<Product[]> {
 export async function fetchStoreToken(): Promise<{ token: string; url: string }> {
   const res = await fetch(`${API_BASE}/store-token`, { credentials: 'include' });
   if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.detail || 'Failed to fetch store token');
+    throw await errorFromResponse(res, 'No se pudo cargar el link de tienda');
   }
   return res.json();
 }
@@ -991,8 +1087,7 @@ export async function regenerateStoreToken(): Promise<{ token: string; url: stri
     credentials: 'include',
   });
   if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.detail || 'Failed to regenerate store token');
+    throw await errorFromResponse(res, 'No se pudo regenerar el link de tienda');
   }
   return res.json();
 }
@@ -1069,13 +1164,13 @@ export interface PrinterCatalog {
 
 export async function fetchPrinters(): Promise<Printer[]> {
   const res = await fetch(`${API_BASE}/printers`, { credentials: 'include' });
-  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail || 'Failed to fetch printers');
+  if (!res.ok) throw await errorFromResponse(res, 'No se pudieron cargar las impresoras');
   return res.json();
 }
 
 export async function fetchPrinter(id: string): Promise<Printer> {
   const res = await fetch(`${API_BASE}/printers/${id}`, { credentials: 'include' });
-  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail || 'Failed to fetch printer');
+  if (!res.ok) throw await errorFromResponse(res, 'No se pudo cargar la impresora');
   return res.json();
 }
 
@@ -1086,7 +1181,7 @@ export async function createPrinter(payload: PrinterCreate): Promise<Printer> {
     body: JSON.stringify(payload),
     credentials: 'include',
   });
-  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail || 'Failed to create printer');
+  if (!res.ok) throw await errorFromResponse(res, 'No se pudo crear la impresora');
   return res.json();
 }
 
@@ -1097,7 +1192,7 @@ export async function updatePrinter(id: string, payload: PrinterUpdate): Promise
     body: JSON.stringify(payload),
     credentials: 'include',
   });
-  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail || 'Failed to update printer');
+  if (!res.ok) throw await errorFromResponse(res, 'No se pudo actualizar la impresora');
   return res.json();
 }
 
@@ -1106,13 +1201,13 @@ export async function deletePrinter(id: string): Promise<{ id: string; is_active
     method: 'DELETE',
     credentials: 'include',
   });
-  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail || 'Failed to delete printer');
+  if (!res.ok) throw await errorFromResponse(res, 'No se pudo archivar la impresora');
   return res.json();
 }
 
 export async function fetchPrinterMaintenance(id: string): Promise<MaintenanceRecord[]> {
   const res = await fetch(`${API_BASE}/printers/${id}/maintenance`, { credentials: 'include' });
-  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail || 'Failed to fetch maintenance');
+  if (!res.ok) throw await errorFromResponse(res, 'No se pudo cargar el mantenimiento');
   return res.json();
 }
 
@@ -1123,12 +1218,12 @@ export async function createPrinterMaintenance(id: string, payload: MaintenanceC
     body: JSON.stringify(payload),
     credentials: 'include',
   });
-  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail || 'Failed to create maintenance');
+  if (!res.ok) throw await errorFromResponse(res, 'No se pudo crear el mantenimiento');
   return res.json();
 }
 
 export async function fetchPrinterCatalog(): Promise<PrinterCatalog> {
   const res = await fetch(`${API_BASE}/printers/catalog`, { credentials: 'include' });
-  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail || 'Failed to fetch catalog');
+  if (!res.ok) throw await errorFromResponse(res, 'No se pudo cargar el catálogo de impresoras');
   return res.json();
 }

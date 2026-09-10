@@ -15,6 +15,9 @@ import {
   CircularProgress,
   IconButton,
   Button,
+  TextField,
+  FormControl,
+  InputLabel,
   type SxProps,
   type Theme,
 } from '@mui/material';
@@ -24,6 +27,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchAllOrders, updateOrderStatus, type Order } from '@/app/api';
 import { getStatusTransitions, statusColor, statusLabel } from '@/utils/order';
 import Pagination, { usePagination } from '@/components/Pagination';
+import { useDashboardFeedback } from '@/app/dashboard/feedback';
+import { normalizeApiError } from '@/app/error-normalizer';
 
 interface StatusCellProps {
   order: Order;
@@ -61,6 +66,7 @@ function BudgetCell({ orderId, orderStatus, workType, hasBudget }: { orderId: st
 
 function StatusCell({ order, transitions }: StatusCellProps) {
   const queryClient = useQueryClient();
+  const feedback = useDashboardFeedback();
   const [editing, setEditing] = useState(false);
   const availableTransitions = transitions[order.status] || [];
   const [selected, setSelected] = useState(availableTransitions[0] || '');
@@ -71,7 +77,9 @@ function StatusCell({ order, transitions }: StatusCellProps) {
       queryClient.invalidateQueries({ queryKey: ['orders'] });
       queryClient.invalidateQueries({ queryKey: ['order', order.id] });
       setEditing(false);
+      feedback.success('Estado actualizado');
     },
+    onError: (err: unknown) => feedback.error(normalizeApiError(err, 'No se pudo actualizar el estado')),
   });
 
   if (availableTransitions.length === 0) {
@@ -159,13 +167,28 @@ const headCellSx: SxProps<Theme> = {
 
 export default function OrdersTable() {
   const router = useRouter();
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [typeFilter, setTypeFilter] = useState('');
   const { data: orders, isLoading, error } = useQuery<Order[]>({
     queryKey: ['orders'],
     queryFn: () => fetchAllOrders(),
     refetchInterval: 30_000,
   });
-  const pagination = usePagination(orders?.length ?? 0, 10);
-  const quotingCount = orders?.filter((o) => o.status === 'quoting').length ?? 0;
+  const filteredOrders = (orders ?? [])
+    .filter((order) => `${order.id} ${order.customer_name ?? ''} ${order.description}`.toLowerCase().includes(search.toLowerCase()))
+    .filter((order) => !statusFilter || order.status === statusFilter)
+    .filter((order) => !typeFilter || order.work_type === typeFilter);
+  const pagination = usePagination(filteredOrders.length, 10);
+  const quotingCount = filteredOrders.filter((o) => o.status === 'quoting').length;
+  const statuses = Array.from(new Set((orders ?? []).map((order) => order.status)));
+
+  const resetFilters = () => {
+    setSearch('');
+    setStatusFilter('');
+    setTypeFilter('');
+    pagination.setPage(0);
+  };
 
   return (
     <div className="card h-full rounded-md border border-line bg-snow">
@@ -173,10 +196,32 @@ export default function OrdersTable() {
         <h3 className="text-[1.05rem] font-semibold">Pedidos</h3>
         {!isLoading && !error && orders && (
           <p className="text-[0.8rem] text-slate">
-            {orders.length} {orders.length === 1 ? 'pedido' : 'pedidos'} · {quotingCount} en cotización
+            {filteredOrders.length} {filteredOrders.length === 1 ? 'pedido' : 'pedidos'} · {quotingCount} en cotización
           </p>
         )}
       </div>
+      {!isLoading && !error && orders && (
+        <div className="flex flex-wrap items-center gap-2 border-b border-line p-3">
+          <TextField size="small" label="Buscar pedido" value={search} onChange={(e) => { setSearch(e.target.value); pagination.setPage(0); }} sx={{ minWidth: { xs: '100%', sm: 220 } }} />
+          <FormControl size="small" sx={{ minWidth: 150 }}>
+            <InputLabel>Estado</InputLabel>
+            <Select value={statusFilter} label="Estado" onChange={(e) => { setStatusFilter(e.target.value); pagination.setPage(0); }}>
+              <MenuItem value="">Todos</MenuItem>
+              {statuses.map((status) => <MenuItem key={status} value={status}>{statusLabel(status)}</MenuItem>)}
+            </Select>
+          </FormControl>
+          <FormControl size="small" sx={{ minWidth: 150 }}>
+            <InputLabel>Tipo</InputLabel>
+            <Select value={typeFilter} label="Tipo" onChange={(e) => { setTypeFilter(e.target.value); pagination.setPage(0); }}>
+              <MenuItem value="">Todos</MenuItem>
+              <MenuItem value="impresion_3d">Impresión 3D</MenuItem>
+              <MenuItem value="diseno_3d">Diseño 3D</MenuItem>
+              <MenuItem value="product">Producto</MenuItem>
+            </Select>
+          </FormControl>
+          <Button size="small" onClick={resetFilters}>Limpiar filtros</Button>
+        </div>
+      )}
 
       {isLoading ? (
         <div className="flex justify-center p-6">
@@ -195,6 +240,11 @@ export default function OrdersTable() {
             de clientes.
           </p>
         </div>
+      ) : filteredOrders.length === 0 ? (
+        <div className="flex flex-col items-center gap-1 px-4 py-10 text-center">
+          <p className="text-[0.95rem] font-semibold">Pedidos no tiene resultados con los filtros activos</p>
+          <Button size="small" onClick={resetFilters}>Limpiar filtros</Button>
+        </div>
       ) : (
         <>
           <TableContainer className="px-2">
@@ -210,7 +260,7 @@ export default function OrdersTable() {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {pagination.slice(orders).map((order) => (
+                {pagination.slice(filteredOrders).map((order) => (
                   <TableRow
                     key={order.id}
                     hover
@@ -251,7 +301,7 @@ export default function OrdersTable() {
             </Table>
           </TableContainer>
           <Pagination
-            count={orders.length}
+            count={filteredOrders.length}
             page={pagination.page}
             onPageChange={pagination.setPage}
             rowsPerPage={pagination.rowsPerPage}

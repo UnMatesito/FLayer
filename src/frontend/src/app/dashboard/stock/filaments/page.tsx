@@ -1,10 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  Button, Chip, CircularProgress, Collapse, Dialog, DialogActions,
-  DialogContent, DialogTitle, FormControl, IconButton, InputLabel,
+  Button, Chip, CircularProgress, Collapse, Drawer, FormControl, IconButton, InputLabel,
   MenuItem, Select, Table, TableBody, TableCell,
   TableHead, TableRow, TextField,
 } from '@mui/material';
@@ -23,6 +22,8 @@ import {
 } from '@/app/api';
 import { FilamentIcon } from '@/components/FilamentIcon';
 import Pagination, { usePagination } from '@/components/Pagination';
+import { useDashboardFeedback } from '../../feedback';
+import { normalizeApiError } from '@/app/error-normalizer';
 
 const styles: Record<string, SxProps<Theme>> = {
   lowStockRow: {
@@ -44,8 +45,9 @@ const DEFAULT_SETTINGS: FilamentSettings = {
   plate_temperature: 65,
 };
 
-function AddFilamentDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+function AddFilamentDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
   const queryClient = useQueryClient();
+  const feedback = useDashboardFeedback();
   const [form, setForm] = useState<FilamentCreate>({
     color_name: '', color_hex: '#000000', brand: '', filament_type: 'PLA',
     weight_grams: 1000, price_per_kg: 19000, min_stock_warning_grams: 200,
@@ -64,13 +66,18 @@ function AddFilamentDialog({ open, onClose }: { open: boolean; onClose: () => vo
       queryClient.invalidateQueries({ queryKey: ['low-stock'] });
       onClose();
       setForm({ color_name: '', color_hex: '#000000', brand: '', filament_type: 'PLA', weight_grams: 1000, price_per_kg: 25, min_stock_warning_grams: 200, settings: { ...DEFAULT_SETTINGS } });
+      feedback.success('Filamento guardado');
     },
+    onError: (err: unknown) => feedback.error(normalizeApiError(err, 'No se pudo crear el filamento')),
   });
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
-      <DialogTitle>Agregar Filamento</DialogTitle>
-      <DialogContent>
+    <Drawer anchor="right" open={open} onClose={onClose} slotProps={{ paper: { sx: { width: { xs: '100vw', sm: 540 }, maxWidth: '100vw' } } }}>
+      <div className="flex h-full flex-col">
+      <div className="border-b border-line px-3 py-2">
+        <h3 className="text-[1.15rem] font-semibold">Agregar Filamento</h3>
+      </div>
+      <div className="flex-1 overflow-y-auto p-3">
         <div className="mt-2 flex flex-col gap-2">
           <TextField label="Nombre de color" value={form.color_name} onChange={(e) => setForm({ ...form, color_name: e.target.value })} fullWidth required />
           <TextField label="Marca" value={form.brand} onChange={(e) => setForm({ ...form, brand: e.target.value })} fullWidth />
@@ -101,7 +108,7 @@ function AddFilamentDialog({ open, onClose }: { open: boolean; onClose: () => vo
           </Button>
 
           <Collapse in={settingsOpen}>
-            <div className="grid grid-cols-2 gap-2 rounded-md bg-plate p-4">
+            <div className="grid grid-cols-1 gap-2 rounded-md bg-plate p-3 sm:grid-cols-2">
               <TextField label="Temp. boquilla mín. recomendada" type="number" value={form.settings?.recommended_nozzle_temp_min ?? ''} onChange={(e) => setSetting('recommended_nozzle_temp_min', e.target.value ? Number(e.target.value) : undefined)} fullWidth />
               <TextField label="Temp. boquilla máx. recomendada" type="number" value={form.settings?.recommended_nozzle_temp_max ?? ''} onChange={(e) => setSetting('recommended_nozzle_temp_max', e.target.value ? Number(e.target.value) : undefined)} fullWidth />
               <TextField label="Flow Ratio" type="number" value={form.settings?.flow_ratio ?? ''} onChange={(e) => setSetting('flow_ratio', e.target.value ? Number(e.target.value) : undefined)} fullWidth inputProps={{ step: 0.01 }} />
@@ -119,14 +126,15 @@ function AddFilamentDialog({ open, onClose }: { open: boolean; onClose: () => vo
             </div>
           </Collapse>
         </div>
-      </DialogContent>
-      <DialogActions>
+      </div>
+      <div className="flex justify-end gap-1 border-t border-line p-2">
         <Button onClick={onClose}>Cancelar</Button>
           <Button onClick={() => mutation.mutate()} variant="contained" disabled={!form.color_name || mutation.isPending}>
           {mutation.isPending ? 'Guardando...' : 'Guardar'}
         </Button>
-      </DialogActions>
-    </Dialog>
+      </div>
+      </div>
+    </Drawer>
   );
 }
 
@@ -137,6 +145,10 @@ export default function FilamentsPage() {
   const paper = theme.vars?.palette.background.paper ?? theme.palette.background.paper;
   const [dialogOpen, setDialogOpen] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
+  const [search, setSearch] = useState('');
+  const [typeFilter, setTypeFilter] = useState('');
+  const [stockFilter, setStockFilter] = useState<'all' | 'low' | 'ok'>('all');
+  const feedback = useDashboardFeedback();
 
   const { data: filaments, isLoading } = useQuery<Filament[]>({
     queryKey: ['filaments', { archived: showArchived }],
@@ -148,7 +160,9 @@ export default function FilamentsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['filaments'] });
       queryClient.invalidateQueries({ queryKey: ['low-stock'] });
+      feedback.success('Filamento archivado');
     },
+    onError: (err: unknown) => feedback.error(normalizeApiError(err, 'No se pudo archivar el filamento')),
   });
 
   const restoreMutation = useMutation({
@@ -156,13 +170,23 @@ export default function FilamentsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['filaments'] });
       queryClient.invalidateQueries({ queryKey: ['low-stock'] });
+      feedback.success('Filamento restaurado');
     },
+    onError: (err: unknown) => feedback.error(normalizeApiError(err, 'No se pudo restaurar el filamento')),
   });
 
-  const visible = showArchived
+  const visible = (showArchived
     ? filaments?.filter((f) => !f.is_active) ?? []
-    : filaments?.filter((f) => f.is_active) ?? [];
+    : filaments?.filter((f) => f.is_active) ?? [])
+    .filter((f) => `${f.color_name} ${f.brand}`.toLowerCase().includes(search.toLowerCase()))
+    .filter((f) => !typeFilter || f.filament_type === typeFilter)
+    .filter((f) => stockFilter === 'all' || (stockFilter === 'low' ? f.weight_grams < f.min_stock_warning_grams : f.weight_grams >= f.min_stock_warning_grams));
+  const lowCount = filaments?.filter((f) => f.is_active && f.weight_grams < f.min_stock_warning_grams).length ?? 0;
   const pagination = usePagination(visible.length, 50);
+
+  useEffect(() => {
+    pagination.setPage(0);
+  }, [search, typeFilter, stockFilter, showArchived]);
 
   if (isLoading) {
     return <div className="flex justify-center p-4"><CircularProgress /></div>;
@@ -189,6 +213,28 @@ export default function FilamentsPage() {
       </div>
 
       <div className="card rounded-md border border-line bg-snow">
+        <div className="flex flex-wrap items-center gap-2 border-b border-line p-3">
+          <TextField size="small" label="Buscar filamento" value={search} onChange={(e) => setSearch(e.target.value)} sx={{ minWidth: { xs: '100%', sm: 240 } }} />
+          <FormControl size="small" sx={{ minWidth: 140 }}>
+            <InputLabel>Tipo</InputLabel>
+            <Select value={typeFilter} label="Tipo" onChange={(e) => setTypeFilter(e.target.value)}>
+              <MenuItem value="">Todos</MenuItem>
+              {FILAMENT_TYPES.map((t) => <MenuItem key={t} value={t}>{t}</MenuItem>)}
+            </Select>
+          </FormControl>
+          <FormControl size="small" sx={{ minWidth: 150 }}>
+            <InputLabel>Stock</InputLabel>
+            <Select value={stockFilter} label="Stock" onChange={(e) => setStockFilter(e.target.value as typeof stockFilter)}>
+              <MenuItem value="all">Todos</MenuItem>
+              <MenuItem value="low">Stock bajo</MenuItem>
+              <MenuItem value="ok">OK</MenuItem>
+            </Select>
+          </FormControl>
+          <Button size="small" onClick={() => { setSearch(''); setTypeFilter(''); setStockFilter('all'); }}>Limpiar filtros</Button>
+          <p className="ml-auto text-[0.8rem] text-slate">{visible.length} resultados · {lowCount} stock bajo</p>
+          {lowCount === 0 && !showArchived && <p className="basis-full text-[0.82rem] text-slate">Stock normal: todos los filamentos están por encima del mínimo.</p>}
+        </div>
+        <div className="overflow-x-auto">
         <Table>
           <TableHead>
             <TableRow>
@@ -265,6 +311,7 @@ export default function FilamentsPage() {
             )}
           </TableBody>
         </Table>
+        </div>
         <Pagination
           count={visible.length}
           page={pagination.page}
@@ -274,7 +321,7 @@ export default function FilamentsPage() {
         />
       </div>
 
-      {!showArchived && <AddFilamentDialog open={dialogOpen} onClose={() => setDialogOpen(false)} />}
+      {!showArchived && <AddFilamentDrawer open={dialogOpen} onClose={() => setDialogOpen(false)} />}
     </div>
   );
 }

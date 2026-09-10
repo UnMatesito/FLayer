@@ -14,6 +14,10 @@ def _upload_path(user_id: uuid.UUID, ext: str) -> Path:
     return LOGO_DIR / f"logo_{user_id}{ext}"
 
 
+def _favicon_path(user_id: uuid.UUID, ext: str) -> Path:
+    return LOGO_DIR / f"favicon_{user_id}{ext}"
+
+
 def _remove_file(path: Path) -> None:
     try:
         path.unlink(missing_ok=True)
@@ -45,6 +49,17 @@ class TestBrandingAuth:
 
     def test_logo_delete_requires_auth(self, client):
         response = client.delete("/api/auth/me/logo")
+        assert response.status_code == 401
+
+    def test_favicon_upload_requires_auth(self, client):
+        response = client.post(
+            "/api/auth/me/favicon",
+            files={"file": ("favicon.png", b"x", "image/png")},
+        )
+        assert response.status_code == 401
+
+    def test_favicon_delete_requires_auth(self, client):
+        response = client.delete("/api/auth/me/favicon")
         assert response.status_code == 401
 
 
@@ -188,8 +203,10 @@ class TestMeBranding:
         assert data["id"] == str(test_user.id)
         assert data["primary_color"] is None
         assert data["logo_url"] is None
+        assert data["favicon_url"] is None
         assert "logo_path" not in data
-        assert set(data.keys()) == {"id", "email", "name", "business_name", "primary_color", "logo_url", "currency"}
+        assert "favicon_path" not in data
+        assert set(data.keys()) == {"id", "email", "name", "business_name", "primary_color", "logo_url", "favicon_url", "currency"}
         assert data["currency"] == "ARS"
 
 
@@ -286,10 +303,84 @@ class TestLogoDelete:
             _remove_file(_upload_path(test_user.id, ".png"))
 
 
+class TestFaviconUpload:
+    def test_favicon_upload_sets_cache_busted_url_and_keeps_logo_separate(self, client, auth_headers, db_session, test_user):
+        try:
+            response = client.post(
+                "/api/auth/me/favicon",
+                files={"file": ("favicon.png", b"fake-png", "image/png")},
+                headers=auth_headers,
+            )
+            assert response.status_code == 200
+            data = response.json()
+            assert data["favicon_url"].startswith(f"/uploads/favicon_{test_user.id}.png?v=")
+            assert data["logo_url"] is None
+            assert _favicon_path(test_user.id, ".png").exists()
+
+            db_session.expire_all()
+            user = db_session.get(User, test_user.id)
+            assert user.favicon_path == f"uploads/favicon_{test_user.id}.png"
+
+            second = client.post(
+                "/api/auth/me/favicon",
+                files={"file": ("favicon.webp", b"fake-webp", "image/webp")},
+                headers=auth_headers,
+            )
+            assert second.status_code == 200
+            assert second.json()["favicon_url"].startswith(f"/uploads/favicon_{test_user.id}.webp?v=")
+            assert _favicon_path(test_user.id, ".webp").exists()
+            assert not _favicon_path(test_user.id, ".png").exists()
+        finally:
+            _remove_file(_favicon_path(test_user.id, ".png"))
+            _remove_file(_favicon_path(test_user.id, ".webp"))
+
+    def test_favicon_invalid_type_422_keeps_previous_file(self, client, auth_headers, db_session, test_user):
+        test_user.favicon_path = f"uploads/favicon_{test_user.id}.png"
+        db_session.flush()
+        _favicon_path(test_user.id, ".png").write_bytes(b"existing")
+        try:
+            response = client.post(
+                "/api/auth/me/favicon",
+                files={"file": ("favicon.txt", b"plain", "text/plain")},
+                headers=auth_headers,
+            )
+            assert response.status_code == 422
+            assert _favicon_path(test_user.id, ".png").exists()
+
+            db_session.expire_all()
+            user = db_session.get(User, test_user.id)
+            assert user.favicon_path == f"uploads/favicon_{test_user.id}.png"
+        finally:
+            _remove_file(_favicon_path(test_user.id, ".png"))
+
+
+class TestFaviconDelete:
+    def test_favicon_delete_clears_field_and_file(self, client, auth_headers, db_session, test_user):
+        test_user.favicon_path = f"uploads/favicon_{test_user.id}.png"
+        db_session.flush()
+        _favicon_path(test_user.id, ".png").write_bytes(b"fake-png")
+        try:
+            response = client.delete("/api/auth/me/favicon", headers=auth_headers)
+            assert response.status_code == 200
+            assert response.json()["favicon_url"] is None
+
+            assert not _favicon_path(test_user.id, ".png").exists()
+
+            db_session.expire_all()
+            user = db_session.get(User, test_user.id)
+            assert user.favicon_path is None
+
+            me = client.get("/api/auth/me", headers=auth_headers)
+            assert me.json()["favicon_url"] is None
+        finally:
+            _remove_file(_favicon_path(test_user.id, ".png"))
+
+
 class TestCrossUser:
     def test_no_cross_user_profile_access(self, client, auth_headers, db_session, test_user, other_user):
         other_user.primary_color = "#BEEF00"
         other_user.logo_path = f"uploads/logo_{other_user.id}.png"
+        other_user.favicon_path = f"uploads/favicon_{other_user.id}.png"
         db_session.flush()
 
         me = client.get("/api/auth/me", headers=auth_headers)
@@ -298,6 +389,7 @@ class TestCrossUser:
         assert data["id"] == str(test_user.id)
         assert data["primary_color"] is None
         assert data["logo_url"] is None
+        assert data["favicon_url"] is None
         assert "#BEEF00" != data["primary_color"]
 
         response = client.patch(

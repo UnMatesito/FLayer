@@ -2,14 +2,12 @@
 
 import { useEffect, useRef, useState } from 'react';
 import {
-  Alert,
   Button,
   CircularProgress,
   FormControl,
   InputLabel,
   MenuItem,
   Select,
-  Snackbar,
   TextField,
   ToggleButton,
   ToggleButtonGroup,
@@ -20,10 +18,12 @@ import { useAuth } from '../../auth-context';
 import {
   fetchBudgetParameters,
   removeLogo,
+  removeFavicon,
   updateBudgetParameters,
   updateProfile,
   updateUserCurrency,
   uploadLogo,
+  uploadFavicon,
   CURRENCY_OPTIONS,
   type BudgetParametersBundle,
   type BudgetParametersUpdate,
@@ -31,6 +31,8 @@ import {
   type User,
 } from '../../api';
 import { EMBER } from '../../theme';
+import { useDashboardFeedback } from '../feedback';
+import { normalizeApiError } from '../../error-normalizer';
 
 const HEX_PATTERN = /^#[0-9a-fA-F]{6}$/;
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
@@ -46,13 +48,13 @@ function FieldError({ message }: { message: string }) {
 
 function MakerParametersBlock() {
   const { user, refreshUser } = useAuth();
+  const feedback = useDashboardFeedback();
   const [activeCurrency, setActiveCurrency] = useState<Currency>('ARS');
   const [activeTouched, setActiveTouched] = useState(false);
   const [defaultCurrency, setDefaultCurrency] = useState<Currency>(user?.currency ?? 'ARS');
   const [defaultTouched, setDefaultTouched] = useState(false);
   const [values, setValues] = useState<Record<Currency, BudgetParametersUpdate> | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  const [snackbar, setSnackbar] = useState<{ message: string; severity: 'success' | 'error' } | null>(null);
 
   useEffect(() => {
     if (!defaultTouched && user?.currency) {
@@ -135,9 +137,9 @@ function MakerParametersBlock() {
         };
       });
       setFieldErrors({});
-      setSnackbar({ message: 'Parámetros guardados.', severity: 'success' });
+      feedback.success('Parámetros guardados');
     },
-    onError: (err: Error) => setSnackbar({ message: err.message, severity: 'error' }),
+    onError: (err: unknown) => feedback.error(normalizeApiError(err, 'No se pudieron guardar los parámetros')),
   });
 
   const defaultCurrencyMutation = useMutation({
@@ -146,9 +148,9 @@ function MakerParametersBlock() {
       setDefaultCurrency(updated.currency);
       setActiveCurrency(updated.currency);
       void refreshUser();
-      setSnackbar({ message: 'Moneda por defecto actualizada.', severity: 'success' });
+      feedback.success('Moneda por defecto actualizada');
     },
-    onError: (err: Error) => setSnackbar({ message: err.message, severity: 'error' }),
+    onError: (err: unknown) => feedback.error(normalizeApiError(err, 'No se pudo actualizar la moneda')),
   });
 
   const handleSave = () => {
@@ -272,20 +274,6 @@ function MakerParametersBlock() {
         </>
       )}
 
-      <Snackbar
-        open={!!snackbar}
-        autoHideDuration={3000}
-        onClose={() => setSnackbar(null)}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-        <Alert
-          severity={snackbar?.severity ?? 'success'}
-          onClose={() => setSnackbar(null)}
-          sx={{ fontSize: '0.85rem' }}
-        >
-          {snackbar?.message}
-        </Alert>
-      </Snackbar>
     </div>
   );
 }
@@ -293,6 +281,8 @@ function MakerParametersBlock() {
 export default function ProfilePage() {
   const { user, refreshUser } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const faviconInputRef = useRef<HTMLInputElement>(null);
+  const feedback = useDashboardFeedback();
 
   const [name, setName] = useState(user?.name ?? '');
   const [businessName, setBusinessName] = useState(user?.business_name ?? '');
@@ -301,6 +291,7 @@ export default function ProfilePage() {
   const [businessNameError, setBusinessNameError] = useState<string | null>(null);
   const [hexError, setHexError] = useState<string | null>(null);
   const [logoError, setLogoError] = useState<string | null>(null);
+  const [faviconError, setFaviconError] = useState<string | null>(null);
 
   useEffect(() => {
     setName(user?.name ?? '');
@@ -312,8 +303,9 @@ export default function ProfilePage() {
     onSuccess: (updated: User) => {
       setName(updated.name);
       void refreshUser();
+      feedback.success('Nombre guardado');
     },
-    onError: (err: Error) => setNameError(err.message),
+    onError: (err: unknown) => setNameError(normalizeApiError(err, 'No se pudo guardar el nombre')),
   });
 
   const businessNameMutation = useMutation({
@@ -321,8 +313,9 @@ export default function ProfilePage() {
     onSuccess: (updated: User) => {
       setBusinessName(updated.business_name ?? '');
       void refreshUser();
+      feedback.success('Negocio guardado');
     },
-    onError: (err: Error) => setBusinessNameError(err.message),
+    onError: (err: unknown) => setBusinessNameError(normalizeApiError(err, 'No se pudo guardar el negocio')),
   });
 
   const colorMutation = useMutation({
@@ -330,8 +323,9 @@ export default function ProfilePage() {
     onSuccess: (updated: User) => {
       setHex(updated.primary_color ?? '');
       void refreshUser();
+      feedback.success('Color guardado');
     },
-    onError: (err: Error) => setHexError(err.message),
+    onError: (err: unknown) => setHexError(normalizeApiError(err, 'No se pudo guardar el color')),
   });
 
   const logoMutation = useMutation({
@@ -340,14 +334,37 @@ export default function ProfilePage() {
       setLogoError(null);
       void refreshUser();
       if (updated.logo_url) setHex(updated.primary_color ?? '');
+      feedback.success('Logo actualizado');
     },
-    onError: (err: Error) => setLogoError(err.message),
+    onError: (err: unknown) => setLogoError(normalizeApiError(err, 'No se pudo subir el logo')),
   });
 
   const removeLogoMutation = useMutation({
     mutationFn: removeLogo,
-    onSuccess: () => void refreshUser(),
-    onError: (err: Error) => setLogoError(err.message),
+    onSuccess: () => {
+      void refreshUser();
+      feedback.success('Logo quitado');
+    },
+    onError: (err: unknown) => setLogoError(normalizeApiError(err, 'No se pudo quitar el logo')),
+  });
+
+  const faviconMutation = useMutation({
+    mutationFn: uploadFavicon,
+    onSuccess: () => {
+      setFaviconError(null);
+      void refreshUser();
+      feedback.success('Favicon actualizado');
+    },
+    onError: (err: unknown) => setFaviconError(normalizeApiError(err, 'No se pudo subir el favicon')),
+  });
+
+  const removeFaviconMutation = useMutation({
+    mutationFn: removeFavicon,
+    onSuccess: () => {
+      void refreshUser();
+      feedback.success('Favicon quitado');
+    },
+    onError: (err: unknown) => setFaviconError(normalizeApiError(err, 'No se pudo quitar el favicon')),
   });
 
   const handleSaveName = () => {
@@ -396,6 +413,20 @@ export default function ProfilePage() {
       return;
     }
     logoMutation.mutate(file);
+  };
+
+  const handlePickFavicon = (file: File | undefined) => {
+    setFaviconError(null);
+    if (!file) return;
+    if (!ALLOWED_TYPES.includes(file.type)) {
+      setFaviconError('Solo se aceptan imágenes jpeg, png o webp.');
+      return;
+    }
+    if (file.size > MAX_LOGO_BYTES) {
+      setFaviconError('La imagen no puede superar los 10 MB.');
+      return;
+    }
+    faviconMutation.mutate(file);
   };
 
   const previewColor = HEX_PATTERN.test(hex) ? hex.toUpperCase() : user?.primary_color ?? EMBER;
@@ -550,6 +581,43 @@ export default function ProfilePage() {
           accept="image/jpeg,image/png,image/webp"
           hidden
           onChange={(e) => handlePickFile(e.target.files?.[0])}
+        />
+      </div>
+
+      <div className="card rounded-md border border-line bg-snow p-4">
+        <p className="mb-2 text-[0.95rem] font-semibold">
+          Favicon
+        </p>
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex h-[48px] w-[48px] items-center justify-center rounded-md border border-line bg-plate p-1">
+            <img src={user?.favicon_url ?? '/logo.svg'} alt="Favicon actual" className="max-h-full max-w-full object-contain" />
+          </div>
+          <div className="flex gap-1">
+            <Button variant="outlined" onClick={() => faviconInputRef.current?.click()} disabled={faviconMutation.isPending}>
+              Subir favicon
+            </Button>
+            {user?.favicon_url && (
+              <Button
+                variant="text"
+                color="error"
+                onClick={() => removeFaviconMutation.mutate()}
+                disabled={removeFaviconMutation.isPending}
+              >
+                Quitar favicon
+              </Button>
+            )}
+          </div>
+        </div>
+        {faviconError && <FieldError message={faviconError} />}
+        <p className="mt-1 text-[0.8rem] text-slate">
+          Independiente del logotipo. Se usa solo en la pestaña del navegador; si se quita vuelve a /logo.svg.
+        </p>
+        <input
+          ref={faviconInputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          hidden
+          onChange={(e) => handlePickFavicon(e.target.files?.[0])}
         />
       </div>
       </div>

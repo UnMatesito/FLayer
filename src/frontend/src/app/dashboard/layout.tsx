@@ -32,7 +32,9 @@ import { useQuery } from '@tanstack/react-query';
 import ProtectedRoute from '@/app/protected-route';
 import { useAuth } from '@/app/auth-context';
 import { fetchLowStock } from '@/app/api';
+import type { LowStockResponse } from '@/app/api';
 import { useResolvedColorScheme } from '@/app/theme';
+import { DashboardFeedbackProvider, useDashboardFeedback } from './feedback';
 
 const NavButton = styled('button')(({ theme }) => ({
   width: '100%',
@@ -65,13 +67,13 @@ interface NavItem {
   path: string;
   icon: ReactNode;
   section: string;
-  lowStockKey?: 'filaments' | 'supplies';
+  lowStockKey?: 'products' | 'filaments' | 'supplies';
 }
 
 const navItems: NavItem[] = [
   { label: 'Dashboard', path: '/dashboard', icon: <DashboardIcon />, section: 'General' },
   { label: 'Pedidos', path: '/dashboard/orders', icon: <ReceiptLongIcon />, section: 'General' },
-  { label: 'Productos', path: '/dashboard/products', icon: <RedeemIcon />, section: 'Catálogo' },
+  { label: 'Productos', path: '/dashboard/products', icon: <RedeemIcon />, section: 'Catálogo', lowStockKey: 'products' },
   { label: 'Impresoras', path: '/dashboard/printers', icon: <PrinterIcon color="currentColor" />, section: 'Equipo' },
   { label: 'Filamentos', path: '/dashboard/stock/filaments', icon: <FilamentIcon color="currentColor" hole="var(--rail)" />, section: 'Stock', lowStockKey: 'filaments' },
   { label: 'Insumos', path: '/dashboard/stock/supplies', icon: <InventoryIcon />, section: 'Stock', lowStockKey: 'supplies' },
@@ -126,7 +128,7 @@ function DrawerContent({
   onNavigate,
 }: {
   pathname: string;
-  lowStock: { filaments: { length: number }; supplies: { length: number } } | undefined;
+    lowStock: { filaments: { length: number }; supplies: { length: number }; products?: { length: number } } | undefined;
   logoUrl: string | null;
   onNavigate: (path: string) => void;
 }) {
@@ -199,6 +201,7 @@ function DrawerContent({
                     const selected =
                       pathname === item.path ||
                       (item.path !== '/dashboard' && pathname.startsWith(item.path));
+                    const lowStockCount = item.lowStockKey ? lowStock?.[item.lowStockKey]?.length ?? 0 : 0;
                     return (
                       <li key={item.path} className="mb-0.5">
                         <NavButton
@@ -210,11 +213,11 @@ function DrawerContent({
                             {itemIcon(item)}
                           </span>
                           <span className="flex-1 text-left">{item.label}</span>
-                          {item.lowStockKey && (lowStock?.[item.lowStockKey].length ?? 0) > 0 && (
+                          {lowStockCount > 0 && (
                             <Chip
                               size="small"
                               color="warning"
-                              label={lowStock?.[item.lowStockKey].length}
+                              label={lowStockCount}
                               sx={{
                                 height: 20,
                                 minWidth: 20,
@@ -261,6 +264,23 @@ function DrawerContent({
   );
 }
 
+function LowStockPopup({ lowStock }: { lowStock: LowStockResponse | undefined }) {
+  const feedback = useDashboardFeedback();
+  const [shownFor, setShownFor] = useState('');
+
+  useEffect(() => {
+    const items = lowStock?.items ?? [];
+    if (items.length === 0) return;
+    const signature = items.map((item) => `${item.type}:${item.id}:${item.current_stock}`).sort().join('|');
+    if (!signature || signature === shownFor) return;
+    setShownFor(signature);
+    const first = items[0];
+    feedback.notify(`Stock bajo: ${first.label}${items.length > 1 ? ` y ${items.length - 1} más` : ''}.`, 'warning');
+  }, [feedback, lowStock?.items, shownFor]);
+
+  return null;
+}
+
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -288,6 +308,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
   return (
     <ProtectedRoute>
+      <DashboardFeedbackProvider>
+      <LowStockPopup lowStock={lowStock.data} />
       <div className="flex min-h-screen">
         <AppBar position="fixed" sx={appBarSx} style={appBarStyle}>
           <Toolbar variant="dense" className="flex items-center justify-between">
@@ -329,6 +351,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           {children}
         </main>
       </div>
+      </DashboardFeedbackProvider>
     </ProtectedRoute>
   );
 }

@@ -15,6 +15,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchPrinters, deletePrinter, type Printer } from '@/app/api';
 import { PrinterFormDialog } from '@/components/PrinterFormDialog';
 import { PrinterImage } from '@/components/PrinterImage';
+import { useDashboardFeedback } from '../feedback';
+import { normalizeApiError } from '@/app/error-normalizer';
 
 function formatMoney(value: number | null): string {
   if (value == null) return '—';
@@ -80,6 +82,7 @@ function PrinterCard({ printer, onEdit, onArchive }: {
 
 export default function PrintersPage() {
   const queryClient = useQueryClient();
+  const feedback = useDashboardFeedback();
   const [createOpen, setCreateOpen] = useState(false);
   const [editing, setEditing] = useState<Printer | null>(null);
 
@@ -90,7 +93,11 @@ export default function PrintersPage() {
 
   const archiveMutation = useMutation({
     mutationFn: (id: string) => deletePrinter(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['printers'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['printers'] });
+      feedback.success('Impresora archivada');
+    },
+    onError: (err: unknown) => feedback.error(normalizeApiError(err, 'No se pudo archivar la impresora')),
   });
 
   if (isLoading) {
