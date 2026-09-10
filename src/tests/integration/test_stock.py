@@ -1,4 +1,4 @@
-import pytest
+from tests.factories.budget_factory import BudgetFactory
 
 
 def test_create_filament_valid(client, auth_headers):
@@ -198,6 +198,7 @@ def test_stock_deduction_on_printing(client, auth_headers, test_filament, test_u
         filament_id=test_filament.id,
         grams_estimated=200.00,
     )
+    BudgetFactory.create(session=db_session, user_id=test_user.id, order_id=order.id)
 
     response = client.patch(
         f"/api/orders/{order.id}/status",
@@ -234,6 +235,7 @@ def test_stock_deduction_oversell_allowed(client, auth_headers, test_filament, t
         customer_id=customer.id,
         status="quoting",
     )
+    BudgetFactory.create(session=db_session, user_id=test_user.id, order_id=order.id)
 
     response = client.patch(
         f"/api/orders/{order.id}/status",
@@ -264,6 +266,7 @@ def test_stock_reversal_on_printing_to_cancelled(client, auth_headers, test_fila
         customer_id=customer.id,
         status="quoting",
     )
+    BudgetFactory.create(session=db_session, user_id=test_user.id, order_id=order.id)
 
     original_weight = float(test_filament.weight_grams)
 
@@ -506,6 +509,7 @@ def test_status_change_request_body_extended_fields(client, auth_headers, test_f
         customer_id=customer.id,
         status="quoting",
     )
+    BudgetFactory.create(session=db_session, user_id=test_user.id, order_id=order.id)
 
     response = client.patch(
         f"/api/orders/{order.id}/status",

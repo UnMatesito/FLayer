@@ -76,6 +76,7 @@ export default function OrderDetailPage() {
 
   const actions = getStatusActions(order.work_type)[order.status] || [];
   const isMutationPending = statusMutation.isPending;
+  const printingBlockedByMissingBudget = !isProduct && order.status === 'quoting' && (budgetLoading || !budget);
 
   return (
     <ProtectedRoute>
@@ -146,18 +147,27 @@ export default function OrderDetailPage() {
           <div className="card rounded-md border border-line bg-snow p-4">
             <h3 className="mb-2 text-[1.25rem] font-semibold">Acciones</h3>
             <div className="flex gap-2">
-              {actions.map((action) => (
-                <Button
-                  key={action.targetStatus}
-                  variant="contained"
-                  color={action.color}
-                  onClick={() => statusMutation.mutate(action.targetStatus)}
-                  disabled={isMutationPending}
-                >
-                  {action.label}
-                </Button>
-              ))}
+              {actions.map((action) => {
+                const disabled = isMutationPending
+                  || (action.targetStatus === 'printing' && printingBlockedByMissingBudget);
+                return (
+                  <Button
+                    key={action.targetStatus}
+                    variant="contained"
+                    color={action.color}
+                    onClick={() => statusMutation.mutate(action.targetStatus)}
+                    disabled={disabled}
+                  >
+                    {action.label}
+                  </Button>
+                );
+              })}
             </div>
+            {printingBlockedByMissingBudget && (
+              <Alert severity="info" sx={{ mt: 2 }}>
+                Generá un presupuesto antes de iniciar la impresión.
+              </Alert>
+            )}
             {statusMutation.isError && (
               <Alert severity="error" sx={{ mt: 2 }}>
                 {statusMutation.error instanceof Error ? statusMutation.error.message : 'Error al actualizar el estado'}

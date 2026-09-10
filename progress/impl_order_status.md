@@ -53,3 +53,16 @@ ruff — 0 errors
 - [x] Frontend: order detail page renders
 - [x] Status changes via dropdown/buttons in OrdersTable
 - [x] Email received on status change
+
+## Revision — 2026-09-09: budget required before printing
+
+- Specs updated first in `specs/order_status/{requirements,design,tasks}.md` as R8/R9.
+- Backend: `PATCH /api/orders/{order_id}/status` now rejects `quoting → printing` with 409 when no `Budget` exists for that order/user. The guard runs before filament lookup or stock deduction, so failed transitions do not consume stock.
+- Backend: when a budget exists, the existing printing transition and stock deduction path continue unchanged, including budget-based gram/filament inference.
+- Frontend: `/dashboard/orders/[id]` disables "Iniciar impresión" while the budget query is loading or when no budget exists, and shows a helper message to generate a budget first.
+- Tests: `test_quoting_to_printing_without_budget_rejected`; existing printing/stock transition tests now create budget fixtures where the transition is expected to succeed.
+
+### Revision traceability
+
+- R8 ← `test_quoting_to_printing_without_budget_rejected`, `test_quoting_to_printing`, stock printing transition tests
+- R9 ← `/dashboard/orders/[id]/page.tsx` disable/helper behavior + frontend build/type-check

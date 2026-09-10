@@ -36,3 +36,10 @@
 - [x] `test_order_statuses_seeded` — verify seed data (R4)
 
 Estimated total: ~8h (backend 4h, frontend 2.5h, tests 1.5h)
+
+## Revision tasks — 2026-09-09
+
+- [x] Spec: add budget-required `quoting → printing` rule and UI disable behavior (R8, R9)
+- [x] Backend: reject `quoting → printing` with 409 when the order has no budget; keep stock deduction unchanged when a budget exists (R8)
+- [x] Frontend: disable "Iniciar impresión" until the budget query has a budget (R9)
+- [x] Tests: no-budget transition rejection, budget-present transition success, stock transition tests updated with budget fixtures (R8)

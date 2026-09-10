@@ -156,3 +156,20 @@ async def send_order_status_change(self, order: Order, new_status: str, to: str)
 ```
 
 A simple text email for MVP. Template customization later in `email_notifications`.
+
+## Revision — 2026-09-09: budget gate for printing
+
+`PATCH /api/orders/{order_id}/status` keeps the existing transition table, but
+adds a guard for `quoting → printing`: before stock deduction or status mutation,
+the endpoint looks for the latest `Budget` row for the order and current user.
+If no row exists, it returns 409 Conflict and leaves the order unchanged.
+
+When a budget exists, the existing printing path continues unchanged. The same
+budget row can still be used to infer grams and filament when the request omits
+explicit stock fields.
+
+The order detail UI already fetches `fetchBudget(id)` for the budget section.
+The status action area reuses that query result: for non-product orders in
+`quoting`, the `printing` action is disabled while the query is loading or when
+no budget exists, and a short helper message points the operator to generate a
+budget first.

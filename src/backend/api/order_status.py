@@ -81,15 +81,26 @@ async def update_order_status(
     if new_status == "printing":
         filament_id = body.filament_id or order.filament_id
         grams = body.grams or order.grams_estimated
+        budget = None
 
-        if grams is None and order.status == "quoting":
+        if order.status == "quoting":
             budget_result = await db.execute(
                 select(Budget)
-                .where(Budget.order_id == order_id)
+                .where(
+                    Budget.order_id == order_id,
+                    Budget.user_id == current_user.id,
+                )
                 .order_by(Budget.version.desc())
                 .limit(1)
             )
             budget = budget_result.scalar_one_or_none()
+            if budget is None:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="Cannot start printing before generating a budget",
+                )
+
+        if grams is None and order.status == "quoting":
             if budget is not None:
                 if budget.manual_grams is not None:
                     grams = float(budget.manual_grams)

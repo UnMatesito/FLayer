@@ -6,6 +6,7 @@ from sqlalchemy import select
 from backend.models.order import Order
 from backend.services.email_service import email_service
 from tests.factories.customer_factory import CustomerFactory
+from tests.factories.budget_factory import BudgetFactory
 from tests.factories.order_factory import OrderFactory
 
 
@@ -43,6 +44,34 @@ class TestOrderDetail:
         )
         assert resp.status_code == 404
 
+    def test_order_detail_returns_revision_fields(
+        self, client, db_session, auth_headers, test_user
+    ):
+        customer = CustomerFactory.create(session=db_session, user_id=test_user.id)
+        order = OrderFactory.create(
+            session=db_session,
+            user_id=test_user.id,
+            customer_id=customer.id,
+            order_category="print",
+            needs_3d_printing=True,
+            needs_3d_modelling=False,
+            dimensions="120 x 80 x 40 mm",
+            type_of_delivery="Delivery",
+            delivery_embalaje=500.0,
+            delivery_precio_envio=1500.0,
+        )
+
+        resp = client.get(f"/api/orders/{order.id}", headers=auth_headers)
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["order_category"] == "print"
+        assert data["needs_3d_printing"] is True
+        assert data["needs_3d_modelling"] is False
+        assert data["dimensions"] == "120 x 80 x 40 mm"
+        assert data["type_of_delivery"] == "Delivery"
+        assert data["delivery_embalaje"] == 500.0
+        assert data["delivery_precio_envio"] == 1500.0
+
 
 class TestUpdateStatus:
     def test_new_to_quoting(
@@ -73,6 +102,7 @@ class TestUpdateStatus:
         order = OrderFactory.create(
             session=db_session, user_id=test_user.id, customer_id=customer.id, status="quoting"
         )
+        BudgetFactory.create(session=db_session, user_id=test_user.id, order_id=order.id)
 
         resp = client.patch(
             f"/api/orders/{order.id}/status",
@@ -81,6 +111,25 @@ class TestUpdateStatus:
         )
         assert resp.status_code == 200
         assert resp.json()["status"] == "printing"
+
+    def test_quoting_to_printing_without_budget_rejected(
+        self, client, db_session, auth_headers, test_user
+    ):
+        customer = CustomerFactory.create(session=db_session, user_id=test_user.id)
+        order = OrderFactory.create(
+            session=db_session, user_id=test_user.id, customer_id=customer.id, status="quoting"
+        )
+
+        resp = client.patch(
+            f"/api/orders/{order.id}/status",
+            json={"status": "printing"},
+            headers=auth_headers,
+        )
+        assert resp.status_code == 409
+
+        result = db_session.execute(select(Order).where(Order.id == order.id))
+        updated = result.scalar_one()
+        assert updated.status == "quoting"
 
     def test_printing_to_ready(
         self, client, db_session, auth_headers, test_user

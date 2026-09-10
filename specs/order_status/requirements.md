@@ -62,3 +62,28 @@ THEN it navigates to `/dashboard/orders/{id}`
 - Email template customization → `email_notifications`
 - Status change as a result of payment/budget approval → cross-feature, handled at integration time
 - Status history audit trail → not needed for MVP (current status on order is sufficient)
+
+## Revision — 2026-09-09: budget required before printing
+
+## R8. Status transition — Quoting requires budget before printing
+
+GIVEN an order has status `quoting`
+WHEN the operator tries to change it to `printing`
+THEN the API rejects the transition with 409 Conflict if no budget exists for the order
+AND the order remains in `quoting`
+AND no stock deduction occurs
+
+GIVEN an order has status `quoting` and has a generated budget
+WHEN the operator changes it to `printing`
+THEN the transition is allowed using the existing stock deduction rules
+
+## R9. UI — Printing action disabled until budget exists
+
+GIVEN the operator views a non-product order in `quoting`
+WHEN no budget exists for the order or the budget lookup is still loading
+THEN the "Iniciar impresión" action is disabled
+AND the page explains that a budget must be generated before printing
+
+GIVEN a generated budget exists
+WHEN the operator views the actions for the order
+THEN "Iniciar impresión" is enabled
