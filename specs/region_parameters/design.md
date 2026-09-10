@@ -443,3 +443,25 @@ updateUserCurrency(currency: Currency): Promise<User>             // PATCH /api/
 - Budget formula section: state that `electricity_price_kwh`,
   `error_margin_percent`, and the three multipliers come from
   `budget_parameters` per `(user, currency)`, seeded on first access
+
+## Revision — 2026-09-09: margin settings removed
+
+`budget_parameters` drops these columns because earnings margin is now selected
+per budget in `generate_budget`:
+
+- `margin_multiplier_wholesale`
+- `margin_multiplier_retail`
+- `margin_multiplier_keychain`
+
+The effective `budget_parameters` contract is now:
+
+```json
+{
+  "electricity_price_kwh": 180.00,
+  "error_margin_percent": 6.00
+}
+```
+
+Seed rows still exist per `(user, currency)`, but they seed only electricity and
+error margin. Existing budget rows remain immutable because every budget already
+stores `margin_multiplier` as a snapshot.

@@ -20,9 +20,6 @@ class BudgetParameters(Base):
     currency: Mapped[str] = mapped_column(String(3), nullable=False)
     electricity_price_kwh: Mapped[float] = mapped_column(Numeric(12, 2), nullable=False)
     error_margin_percent: Mapped[float] = mapped_column(Numeric(5, 2), nullable=False)
-    margin_multiplier_wholesale: Mapped[float] = mapped_column(Numeric(5, 2), nullable=False)
-    margin_multiplier_retail: Mapped[float] = mapped_column(Numeric(5, 2), nullable=False)
-    margin_multiplier_keychain: Mapped[float] = mapped_column(Numeric(5, 2), nullable=False)
     is_default: Mapped[bool] = mapped_column(
         nullable=False, default=True, server_default=text("true")
     )
@@ -40,17 +37,5 @@ class BudgetParameters(Base):
         CheckConstraint(
             "error_margin_percent >= 0 AND error_margin_percent <= 100",
             name="ck_budget_parameters_error_margin_range",
-        ),
-        CheckConstraint(
-            "margin_multiplier_wholesale > 0 AND margin_multiplier_wholesale <= 100",
-            name="ck_budget_parameters_wholesale_range",
-        ),
-        CheckConstraint(
-            "margin_multiplier_retail > 0 AND margin_multiplier_retail <= 100",
-            name="ck_budget_parameters_retail_range",
-        ),
-        CheckConstraint(
-            "margin_multiplier_keychain > 0 AND margin_multiplier_keychain <= 100",
-            name="ck_budget_parameters_keychain_range",
         ),
     )

@@ -66,3 +66,10 @@
 - [x] `BudgetForm.tsx` / `BudgetBreakdown.tsx`: currency selector with all six currencies preselected to the user's default; per-currency symbols and machine-default fallbacks via `currencySymbol` / `MACHINE_DEFAULT_FALLBACKS`; `BudgetCreate`/`BudgetPreviewRequest` payloads send `currency` only when changed (R17)
 
 Estimated total: ~18h (backend 7h, tests 5h, frontend 4h, migration/model 2h)
+
+## Revision tasks — 2026-09-09
+
+- [x] Migration/model: drop `budget_parameters` margin multiplier columns and checks (R18)
+- [x] Schemas/API/service: return and accept only electricity price plus error margin for budget parameters (R18, R19)
+- [x] Frontend profile block: remove regional multiplier inputs and validation (R18)
+- [x] Tests: seeded/default/update payloads no longer expose multipliers; budget calculation ignores regional margins and uses per-budget margin (R18, R19)

@@ -3,7 +3,7 @@
 import {
   Table, TableBody, TableCell, TableRow, TableHead,
 } from '@mui/material';
-import { currencySymbol, MACHINE_DEFAULT_FALLBACKS } from '@/app/api';
+import { BUDGET_MARGIN_OPTIONS, currencySymbol, MACHINE_DEFAULT_FALLBACKS } from '@/app/api';
 import { type BudgetResponse } from '@/app/api';
 
 interface Props {
@@ -12,12 +12,8 @@ interface Props {
 }
 
 function marginLabel(type: string) {
-  switch (type) {
-    case 'wholesale': return 'Mayorista';
-    case 'retail': return 'Comercio';
-    case 'keychain': return 'Llavero';
-    default: return type;
-  }
+  if (type === 'custom') return 'Personalizado';
+  return BUDGET_MARGIN_OPTIONS.find((option) => option.value === type)?.reference ?? type;
 }
 
 export default function BudgetBreakdown({ budget }: Props) {
@@ -30,9 +26,8 @@ export default function BudgetBreakdown({ budget }: Props) {
   return (
     <div>
       <div className="mb-2 flex items-center justify-between">
-        <h3 className="text-[1.25rem] font-semibold">Presupuesto</h3>
-        <p className="text-xs text-slate">
-          v{budget.version}
+        <p className="text-sm text-slate">
+          Version: v{budget.version}
         </p>
       </div>
 
@@ -106,8 +101,24 @@ export default function BudgetBreakdown({ budget }: Props) {
             <TableCell align="right">{sym}{budget.extra_costs.toFixed(2)}</TableCell>
           </TableRow>
           <TableRow>
+            <TableCell sx={{ fontWeight: 600 }}>Ensamble</TableCell>
+            <TableCell align="right">{sym}{budget.assembly_cost.toFixed(2)}</TableCell>
+          </TableRow>
+          <TableRow>
+            <TableCell sx={{ fontWeight: 600 }}>Lijado</TableCell>
+            <TableCell align="right">{sym}{budget.sanding_cost.toFixed(2)}</TableCell>
+          </TableRow>
+          <TableRow>
+            <TableCell sx={{ fontWeight: 600 }}>Pintura / barniz</TableCell>
+            <TableCell align="right">{sym}{budget.painting_cost.toFixed(2)}</TableCell>
+          </TableRow>
+          <TableRow>
+            <TableCell sx={{ fontWeight: 600 }}>Post-procesado total</TableCell>
+            <TableCell align="right">{sym}{budget.post_processing_total.toFixed(2)}</TableCell>
+          </TableRow>
+          <TableRow>
             <TableCell sx={{ fontWeight: 600 }}>
-              Subtotal + margen ({marginLabel(budget.margin_type)}, {budget.margin_multiplier}x)
+              Subtotal + margen ({budget.margin_multiplier}x, {marginLabel(budget.margin_type)})
             </TableCell>
             <TableCell align="right">{sym}{budget.total_before_margin.toFixed(2)}</TableCell>
           </TableRow>
@@ -121,16 +132,11 @@ export default function BudgetBreakdown({ budget }: Props) {
       </Table>
 
       <div className="mt-1 flex items-center justify-between rounded-md bg-primary p-2 text-[var(--mui-palette-primary-contrastText)]">
-        <h3 className="text-[1.25rem] font-bold">Precio final</h3>
+        <h3 className="text-[1.25rem] font-bold">Precio final pieza</h3>
         <h3 className="text-[1.25rem] font-bold">
           {sym}{budget.final_price.toFixed(2)}
         </h3>
       </div>
-
-      <p className="mt-0.5 text-right text-sm text-slate">
-        Precio ML sugerido: {sym}{budget.ml_price.toFixed(2)}
-      </p>
-
       {budget.notes && (
         <div className="mt-2 rounded-md bg-canvas p-1.5">
           <p className="text-xs font-semibold text-slate">Notas</p>

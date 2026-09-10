@@ -4,7 +4,6 @@ import pytest
 from sqlalchemy import select
 
 from backend.models.budget import Budget
-from backend.models.order import Order
 from backend.services.email_service import email_service
 from tests.factories.customer_factory import CustomerFactory
 from tests.factories.order_factory import OrderFactory
@@ -179,6 +178,120 @@ class TestCreateBudget:
         assert float(data["total_before_margin"]) == pytest.approx(1671.44, rel=0.01)
         assert float(data["final_price"]) == pytest.approx(6685.76, rel=0.01)
 
+    def test_create_budget_margin_preset_and_post_processing(self, client, db_session, auth_headers, test_user):
+        customer = CustomerFactory.create(session=db_session, user_id=test_user.id)
+        order = OrderFactory.create(
+            session=db_session, user_id=test_user.id, customer_id=customer.id, status="quoting"
+        )
+
+        resp = client.post(
+            f"/api/orders/{order.id}/budget",
+            json={
+                "manual_filament_cost": 100.00,
+                "hours": 0,
+                "margin_type": "high_volume",
+                "assembly_cost": 10.00,
+                "sanding_cost": 20.00,
+                "painting_cost": 30.00,
+                "filament_items": [],
+            },
+            headers=auth_headers,
+        )
+        assert resp.status_code == 201
+        data = resp.json()
+        assert data["margin_multiplier"] == 2.00
+        assert data["post_processing_total"] == 60.00
+        assert data["total_before_margin"] == 165.00
+        assert data["final_price"] == 330.00
+
+        row = db_session.execute(
+            select(Budget).where(Budget.order_id == order.id)
+        ).scalar_one()
+        assert float(row.assembly_cost) == 10.00
+        assert float(row.sanding_cost) == 20.00
+        assert float(row.painting_cost) == 30.00
+        assert float(row.margin_multiplier) == 2.00
+
+    def test_create_budget_custom_margin_multiplier(self, client, db_session, auth_headers, test_user):
+        customer = CustomerFactory.create(session=db_session, user_id=test_user.id)
+        order = OrderFactory.create(
+            session=db_session, user_id=test_user.id, customer_id=customer.id, status="quoting"
+        )
+
+        resp = client.post(
+            f"/api/orders/{order.id}/budget",
+            json={
+                "manual_filament_cost": 100.00,
+                "hours": 0,
+                "margin_type": "custom",
+                "margin_multiplier": 6.00,
+                "filament_items": [],
+            },
+            headers=auth_headers,
+        )
+        assert resp.status_code == 201
+        data = resp.json()
+        assert data["margin_type"] == "custom"
+        assert data["margin_multiplier"] == 6.00
+        assert data["final_price"] == 630.00
+
+    def test_create_budget_custom_margin_requires_multiplier(self, client, db_session, auth_headers, test_user):
+        customer = CustomerFactory.create(session=db_session, user_id=test_user.id)
+        order = OrderFactory.create(
+            session=db_session, user_id=test_user.id, customer_id=customer.id, status="quoting"
+        )
+
+        resp = client.post(
+            f"/api/orders/{order.id}/budget",
+            json={
+                "manual_filament_cost": 100.00,
+                "hours": 0,
+                "margin_type": "custom",
+                "filament_items": [],
+            },
+            headers=auth_headers,
+        )
+        assert resp.status_code == 422
+
+    def test_create_budget_custom_margin_rejects_invalid_values(self, client, db_session, auth_headers, test_user):
+        customer = CustomerFactory.create(session=db_session, user_id=test_user.id)
+        order = OrderFactory.create(
+            session=db_session, user_id=test_user.id, customer_id=customer.id, status="quoting"
+        )
+
+        for multiplier in (0, 100.01):
+            resp = client.post(
+                f"/api/orders/{order.id}/budget",
+                json={
+                    "manual_filament_cost": 100.00,
+                    "hours": 0,
+                    "margin_type": "custom",
+                    "margin_multiplier": multiplier,
+                    "filament_items": [],
+                },
+                headers=auth_headers,
+            )
+            assert resp.status_code == 422
+
+    def test_create_budget_post_processing_negative_rejected(self, client, db_session, auth_headers, test_user):
+        customer = CustomerFactory.create(session=db_session, user_id=test_user.id)
+        order = OrderFactory.create(
+            session=db_session, user_id=test_user.id, customer_id=customer.id, status="quoting"
+        )
+
+        resp = client.post(
+            f"/api/orders/{order.id}/budget",
+            json={
+                "manual_filament_cost": 100.00,
+                "hours": 0,
+                "margin_type": "retail",
+                "assembly_cost": -1.00,
+                "filament_items": [],
+            },
+            headers=auth_headers,
+        )
+        assert resp.status_code == 422
+
 class TestUpdateBudget:
     def test_update_budget_recalculates(self, client, db_session, auth_headers, test_user):
         customer = CustomerFactory.create(session=db_session, user_id=test_user.id)
@@ -327,8 +440,8 @@ class TestGetBudget:
         assert "subtotal" in data
         assert "subtotal_with_error" in data
         assert "total_before_margin" in data
-        assert "ml_price" in data
-        assert float(data["ml_price"]) == pytest.approx(float(data["final_price"]) * 1.30, rel=0.01)
+        assert "post_processing_total" in data
+        assert "ml_price" not in data
 
 
 class TestBudgetPreview:
@@ -808,7 +921,6 @@ class TestUpdateBudgetPrinterProfile:
         assert resp.status_code == 200
         data = resp.json()
         assert float(data["final_price"]) == 7000.00
-        assert float(data["ml_price"]) == 9100.00
 
         row = db_session.execute(
             select(Budget).where(Budget.order_id == order.id)

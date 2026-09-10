@@ -21,6 +21,9 @@ class BudgetFactory(factory.Factory):
     hours = 0
     minutes = 0
     extra_costs = 0.0
+    assembly_cost = 0.0
+    sanding_cost = 0.0
+    painting_cost = 0.0
     margin_type = "retail"
     error_margin_percent = 5.0
     margin_multiplier = 4.0

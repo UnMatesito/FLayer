@@ -323,3 +323,73 @@ This feature defines the interface and call but **does not implement the email s
    - Reuse `fetchPrinters` from `printer_profiles` for the printer select
 
 ### No Budget Parameters page or navigation link — removed for MVP.
+
+## Revision — 2026-09-09: margins, post-processing, ML removal
+
+### `budgets` changes
+
+| Column | Type | Constraints | Notes |
+|---|---|---|---|
+| `assembly_cost` | DECIMAL(12,2) | NOT NULL, DEFAULT 0, `CHECK (>= 0)` | Post-processing assembly cost |
+| `sanding_cost` | DECIMAL(12,2) | NOT NULL, DEFAULT 0, `CHECK (>= 0)` | Post-processing sanding cost |
+| `painting_cost` | DECIMAL(12,2) | NOT NULL, DEFAULT 0, `CHECK (>= 0)` | Post-processing painting/varnish cost |
+
+`margin_type` remains the stored selector code for compatibility with existing
+budget rows, but its allowed values expand to `high_volume`, `medium_volume`,
+`wholesale`, `intermediate`, `retail`, `keychain`, `custom`.
+`margin_multiplier` remains the immutable snapshot used for calculation and
+display. Existing `wholesale`/`retail`/`keychain` rows keep their original
+meaning.
+
+### Earnings margin presets
+
+| Multiplier | API value | Reference |
+|---|---|---|
+| `2.0` | `high_volume` | Alto volumen / descuento |
+| `2.5` | `medium_volume` | Volumen medio |
+| `3.0` | `wholesale` | Mayorista |
+| `3.5` | `intermediate` | Intermedio |
+| `4.0` | `retail` | Minorista |
+| `5.0` | `keychain` | Llaveros / piezas chicas |
+| custom | `custom` | Valor libre ingresado por el operador |
+
+Preset multipliers are code constants, not regional settings. For
+`margin_type = "custom"`, request bodies must include `margin_multiplier` with a
+value `> 0` and `<= 100`. For preset margin types, `margin_multiplier` is
+derived from the table above and snapshotted. The frontend presents the presets
+as buttons plus a numeric input; clicking a button writes its value into the
+numeric input. If the numeric input does not exactly match a preset value, no
+button is selected and the API value is `custom`.
+
+Post-processing is controlled by a frontend toggle. No database boolean is
+stored: disabled means `assembly_cost`, `sanding_cost`, and `painting_cost` are
+submitted as `0`, which keeps the persisted calculation self-contained.
+
+### Formula change
+
+```
+post_processing_total = assembly_cost + sanding_cost + painting_cost
+total_before_margin   = subtotal_with_error + extra_costs + post_processing_total
+final_price           = total_before_margin × margin_multiplier
+```
+
+`ml_price` is removed from the service, response schema, tests, and UI. No
+database migration is needed for ML because it was computed on-the-fly and never
+persisted.
+
+### Request/response additions
+
+Budget create/update/preview bodies accept:
+
+```json
+{
+  "margin_type": "intermediate",
+  "margin_multiplier": null,
+  "assembly_cost": 1200.00,
+  "sanding_cost": 800.00,
+  "painting_cost": 1500.00
+}
+```
+
+Responses include `assembly_cost`, `sanding_cost`, `painting_cost`, and
+`post_processing_total`. Responses no longer include `ml_price`.

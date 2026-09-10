@@ -277,9 +277,6 @@ export interface BudgetParameters {
   currency: Currency;
   electricity_price_kwh: number;
   error_margin_percent: number;
-  margin_multiplier_wholesale: number;
-  margin_multiplier_retail: number;
-  margin_multiplier_keychain: number;
   is_default: boolean;
 }
 
@@ -290,9 +287,6 @@ export interface BudgetParametersBundle {
 export interface BudgetParametersUpdate {
   electricity_price_kwh: number;
   error_margin_percent: number;
-  margin_multiplier_wholesale: number;
-  margin_multiplier_retail: number;
-  margin_multiplier_keychain: number;
 }
 
 export async function fetchBudgetParameters(): Promise<BudgetParametersBundle> {
@@ -791,6 +785,29 @@ export interface FilamentItemResponse {
   cost: number;
 }
 
+export type BudgetMarginType =
+  | 'high_volume'
+  | 'medium_volume'
+  | 'wholesale'
+  | 'intermediate'
+  | 'retail'
+  | 'keychain'
+  | 'custom';
+
+export const BUDGET_MARGIN_OPTIONS: Array<{
+  value: BudgetMarginType;
+  multiplier: number;
+  label: string;
+  reference: string;
+}> = [
+  { value: 'high_volume', multiplier: 2.0, label: '×2.0', reference: 'Alto volumen / descuento' },
+  { value: 'medium_volume', multiplier: 2.5, label: '×2.5', reference: 'Volumen medio' },
+  { value: 'wholesale', multiplier: 3.0, label: '×3.0', reference: 'Mayorista' },
+  { value: 'intermediate', multiplier: 3.5, label: '×3.5', reference: 'Intermedio' },
+  { value: 'retail', multiplier: 4.0, label: '×4.0', reference: 'Minorista' },
+  { value: 'keychain', multiplier: 5.0, label: '×5.0', reference: 'Llaveros / piezas chicas' },
+];
+
 export interface BudgetCreate {
   currency: Currency | null;
   printer_id?: string | null;
@@ -799,8 +816,12 @@ export interface BudgetCreate {
   manual_grams?: number | null;
   hours: number;
   minutes: number;
-  margin_type: 'wholesale' | 'retail' | 'keychain';
+  margin_type: BudgetMarginType;
+  margin_multiplier?: number | null;
   extra_costs?: number;
+  assembly_cost?: number;
+  sanding_cost?: number;
+  painting_cost?: number;
   manual_price?: number | null;
   notes?: string;
 }
@@ -813,8 +834,12 @@ export interface BudgetUpdate {
   manual_grams?: number | null;
   hours?: number;
   minutes?: number;
-  margin_type?: 'wholesale' | 'retail' | 'keychain';
+  margin_type?: BudgetMarginType;
+  margin_multiplier?: number | null;
   extra_costs?: number;
+  assembly_cost?: number;
+  sanding_cost?: number;
+  painting_cost?: number;
   manual_price?: number | null;
   notes?: string;
 }
@@ -834,18 +859,21 @@ export interface BudgetResponse {
   manual_grams: number | null;
   hours: number;
   minutes: number;
-  margin_type: 'wholesale' | 'retail' | 'keychain';
+  margin_type: BudgetMarginType;
   extra_costs: number;
+  assembly_cost: number;
+  sanding_cost: number;
+  painting_cost: number;
   error_margin_percent: number;
   margin_multiplier: number;
   final_price: number;
   manual_price: number | null;
-  ml_price: number;
   filament_total: number;
   electricity_cost: number;
   amortization_cost: number;
   subtotal: number;
   subtotal_with_error: number;
+  post_processing_total: number;
   total_before_margin: number;
   notes: string | null;
   created_at: string;

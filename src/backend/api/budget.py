@@ -1,7 +1,6 @@
 import logging
 from datetime import datetime, timezone
 from decimal import Decimal
-from typing import Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -46,7 +45,11 @@ CALC_AFFECTING_FIELDS = frozenset({
     "hours",
     "minutes",
     "extra_costs",
+    "assembly_cost",
+    "sanding_cost",
+    "painting_cost",
     "margin_type",
+    "margin_multiplier",
     "manual_price",
     "currency",
 })
@@ -121,19 +124,6 @@ async def _get_printer_name(db: AsyncSession, budget: Budget) -> str | None:
     return result.scalar_one_or_none()
 
 
-def _margin_multipliers_from_params(params: dict[str, Decimal]) -> dict[str, Decimal]:
-    return {
-        "wholesale": params["margin_multiplier_wholesale"],
-        "retail": params["margin_multiplier_retail"],
-        "keychain": params["margin_multiplier_keychain"],
-    }
-
-
-def _snapshot_margin_multipliers(budget: Budget) -> dict[str, Decimal]:
-    multiplier = Decimal(str(budget.margin_multiplier))
-    return {budget.margin_type: multiplier}
-
-
 async def _build_budget_response(
     db: AsyncSession,
     budget: Budget,
@@ -169,12 +159,15 @@ async def _build_budget_response(
             hours=budget.hours,
             minutes=budget.minutes,
             extra_costs=Decimal(str(budget.extra_costs)),
+            assembly_cost=Decimal(str(budget.assembly_cost)),
+            sanding_cost=Decimal(str(budget.sanding_cost)),
+            painting_cost=Decimal(str(budget.painting_cost)),
             margin_type=budget.margin_type,
+            margin_multiplier=Decimal(str(budget.margin_multiplier)),
             manual_price=manual_price,
             currency=currency,
             electricity_price_kwh=electricity_price_kwh,
             error_margin_percent=Decimal(str(budget.error_margin_percent)),
-            margin_multipliers=_snapshot_margin_multipliers(budget),
             power_watts=machine["power_watts"],
             lifespan_hours=machine["lifespan_hours"],
             spare_parts_cost=machine["spare_parts_cost"],
@@ -197,16 +190,19 @@ async def _build_budget_response(
         "minutes": budget.minutes,
         "margin_type": budget.margin_type,
         "extra_costs": float(budget.extra_costs),
+        "assembly_cost": float(budget.assembly_cost),
+        "sanding_cost": float(budget.sanding_cost),
+        "painting_cost": float(budget.painting_cost),
         "error_margin_percent": breakdown["error_margin_percent"],
         "margin_multiplier": breakdown["margin_multiplier"],
         "final_price": float(budget.final_price),
         "manual_price": float(budget.manual_price) if budget.manual_price is not None else None,
-        "ml_price": breakdown["ml_price"],
         "filament_total": breakdown["filament_total"],
         "electricity_cost": breakdown["electricity_cost"],
         "amortization_cost": breakdown["amortization_cost"],
         "subtotal": breakdown["subtotal"],
         "subtotal_with_error": breakdown["subtotal_with_error"],
+        "post_processing_total": breakdown["post_processing_total"],
         "total_before_margin": breakdown["total_before_margin"],
         "notes": budget.notes,
         "created_at": budget.created_at.isoformat() if hasattr(budget.created_at, 'isoformat') else str(budget.created_at),
@@ -246,12 +242,15 @@ async def create_budget(
         hours=body.hours,
         minutes=body.minutes,
         extra_costs=body.extra_costs,
+        assembly_cost=body.assembly_cost,
+        sanding_cost=body.sanding_cost,
+        painting_cost=body.painting_cost,
         margin_type=body.margin_type,
+        margin_multiplier=body.margin_multiplier,
         manual_price=body.manual_price,
         currency=effective_currency,
         electricity_price_kwh=params["electricity_price_kwh"],
         error_margin_percent=params["error_margin_percent"],
-        margin_multipliers=_margin_multipliers_from_params(params),
         power_watts=machine_params["power_watts"],
         lifespan_hours=machine_params["lifespan_hours"],
         spare_parts_cost=machine_params["spare_parts_cost"],
@@ -268,6 +267,9 @@ async def create_budget(
         hours=body.hours,
         minutes=body.minutes,
         extra_costs=body.extra_costs,
+        assembly_cost=body.assembly_cost,
+        sanding_cost=body.sanding_cost,
+        painting_cost=body.painting_cost,
         margin_type=body.margin_type,
         error_margin_percent=calc_result["error_margin_percent"],
         margin_multiplier=calc_result["margin_multiplier"],
@@ -364,14 +366,17 @@ async def update_budget(
             hours=body.hours if body.hours is not None else budget.hours,
             minutes=body.minutes if body.minutes is not None else budget.minutes,
             extra_costs=body.extra_costs if body.extra_costs is not None else float(budget.extra_costs),
+            assembly_cost=body.assembly_cost if body.assembly_cost is not None else float(budget.assembly_cost),
+            sanding_cost=body.sanding_cost if body.sanding_cost is not None else float(budget.sanding_cost),
+            painting_cost=body.painting_cost if body.painting_cost is not None else float(budget.painting_cost),
             margin_type=body.margin_type if body.margin_type is not None else budget.margin_type,
+            margin_multiplier=body.margin_multiplier if "margin_multiplier" in body.model_fields_set else float(budget.margin_multiplier),
             manual_price=body.manual_price if body.manual_price is not None else (
                 float(budget.manual_price) if budget.manual_price is not None else None
             ),
             currency=effective_currency,
             electricity_price_kwh=params["electricity_price_kwh"],
             error_margin_percent=params["error_margin_percent"],
-            margin_multipliers=_margin_multipliers_from_params(params),
             power_watts=power_watts,
             lifespan_hours=lifespan_hours,
             spare_parts_cost=spare_parts_cost,
@@ -399,6 +404,12 @@ async def update_budget(
         budget.minutes = body.minutes
     if body.extra_costs is not None:
         budget.extra_costs = body.extra_costs
+    if body.assembly_cost is not None:
+        budget.assembly_cost = body.assembly_cost
+    if body.sanding_cost is not None:
+        budget.sanding_cost = body.sanding_cost
+    if body.painting_cost is not None:
+        budget.painting_cost = body.painting_cost
     if body.margin_type is not None:
         budget.margin_type = body.margin_type
     if body.manual_price is not None:
@@ -441,12 +452,15 @@ async def preview_budget(
         hours=body.hours,
         minutes=body.minutes,
         extra_costs=body.extra_costs,
+        assembly_cost=body.assembly_cost,
+        sanding_cost=body.sanding_cost,
+        painting_cost=body.painting_cost,
         margin_type=body.margin_type,
+        margin_multiplier=body.margin_multiplier,
         manual_price=body.manual_price,
         currency=effective_currency,
         electricity_price_kwh=params["electricity_price_kwh"],
         error_margin_percent=params["error_margin_percent"],
-        margin_multipliers=_margin_multipliers_from_params(params),
         power_watts=machine_params["power_watts"],
         lifespan_hours=machine_params["lifespan_hours"],
         spare_parts_cost=machine_params["spare_parts_cost"],
@@ -469,16 +483,19 @@ async def preview_budget(
         "minutes": body.minutes,
         "margin_type": body.margin_type,
         "extra_costs": body.extra_costs,
+        "assembly_cost": body.assembly_cost,
+        "sanding_cost": body.sanding_cost,
+        "painting_cost": body.painting_cost,
         "error_margin_percent": calc_result["error_margin_percent"],
         "margin_multiplier": calc_result["margin_multiplier"],
         "final_price": calc_result["final_price"],
         "manual_price": body.manual_price,
-        "ml_price": calc_result["ml_price"],
         "filament_total": calc_result["filament_total"],
         "electricity_cost": calc_result["electricity_cost"],
         "amortization_cost": calc_result["amortization_cost"],
         "subtotal": calc_result["subtotal"],
         "subtotal_with_error": calc_result["subtotal_with_error"],
+        "post_processing_total": calc_result["post_processing_total"],
         "total_before_margin": calc_result["total_before_margin"],
         "notes": None,
         "created_at": datetime.now(timezone.utc).isoformat(),
@@ -527,9 +544,6 @@ async def update_budget_parameters(
             currency=currency,
             electricity_price_kwh=values["electricity_price_kwh"],
             error_margin_percent=values["error_margin_percent"],
-            margin_multiplier_wholesale=values["margin_multiplier_wholesale"],
-            margin_multiplier_retail=values["margin_multiplier_retail"],
-            margin_multiplier_keychain=values["margin_multiplier_keychain"],
             is_default=False,
         )
         db.add(row)

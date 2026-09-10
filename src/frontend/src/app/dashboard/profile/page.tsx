@@ -74,9 +74,6 @@ function MakerParametersBlock() {
       const toUpdate = (c: Currency) => ({
         electricity_price_kwh: data.parameters[c].electricity_price_kwh,
         error_margin_percent: data.parameters[c].error_margin_percent,
-        margin_multiplier_wholesale: data.parameters[c].margin_multiplier_wholesale,
-        margin_multiplier_retail: data.parameters[c].margin_multiplier_retail,
-        margin_multiplier_keychain: data.parameters[c].margin_multiplier_keychain,
       });
       const initial: Record<Currency, BudgetParametersUpdate> = {
         ARS: toUpdate('ARS'),
@@ -111,11 +108,6 @@ function MakerParametersBlock() {
     if (!(v.error_margin_percent >= 0 && v.error_margin_percent <= 100)) {
       errors.error_margin_percent = 'Debe estar entre 0 y 100.';
     }
-    for (const key of ['margin_multiplier_wholesale', 'margin_multiplier_retail', 'margin_multiplier_keychain'] as const) {
-      if (!(v[key] > 0 && v[key] <= 100)) {
-        errors[key] = 'Debe ser mayor a 0 y hasta 100.';
-      }
-    }
     return errors;
   };
 
@@ -129,9 +121,6 @@ function MakerParametersBlock() {
           [activeCurrency]: {
             electricity_price_kwh: saved.electricity_price_kwh,
             error_margin_percent: saved.error_margin_percent,
-            margin_multiplier_wholesale: saved.margin_multiplier_wholesale,
-            margin_multiplier_retail: saved.margin_multiplier_retail,
-            margin_multiplier_keychain: saved.margin_multiplier_keychain,
           },
         };
       });
@@ -177,9 +166,6 @@ function MakerParametersBlock() {
   const fields: { key: keyof BudgetParametersUpdate; label: string }[] = [
     { key: 'electricity_price_kwh', label: 'Precio kWh' },
     { key: 'error_margin_percent', label: 'Margen de error %' },
-    { key: 'margin_multiplier_wholesale', label: 'Margen de ganancia mayorista (wholesale)' },
-    { key: 'margin_multiplier_retail', label: 'Margen de ganancia minorista (retail)' },
-    { key: 'margin_multiplier_keychain', label: 'Margen de ganancia llaveros (keychain)' },
   ];
 
   return (

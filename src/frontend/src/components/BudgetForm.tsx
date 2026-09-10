@@ -12,9 +12,9 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   fetchFilaments, createBudget, updateBudget, previewBudget, fetchPrinters,
-  CURRENCY_OPTIONS, currencySymbol, MACHINE_DEFAULT_FALLBACKS,
+  CURRENCY_OPTIONS, currencySymbol, MACHINE_DEFAULT_FALLBACKS, BUDGET_MARGIN_OPTIONS,
   type Currency,
-  type BudgetResponse, type FilamentItemInput, type Filament, type Printer,
+  type BudgetMarginType, type BudgetResponse, type FilamentItemInput, type Filament, type Printer,
 } from '@/app/api';
 import { useAuth } from '@/app/auth-context';
 
@@ -33,6 +33,10 @@ interface Props {
 
 function itemKey(index: number) {
   return `item-${index}`;
+}
+
+function marginTypeFor(multiplier: number): BudgetMarginType {
+  return BUDGET_MARGIN_OPTIONS.find((option) => option.multiplier === multiplier)?.value ?? 'custom';
 }
 
 export default function BudgetForm({ open, onClose, orderId, existingBudget }: Props) {
@@ -59,9 +63,13 @@ export default function BudgetForm({ open, onClose, orderId, existingBudget }: P
   const [hours, setHours] = useState(existingBudget?.hours?.toString() ?? '0');
   const [minutes, setMinutes] = useState(existingBudget?.minutes?.toString() ?? '0');
   const [extraCosts, setExtraCosts] = useState(existingBudget?.extra_costs?.toString() ?? '0');
-  const [marginType, setMarginType] = useState<'wholesale' | 'retail' | 'keychain'>(
-    existingBudget?.margin_type ?? 'retail',
+  const [assemblyCost, setAssemblyCost] = useState(existingBudget?.assembly_cost?.toString() ?? '0');
+  const [sandingCost, setSandingCost] = useState(existingBudget?.sanding_cost?.toString() ?? '0');
+  const [paintingCost, setPaintingCost] = useState(existingBudget?.painting_cost?.toString() ?? '0');
+  const [postProcessingEnabled, setPostProcessingEnabled] = useState(
+    Boolean((existingBudget?.assembly_cost ?? 0) || (existingBudget?.sanding_cost ?? 0) || (existingBudget?.painting_cost ?? 0)),
   );
+  const [marginMultiplier, setMarginMultiplier] = useState(existingBudget?.margin_multiplier?.toString() ?? '4');
   const [manualPrice, setManualPrice] = useState(
     existingBudget?.manual_price?.toString() ?? '',
   );
@@ -89,8 +97,12 @@ export default function BudgetForm({ open, onClose, orderId, existingBudget }: P
     manual_grams: number | null;
     hours: number;
     minutes: number;
-    margin_type: 'wholesale' | 'retail' | 'keychain';
+    margin_type: BudgetMarginType;
+    margin_multiplier: number | null;
     extra_costs: number;
+    assembly_cost: number;
+    sanding_cost: number;
+    painting_cost: number;
     manual_price: number | null;
     notes: string;
   } => {
@@ -101,6 +113,8 @@ export default function BudgetForm({ open, onClose, orderId, existingBudget }: P
           product_name: i.product_id ? null : (i.product_name || null),
           grams: i.grams,
         }));
+    const parsedMargin = parseFloat(marginMultiplier);
+    const effectiveMargin = Number.isFinite(parsedMargin) ? parsedMargin : 0;
     return {
       currency,
       printer_id: printerId || null,
@@ -109,12 +123,16 @@ export default function BudgetForm({ open, onClose, orderId, existingBudget }: P
       manual_grams: useManualFilament ? (parseFloat(manualGrams) || null) : null,
       hours: parseInt(hours) || 0,
       minutes: Math.min(parseInt(minutes) || 0, 59),
-      margin_type: marginType,
+      margin_type: marginTypeFor(effectiveMargin),
+      margin_multiplier: effectiveMargin || null,
       extra_costs: parseFloat(extraCosts) || 0,
+      assembly_cost: postProcessingEnabled ? (parseFloat(assemblyCost) || 0) : 0,
+      sanding_cost: postProcessingEnabled ? (parseFloat(sandingCost) || 0) : 0,
+      painting_cost: postProcessingEnabled ? (parseFloat(paintingCost) || 0) : 0,
       manual_price: manualPrice ? (parseFloat(manualPrice) || null) : null,
       notes: notes || '',
     };
-  }, [currency, printerId, items, useManualFilament, manualFilamentCost, manualGrams, hours, minutes, marginType, extraCosts, manualPrice, notes]);
+  }, [currency, printerId, items, useManualFilament, manualFilamentCost, manualGrams, hours, minutes, marginMultiplier, extraCosts, postProcessingEnabled, assemblyCost, sandingCost, paintingCost, manualPrice, notes]);
 
   useEffect(() => {
     if (!open) return;
@@ -172,12 +190,14 @@ export default function BudgetForm({ open, onClose, orderId, existingBudget }: P
     updateItem(index, 'product_name', filament?.color_name ?? null);
   };
 
-  const marginLabel = (v: string) => {
-    switch (v) {
-      case 'wholesale': return 'Mayorista';
-      case 'retail': return 'Comercio';
-      case 'keychain': return 'Llavero';
-      default: return v;
+  const parsedMargin = parseFloat(marginMultiplier);
+  const selectedMarginOption = BUDGET_MARGIN_OPTIONS.find((option) => option.multiplier === parsedMargin);
+  const handlePostProcessingToggle = (enabled: boolean) => {
+    setPostProcessingEnabled(enabled);
+    if (!enabled) {
+      setAssemblyCost('0');
+      setSandingCost('0');
+      setPaintingCost('0');
     }
   };
 
@@ -323,18 +343,77 @@ export default function BudgetForm({ open, onClose, orderId, existingBudget }: P
             slotProps={{ htmlInput: { min: 0, step: 0.01 } }}
           />
 
-          <FormControl size="small" sx={{ width: 200 }}>
-            <InputLabel>Tipo de margen</InputLabel>
-            <Select<'wholesale' | 'retail' | 'keychain'>
-              value={marginType}
-              label="Tipo de margen"
-              onChange={(e) => setMarginType(e.target.value as 'wholesale' | 'retail' | 'keychain')}
-            >
-              <MenuItem value="wholesale">Mayorista</MenuItem>
-              <MenuItem value="retail">Comercio</MenuItem>
-              <MenuItem value="keychain">Llavero</MenuItem>
-            </Select>
-          </FormControl>
+          <div className="rounded-md border border-line p-2">
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={postProcessingEnabled}
+                  onChange={(e) => handlePostProcessingToggle(e.target.checked)}
+                />
+              }
+              label="Requiere post-procesado"
+            />
+            {postProcessingEnabled && (
+              <div className="mt-1 flex flex-wrap gap-2">
+                <TextField
+                  label="Ensamble"
+                  type="number"
+                  value={assemblyCost}
+                  onChange={(e) => setAssemblyCost(e.target.value)}
+                  size="small"
+                  sx={{ width: 150 }}
+                  slotProps={{ htmlInput: { min: 0, step: 0.01 } }}
+                />
+                <TextField
+                  label="Lijado"
+                  type="number"
+                  value={sandingCost}
+                  onChange={(e) => setSandingCost(e.target.value)}
+                  size="small"
+                  sx={{ width: 150 }}
+                  slotProps={{ htmlInput: { min: 0, step: 0.01 } }}
+                />
+                <TextField
+                  label="Pintura / barniz"
+                  type="number"
+                  value={paintingCost}
+                  onChange={(e) => setPaintingCost(e.target.value)}
+                  size="small"
+                  sx={{ width: 170 }}
+                  slotProps={{ htmlInput: { min: 0, step: 0.01 } }}
+                />
+              </div>
+            )}
+          </div>
+
+          <div className="rounded-md border border-line p-2">
+            <p className="mb-2 text-sm font-medium">Margen de ganancia</p>
+            <div className="mb-2 flex flex-wrap gap-1">
+              {BUDGET_MARGIN_OPTIONS.map((option) => (
+                <Button
+                  key={option.value}
+                  size="small"
+                  variant={parsedMargin === option.multiplier ? 'contained' : 'outlined'}
+                  onClick={() => setMarginMultiplier(String(option.multiplier))}
+                >
+                  {option.label}
+                </Button>
+              ))}
+            </div>
+            <TextField
+              label="Multiplicador"
+              type="number"
+              value={marginMultiplier}
+              onChange={(e) => setMarginMultiplier(e.target.value)}
+              size="small"
+              sx={{ width: 240 }}
+              slotProps={{ htmlInput: { min: 0.01, max: 100, step: 0.1 } }}
+              helperText="Los botones son referencias; otros valores válidos se usan como personalizado."
+            />
+            <p className="mt-1 text-xs text-slate">
+              Referencia: {selectedMarginOption ? `${selectedMarginOption.label} ${selectedMarginOption.reference}` : 'Personalizado'}
+            </p>
+          </div>
 
           <TextField
             label="Precio manual (opcional)"
@@ -390,6 +469,10 @@ export default function BudgetForm({ open, onClose, orderId, existingBudget }: P
                     <TableCell align="right">{currencySymbol(preview.currency)}{preview.extra_costs.toFixed(2)}</TableCell>
                   </TableRow>
                   <TableRow>
+                    <TableCell sx={{ fontWeight: 600 }}>Post-procesado</TableCell>
+                    <TableCell align="right">{currencySymbol(preview.currency)}{preview.post_processing_total.toFixed(2)}</TableCell>
+                  </TableRow>
+                  <TableRow>
                     <TableCell sx={{ fontWeight: 600 }}>Multiplicador ({preview.margin_multiplier}x)</TableCell>
                     <TableCell align="right">{currencySymbol(preview.currency)}{preview.total_before_margin.toFixed(2)}</TableCell>
                   </TableRow>
@@ -400,15 +483,9 @@ export default function BudgetForm({ open, onClose, orderId, existingBudget }: P
                     </TableRow>
                   )}
                   <TableRow>
-                    <TableCell sx={{ fontWeight: 700, fontSize: '1.1rem' }}>Precio final</TableCell>
+                    <TableCell sx={{ fontWeight: 700, fontSize: '1.1rem' }}>Precio final pieza</TableCell>
                     <TableCell align="right" sx={{ fontWeight: 700, fontSize: '1.1rem' }}>
                       {currencySymbol(preview.currency)}{preview.final_price.toFixed(2)}
-                    </TableCell>
-                  </TableRow>
-                  <TableRow>
-                    <TableCell sx={{ color: 'text.secondary' }}>Precio ML sugerido</TableCell>
-                    <TableCell align="right" sx={{ color: 'text.secondary', fontSize: '0.9rem' }}>
-                      {currencySymbol(preview.currency)}{preview.ml_price.toFixed(2)}
                     </TableCell>
                   </TableRow>
                 </TableBody>

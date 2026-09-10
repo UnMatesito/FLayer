@@ -1,11 +1,15 @@
 import uuid
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Integer, Numeric, String, Text, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from backend.database import Base
+
+if TYPE_CHECKING:
+    from backend.models.printer import Printer
 
 
 class Budget(Base):
@@ -36,6 +40,15 @@ class Budget(Base):
     hours: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
     minutes: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
     extra_costs: Mapped[float] = mapped_column(
+        Numeric(12, 2), nullable=False, server_default="0"
+    )
+    assembly_cost: Mapped[float] = mapped_column(
+        Numeric(12, 2), nullable=False, server_default="0"
+    )
+    sanding_cost: Mapped[float] = mapped_column(
+        Numeric(12, 2), nullable=False, server_default="0"
+    )
+    painting_cost: Mapped[float] = mapped_column(
         Numeric(12, 2), nullable=False, server_default="0"
     )
     margin_type: Mapped[str] = mapped_column(
@@ -77,4 +90,7 @@ class Budget(Base):
         CheckConstraint("power_watts >= 0", name="ck_budgets_power_watts_non_negative"),
         CheckConstraint("lifespan_hours >= 0", name="ck_budgets_lifespan_hours_non_negative"),
         CheckConstraint("spare_parts_cost >= 0", name="ck_budgets_spare_parts_cost_non_negative"),
+        CheckConstraint("assembly_cost >= 0", name="ck_budgets_assembly_cost_non_negative"),
+        CheckConstraint("sanding_cost >= 0", name="ck_budgets_sanding_cost_non_negative"),
+        CheckConstraint("painting_cost >= 0", name="ck_budgets_painting_cost_non_negative"),
     )

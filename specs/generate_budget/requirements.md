@@ -131,3 +131,57 @@ AND a `printer_id` that does not exist or belongs to another user is rejected
   the budget's currency) → future feature
 - Resin printing costs → future feature
 - PDF generation of budget → future enhancement
+
+## Revision — 2026-09-09: per-budget earnings margin and post-processing
+
+## R12. Budget — Per-budget earnings margin presets
+
+GIVEN the operator is creating, updating, or previewing a budget
+WHEN they select an earnings margin preset
+THEN the calculation uses the selected preset's multiplier for that budget
+AND the multiplier is snapshotted on the budget row as `margin_multiplier`
+AND the old regional multiplier settings (`wholesale`, `retail`, `keychain`)
+    are not read from `budget_parameters` anymore
+
+Preset reference:
+
+| Multiplier | API value | Reference |
+|---|---|---|
+| `2.0` | `high_volume` | Alto volumen / descuento |
+| `2.5` | `medium_volume` | Volumen medio |
+| `3.0` | `wholesale` | Mayorista |
+| `3.5` | `intermediate` | Intermedio |
+| `4.0` | `retail` | Minorista |
+| `5.0` | `keychain` | Llaveros / piezas chicas |
+
+## R13. Budget — Custom earnings margin
+
+GIVEN the operator is creating, updating, or previewing a budget
+WHEN they use the numeric earnings margin input
+THEN they can enter a custom multiplier greater than 0 and at most 100
+AND pressing any preset button writes that preset value into the numeric input
+AND only a numeric value that exactly matches a preset keeps that preset button enabled
+AND any other valid numeric value, such as `6`, disables all preset buttons and is treated as `custom`
+AND the calculation uses the numeric input's multiplier
+
+## R14. Budget — Post-processing costs
+
+GIVEN the operator is creating, updating, or previewing a budget
+WHEN they enable post-processing
+THEN they can enter amounts for assembly, sanding, and painting/varnish
+AND each value is accepted as a free non-negative number input
+AND the system calculates `post_processing_total` as their sum
+AND `post_processing_total` is added before applying the earnings margin
+AND the response displays each post-processing line and the total
+
+GIVEN the operator disables post-processing
+WHEN they create, update, or preview a budget
+THEN the post-processing inputs are not editable
+AND the submitted post-processing values are all zero
+
+## R15. Budget — MercadoLibre convenience price removed
+
+GIVEN the operator reads or previews a budget
+WHEN the budget response is returned
+THEN no MercadoLibre/ML price is calculated or displayed
+AND the UI no longer shows the extra ML suggested price line

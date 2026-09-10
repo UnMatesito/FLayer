@@ -73,17 +73,18 @@ electricity_cost       = (hours + min/60) × (watts / 1000) × price_kwh
 amortization_cost      = (hours + min/60) × (parts_cost / machine_lifespan_hours)
 subtotal               = sum of the 3 above
 subtotal_with_error    = subtotal × (1 + error_margin_percent / 100)
-final_price            = subtotal_with_error × margin_multiplier
+post_processing_total  = assembly_cost + sanding_cost + painting_cost
+total_before_margin    = subtotal_with_error + extra_costs + post_processing_total
+final_price            = total_before_margin × margin_multiplier
 ```
 
-`margin_multiplier` depends on type (wholesale/retail/keychain), comes from
-`budget_parameters`. The five configurable values (`electricity_price_kwh`,
-`error_margin_percent`, `margin_multiplier_wholesale`,
-`margin_multiplier_retail`, `margin_multiplier_keychain`) come from
-`budget_parameters` per `(user_id, currency)` (table owned by
-`region_parameters`), seeded on first access with the pre-feature defaults
-and editable via the Perfil page. `users.currency` (default `'ARS'`) drives
-the budget currency default when the form omits `currency`. `budgets`
-snapshots `electricity_price_kwh`, `error_margin_percent` and
-`margin_multiplier` at calculation time (`NULL` electricity snapshot = a
+`margin_multiplier` is selected per budget from fixed presets (`2.0` alto
+volumen / descuento, `2.5` volumen medio, `3.0` mayorista, `3.5` intermedio,
+`4.0` minorista, `5.0` llaveros / piezas chicas) or from a custom value. The
+regional `budget_parameters` table now configures only `electricity_price_kwh`
+and `error_margin_percent` per `(user_id, currency)`, seeded on first access and
+editable via the Perfil page. `users.currency` (default `'ARS'`) drives the
+budget currency default when the form omits `currency`. `budgets` snapshots
+`electricity_price_kwh`, `error_margin_percent`, `margin_multiplier`, and the
+post-processing inputs at calculation time (`NULL` electricity snapshot = a
 pre-`region_parameters` budget → falls back to the seeded value at read).

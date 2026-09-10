@@ -72,3 +72,32 @@
 - [x] `test_update_budget_final_price_recalculated_on_partial_update` — PUT hours/extra_costs/manual_price-only recalculates stored `final_price` (R1–R4 regression, review follow-up)
 
 Estimated total: R11 addition ~8h (backend 3h, frontend 2h, tests 3h)
+
+## Revision tasks — 2026-09-09
+
+### Backend
+
+- [x] Migration `020`: add post-processing cost columns to `budgets`; remove regional margin multiplier columns from `budget_parameters` (R12, R14)
+- [x] Models: add `assembly_cost`, `sanding_cost`, `painting_cost`; remove budget-parameter multiplier fields and checks (R12, R14)
+- [x] Schemas: expand margin types, add optional custom `margin_multiplier`, add post-processing fields, remove `ml_price` from responses (R12–R15)
+- [x] Service/API: calculate preset/custom margin per budget; add `post_processing_total`; stop computing/returning ML price (R12–R15)
+- [x] Tests: presets, custom margin validation, post-processing math/snapshots, ML removal, six-currency update regression (R12–R15)
+
+### Frontend
+
+- [x] API types: remove regional margin fields and `ml_price`; add margin preset union/custom multiplier and post-processing fields (R12–R15)
+- [x] Budget form: replace old 3-option margin selector with preset/custom selector and reference copy; add post-processing section (R12–R14)
+- [x] Budget breakdown: show selected margin reference and post-processing lines; remove ML suggested price (R12–R15)
+- [x] Profile parameters: keep only electricity price and error margin in regional settings (R12)
+- [x] Verify: backend pytest, frontend `npx tsc --noEmit`, frontend build, `./init.sh` harness (R12–R15)
+
+## Revision tasks — 2026-09-09 follow-up
+
+- [x] Backend schemas/tests: restore custom margin values outside preset range (`>0..100`) (R13)
+- [x] Budget form: replace margin select with preset buttons plus numeric margin input (R13)
+- [x] Budget form: add post-processing toggle and submit zero costs when disabled (R14)
+- [x] Frontend test infra: Vitest + jsdom + @testing-library/react + user-event, `pnpm test` script (R13–R15)
+- [x] Frontend component tests: preset buttons write numeric margin input / exact preset stays active / custom `6` submits `custom` (R13)
+- [x] Frontend component test: post-processing toggle-off removes inputs and submits zero costs (R14)
+- [x] Frontend component test: no ML suggested price line rendered in form preview and breakdown (R15)
+- [x] Progress: R11 added to the R→test traceability map in `progress/impl_generate_budget.md` (R11)

@@ -14,49 +14,40 @@ logger = logging.getLogger(__name__)
 SEED_PARAMETERS_ARS = {
     "electricity_price_kwh": Decimal("140.00"),
     "error_margin_percent": Decimal("5.00"),
-    "margin_multiplier_wholesale": Decimal("3.00"),
-    "margin_multiplier_retail": Decimal("4.00"),
-    "margin_multiplier_keychain": Decimal("5.00"),
 }
 
 SEED_PARAMETERS_USD = {
     "electricity_price_kwh": Decimal("0.15"),
     "error_margin_percent": Decimal("5.00"),
-    "margin_multiplier_wholesale": Decimal("3.00"),
-    "margin_multiplier_retail": Decimal("4.00"),
-    "margin_multiplier_keychain": Decimal("5.00"),
 }
 
 SEED_PARAMETERS_EUR = {
     "electricity_price_kwh": Decimal("0.25"),
     "error_margin_percent": Decimal("5.00"),
-    "margin_multiplier_wholesale": Decimal("3.00"),
-    "margin_multiplier_retail": Decimal("4.00"),
-    "margin_multiplier_keychain": Decimal("5.00"),
 }
 
 SEED_PARAMETERS_BRL = {
     "electricity_price_kwh": Decimal("0.80"),
     "error_margin_percent": Decimal("5.00"),
-    "margin_multiplier_wholesale": Decimal("3.00"),
-    "margin_multiplier_retail": Decimal("4.00"),
-    "margin_multiplier_keychain": Decimal("5.00"),
 }
 
 SEED_PARAMETERS_GBP = {
     "electricity_price_kwh": Decimal("0.25"),
     "error_margin_percent": Decimal("5.00"),
-    "margin_multiplier_wholesale": Decimal("3.00"),
-    "margin_multiplier_retail": Decimal("4.00"),
-    "margin_multiplier_keychain": Decimal("5.00"),
 }
 
 SEED_PARAMETERS_MXN = {
     "electricity_price_kwh": Decimal("2.50"),
     "error_margin_percent": Decimal("5.00"),
-    "margin_multiplier_wholesale": Decimal("3.00"),
-    "margin_multiplier_retail": Decimal("4.00"),
-    "margin_multiplier_keychain": Decimal("5.00"),
+}
+
+MARGIN_PRESETS: dict[str, Decimal] = {
+    "high_volume": Decimal("2.00"),
+    "medium_volume": Decimal("2.50"),
+    "wholesale": Decimal("3.00"),
+    "intermediate": Decimal("3.50"),
+    "retail": Decimal("4.00"),
+    "keychain": Decimal("5.00"),
 }
 
 MACHINE_DEFAULTS_ARS = {
@@ -116,9 +107,6 @@ MACHINE_DEFAULTS: dict[str, dict[str, Decimal]] = {
 CONFIGURABLE_KEYS = frozenset({
     "electricity_price_kwh",
     "error_margin_percent",
-    "margin_multiplier_wholesale",
-    "margin_multiplier_retail",
-    "margin_multiplier_keychain",
 })
 
 
@@ -151,9 +139,6 @@ async def get_budget_parameters(
             currency=currency,
             electricity_price_kwh=seed["electricity_price_kwh"],
             error_margin_percent=seed["error_margin_percent"],
-            margin_multiplier_wholesale=seed["margin_multiplier_wholesale"],
-            margin_multiplier_retail=seed["margin_multiplier_retail"],
-            margin_multiplier_keychain=seed["margin_multiplier_keychain"],
             is_default=True,
         )
         db.add(row)
@@ -163,10 +148,18 @@ async def get_budget_parameters(
     return {
         "electricity_price_kwh": Decimal(str(row.electricity_price_kwh)),
         "error_margin_percent": Decimal(str(row.error_margin_percent)),
-        "margin_multiplier_wholesale": Decimal(str(row.margin_multiplier_wholesale)),
-        "margin_multiplier_retail": Decimal(str(row.margin_multiplier_retail)),
-        "margin_multiplier_keychain": Decimal(str(row.margin_multiplier_keychain)),
     }
+
+
+def resolve_margin_multiplier(
+    margin_type: str,
+    custom_multiplier: Decimal | None,
+) -> Decimal:
+    if margin_type == "custom":
+        if custom_multiplier is None:
+            raise ValueError("custom margin requires a multiplier")
+        return custom_multiplier
+    return MARGIN_PRESETS[margin_type]
 
 
 def resolve_machine_params(
@@ -204,12 +197,15 @@ def calculate_breakdown(
     hours: int,
     minutes: int,
     extra_costs: Decimal,
+    assembly_cost: Decimal,
+    sanding_cost: Decimal,
+    painting_cost: Decimal,
     margin_type: str,
+    margin_multiplier: Decimal | None,
     manual_price: Decimal | None,
     currency: str,
     electricity_price_kwh: Decimal,
     error_margin_percent: Decimal,
-    margin_multipliers: dict[str, Decimal],
     power_watts: Decimal,
     lifespan_hours: Decimal,
     spare_parts_cost: Decimal,
@@ -232,16 +228,15 @@ def calculate_breakdown(
     amortization_cost = time_hours * (machine_cost / machine_lifespan_hours)
     subtotal = filament_total + electricity_cost + amortization_cost
     subtotal_with_error = subtotal * (Decimal("1") + error_margin_percent / Decimal("100"))
-    total_before_margin = subtotal_with_error + extra_costs
+    post_processing_total = assembly_cost + sanding_cost + painting_cost
+    total_before_margin = subtotal_with_error + extra_costs + post_processing_total
 
-    margin_multiplier = margin_multipliers[margin_type]
+    resolved_margin_multiplier = resolve_margin_multiplier(margin_type, margin_multiplier)
 
     if manual_price is not None:
         final_price = manual_price
     else:
-        final_price = total_before_margin * margin_multiplier
-
-    ml_price = final_price * Decimal("1.30")
+        final_price = total_before_margin * resolved_margin_multiplier
 
     return {
         "filament_total": float(round(filament_total, 2)),
@@ -249,10 +244,10 @@ def calculate_breakdown(
         "amortization_cost": float(round(amortization_cost, 2)),
         "subtotal": float(round(subtotal, 2)),
         "subtotal_with_error": float(round(subtotal_with_error, 2)),
+        "post_processing_total": float(round(post_processing_total, 2)),
         "total_before_margin": float(round(total_before_margin, 2)),
         "final_price": float(round(final_price, 2)),
-        "ml_price": float(round(ml_price, 2)),
-        "margin_multiplier": float(margin_multiplier),
+        "margin_multiplier": float(resolved_margin_multiplier),
         "error_margin_percent": float(error_margin_percent),
         "power_watts": float(machine_wattage),
         "lifespan_hours": float(machine_lifespan_hours),
@@ -311,12 +306,15 @@ class BudgetCalculator:
         hours: int,
         minutes: int,
         extra_costs: float,
+        assembly_cost: float,
+        sanding_cost: float,
+        painting_cost: float,
         margin_type: str,
+        margin_multiplier: float | None,
         manual_price: float | None,
         currency: str,
         electricity_price_kwh: Decimal,
         error_margin_percent: Decimal,
-        margin_multipliers: dict[str, Decimal],
         power_watts: Decimal,
         lifespan_hours: Decimal,
         spare_parts_cost: Decimal,
@@ -329,12 +327,15 @@ class BudgetCalculator:
             hours=hours,
             minutes=minutes,
             extra_costs=Decimal(str(extra_costs)),
+            assembly_cost=Decimal(str(assembly_cost)),
+            sanding_cost=Decimal(str(sanding_cost)),
+            painting_cost=Decimal(str(painting_cost)),
             margin_type=margin_type,
+            margin_multiplier=Decimal(str(margin_multiplier)) if margin_multiplier is not None else None,
             manual_price=Decimal(str(manual_price)) if manual_price is not None else None,
             currency=currency,
             electricity_price_kwh=electricity_price_kwh,
             error_margin_percent=error_margin_percent,
-            margin_multipliers=margin_multipliers,
             power_watts=power_watts,
             lifespan_hours=lifespan_hours,
             spare_parts_cost=spare_parts_cost,
@@ -352,12 +353,15 @@ class BudgetCalculator:
         hours: int,
         minutes: int,
         extra_costs: float,
+        assembly_cost: float,
+        sanding_cost: float,
+        painting_cost: float,
         margin_type: str,
+        margin_multiplier: float | None,
         manual_price: float | None,
         currency: str,
         electricity_price_kwh: Decimal,
         error_margin_percent: Decimal,
-        margin_multipliers: dict[str, Decimal],
         power_watts: Decimal,
         lifespan_hours: Decimal,
         spare_parts_cost: Decimal,
@@ -368,12 +372,15 @@ class BudgetCalculator:
             hours=hours,
             minutes=minutes,
             extra_costs=Decimal(str(extra_costs)),
+            assembly_cost=Decimal(str(assembly_cost)),
+            sanding_cost=Decimal(str(sanding_cost)),
+            painting_cost=Decimal(str(painting_cost)),
             margin_type=margin_type,
+            margin_multiplier=Decimal(str(margin_multiplier)) if margin_multiplier is not None else None,
             manual_price=Decimal(str(manual_price)) if manual_price is not None else None,
             currency=currency,
             electricity_price_kwh=electricity_price_kwh,
             error_margin_percent=error_margin_percent,
-            margin_multipliers=margin_multipliers,
             power_watts=power_watts,
             lifespan_hours=lifespan_hours,
             spare_parts_cost=spare_parts_cost,

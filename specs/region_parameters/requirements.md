@@ -181,3 +181,24 @@ AND the operator can still switch to any of the six currencies
   `spare_parts_cost`) from this page — they belong to printer profiles
   (`printer_profiles`)
 - Per-order parameter overrides
+
+## Revision — 2026-09-09: margins leave regional settings
+
+## R18. Regional parameters no longer configure earnings margins
+
+GIVEN an authenticated operator reads or updates `budget_parameters`
+WHEN `GET /api/budget-parameters` or `PUT /api/budget-parameters/{currency}` is used
+THEN each currency entry contains only `electricity_price_kwh`,
+    `error_margin_percent`, `is_default`, and timestamps
+AND the old multiplier fields (`margin_multiplier_wholesale`,
+    `margin_multiplier_retail`, `margin_multiplier_keychain`) are not accepted
+    by the update schema
+
+## R19. Budget calculations use per-budget earnings margins
+
+GIVEN an operator creates, updates, or previews a budget
+WHEN the budget has a selected earnings margin preset or custom multiplier
+THEN the regional parameter row contributes only `electricity_price_kwh` and
+    `error_margin_percent`
+AND the earnings multiplier comes from the budget request/default preset, not
+    from the regional parameter row

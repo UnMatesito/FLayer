@@ -7,8 +7,28 @@ from pydantic import BaseModel, field_validator, model_validator
 from backend.schemas.auth import ALL_CURRENCIES
 
 
-VALID_MARGIN_TYPES = {"wholesale", "retail", "keychain"}
+VALID_MARGIN_TYPES = {
+    "high_volume",
+    "medium_volume",
+    "wholesale",
+    "intermediate",
+    "retail",
+    "keychain",
+    "custom",
+}
 VALID_CURRENCIES = set(ALL_CURRENCIES)
+
+
+def _validate_non_negative_amount(value: float, field_name: str) -> float:
+    if value < 0:
+        raise ValueError(f"{field_name} must be >= 0")
+    return value
+
+
+def _validate_margin_multiplier(value: float | None) -> float | None:
+    if value is not None and (value <= 0 or value > 100):
+        raise ValueError("margin_multiplier must be greater than 0 and at most 100")
+    return value
 
 
 class FilamentItemInput(BaseModel):
@@ -43,7 +63,11 @@ class BudgetCreate(BaseModel):
     hours: int = 0
     minutes: int = 0
     margin_type: str = "retail"
+    margin_multiplier: float | None = None
     extra_costs: float = 0.0
+    assembly_cost: float = 0.0
+    sanding_cost: float = 0.0
+    painting_cost: float = 0.0
     manual_price: float | None = None
     notes: str | None = None
 
@@ -51,7 +75,7 @@ class BudgetCreate(BaseModel):
     @classmethod
     def valid_currency(cls, v: str | None) -> str | None:
         if v is not None and v not in VALID_CURRENCIES:
-            raise ValueError(f"currency must be one of: {", ".join(sorted(VALID_CURRENCIES))}")
+            raise ValueError(f"currency must be one of: {', '.join(sorted(VALID_CURRENCIES))}")
         return v
 
     @field_validator("hours")
@@ -80,9 +104,17 @@ class BudgetCreate(BaseModel):
     @field_validator("extra_costs")
     @classmethod
     def extra_costs_non_negative(cls, v: float) -> float:
-        if v < 0:
-            raise ValueError("extra_costs must be >= 0")
-        return v
+        return _validate_non_negative_amount(v, "extra_costs")
+
+    @field_validator("assembly_cost", "sanding_cost", "painting_cost")
+    @classmethod
+    def post_processing_non_negative(cls, v: float) -> float:
+        return _validate_non_negative_amount(v, "post-processing cost")
+
+    @field_validator("margin_multiplier")
+    @classmethod
+    def margin_multiplier_range(cls, v: float | None) -> float | None:
+        return _validate_margin_multiplier(v)
 
     @field_validator("manual_filament_cost")
     @classmethod
@@ -111,6 +143,8 @@ class BudgetCreate(BaseModel):
             raise ValueError(
                 "At least one filament item is required when manual_filament_cost is not set"
             )
+        if self.margin_type == "custom" and self.margin_multiplier is None:
+            raise ValueError("margin_multiplier is required when margin_type is custom")
         return self
 
 
@@ -123,17 +157,19 @@ class BudgetUpdate(BaseModel):
     hours: int | None = None
     minutes: int | None = None
     margin_type: str | None = None
+    margin_multiplier: float | None = None
     extra_costs: float | None = None
+    assembly_cost: float | None = None
+    sanding_cost: float | None = None
+    painting_cost: float | None = None
     manual_price: float | None = None
     notes: str | None = None
 
     @field_validator("currency")
     @classmethod
     def valid_currency(cls, v: str | None) -> str | None:
-        if v is not None:
-            allowed = {"ARS", "USD"}
-            if v not in allowed:
-                raise ValueError(f"currency must be one of: {", ".join(sorted(VALID_CURRENCIES))}")
+        if v is not None and v not in VALID_CURRENCIES:
+            raise ValueError(f"currency must be one of: {', '.join(sorted(VALID_CURRENCIES))}")
         return v
 
     @field_validator("hours")
@@ -162,9 +198,21 @@ class BudgetUpdate(BaseModel):
     @field_validator("extra_costs")
     @classmethod
     def extra_costs_non_negative(cls, v: float | None) -> float | None:
-        if v is not None and v < 0:
-            raise ValueError("extra_costs must be >= 0")
+        if v is not None:
+            return _validate_non_negative_amount(v, "extra_costs")
         return v
+
+    @field_validator("assembly_cost", "sanding_cost", "painting_cost")
+    @classmethod
+    def post_processing_non_negative(cls, v: float | None) -> float | None:
+        if v is not None:
+            return _validate_non_negative_amount(v, "post-processing cost")
+        return v
+
+    @field_validator("margin_multiplier")
+    @classmethod
+    def margin_multiplier_range(cls, v: float | None) -> float | None:
+        return _validate_margin_multiplier(v)
 
     @field_validator("manual_filament_cost")
     @classmethod
@@ -187,6 +235,12 @@ class BudgetUpdate(BaseModel):
             raise ValueError("manual_price must be >= 0")
         return v
 
+    @model_validator(mode="after")
+    def validate_custom_margin(self) -> "BudgetUpdate":
+        if self.margin_type == "custom" and self.margin_multiplier is None:
+            raise ValueError("margin_multiplier is required when margin_type is custom")
+        return self
+
 
 class BudgetPreviewRequest(BaseModel):
     currency: str | None = None
@@ -197,14 +251,18 @@ class BudgetPreviewRequest(BaseModel):
     hours: int = 0
     minutes: int = 0
     margin_type: str = "retail"
+    margin_multiplier: float | None = None
     extra_costs: float = 0.0
+    assembly_cost: float = 0.0
+    sanding_cost: float = 0.0
+    painting_cost: float = 0.0
     manual_price: float | None = None
 
     @field_validator("currency")
     @classmethod
     def valid_currency(cls, v: str | None) -> str | None:
         if v is not None and v not in VALID_CURRENCIES:
-            raise ValueError(f"currency must be one of: {", ".join(sorted(VALID_CURRENCIES))}")
+            raise ValueError(f"currency must be one of: {', '.join(sorted(VALID_CURRENCIES))}")
         return v
 
     @field_validator("hours")
@@ -233,9 +291,17 @@ class BudgetPreviewRequest(BaseModel):
     @field_validator("extra_costs")
     @classmethod
     def extra_costs_non_negative(cls, v: float) -> float:
-        if v < 0:
-            raise ValueError("extra_costs must be >= 0")
-        return v
+        return _validate_non_negative_amount(v, "extra_costs")
+
+    @field_validator("assembly_cost", "sanding_cost", "painting_cost")
+    @classmethod
+    def post_processing_non_negative(cls, v: float) -> float:
+        return _validate_non_negative_amount(v, "post-processing cost")
+
+    @field_validator("margin_multiplier")
+    @classmethod
+    def margin_multiplier_range(cls, v: float | None) -> float | None:
+        return _validate_margin_multiplier(v)
 
     @field_validator("manual_filament_cost")
     @classmethod
@@ -258,6 +324,12 @@ class BudgetPreviewRequest(BaseModel):
             raise ValueError("manual_price must be >= 0")
         return v
 
+    @model_validator(mode="after")
+    def validate_custom_margin(self) -> "BudgetPreviewRequest":
+        if self.margin_type == "custom" and self.margin_multiplier is None:
+            raise ValueError("margin_multiplier is required when margin_type is custom")
+        return self
+
 
 class BudgetResponse(BaseModel):
     id: UUID
@@ -276,16 +348,19 @@ class BudgetResponse(BaseModel):
     minutes: int
     margin_type: str
     extra_costs: float
+    assembly_cost: float
+    sanding_cost: float
+    painting_cost: float
     error_margin_percent: float
     margin_multiplier: float
     final_price: float
     manual_price: float | None = None
-    ml_price: float
     filament_total: float
     electricity_cost: float
     amortization_cost: float
     subtotal: float
     subtotal_with_error: float
+    post_processing_total: float
     total_before_margin: float
     notes: str | None = None
     created_at: str
@@ -297,9 +372,8 @@ class BudgetResponse(BaseModel):
 class BudgetParametersUpdate(BaseModel):
     electricity_price_kwh: float
     error_margin_percent: float
-    margin_multiplier_wholesale: float
-    margin_multiplier_retail: float
-    margin_multiplier_keychain: float
+
+    model_config = {"extra": "forbid"}
 
     @field_validator("electricity_price_kwh")
     @classmethod
@@ -315,35 +389,11 @@ class BudgetParametersUpdate(BaseModel):
             raise ValueError("error_margin_percent must be between 0 and 100")
         return v
 
-    @field_validator("margin_multiplier_wholesale")
-    @classmethod
-    def wholesale_range(cls, v: float) -> float:
-        if v <= 0 or v > 100:
-            raise ValueError("margin_multiplier_wholesale must be greater than 0 and at most 100")
-        return v
-
-    @field_validator("margin_multiplier_retail")
-    @classmethod
-    def retail_range(cls, v: float) -> float:
-        if v <= 0 or v > 100:
-            raise ValueError("margin_multiplier_retail must be greater than 0 and at most 100")
-        return v
-
-    @field_validator("margin_multiplier_keychain")
-    @classmethod
-    def keychain_range(cls, v: float) -> float:
-        if v <= 0 or v > 100:
-            raise ValueError("margin_multiplier_keychain must be greater than 0 and at most 100")
-        return v
-
 
 class BudgetParametersResponse(BaseModel):
     currency: str
     electricity_price_kwh: float
     error_margin_percent: float
-    margin_multiplier_wholesale: float
-    margin_multiplier_retail: float
-    margin_multiplier_keychain: float
     is_default: bool
     created_at: datetime | None = None
     updated_at: datetime | None = None

@@ -34,9 +34,6 @@ def _valid_payload(**overrides) -> dict:
     payload = {
         "electricity_price_kwh": 180.00,
         "error_margin_percent": 6.00,
-        "margin_multiplier_wholesale": 3.50,
-        "margin_multiplier_retail": 4.50,
-        "margin_multiplier_keychain": 5.50,
     }
     payload.update(overrides)
     return payload
@@ -52,9 +49,6 @@ class TestGetBudgetParameters:
         ars = data["ARS"]
         assert ars["electricity_price_kwh"] == 140.00
         assert ars["error_margin_percent"] == 5.00
-        assert ars["margin_multiplier_wholesale"] == 3.00
-        assert ars["margin_multiplier_retail"] == 4.00
-        assert ars["margin_multiplier_keychain"] == 5.00
         assert ars["is_default"] is True
 
         usd = data["USD"]
@@ -79,9 +73,6 @@ class TestGetBudgetParameters:
             currency="ARS",
             electricity_price_kwh=900.00,
             error_margin_percent=1.00,
-            margin_multiplier_wholesale=2.00,
-            margin_multiplier_retail=2.00,
-            margin_multiplier_keychain=2.00,
             is_default=False,
         )
         db_session.add(row)
@@ -159,9 +150,17 @@ class TestPutBudgetParameters:
             "/api/budget-parameters/ARS",
             json={
                 "electricity_price_kwh": 180.00,
-                "error_margin_percent": 6.00,
+            },
+            headers=auth_headers,
+        )
+        assert resp.status_code == 422
+
+    def test_put_parameters_rejects_obsolete_multiplier_fields(self, client, auth_headers):
+        resp = client.put(
+            "/api/budget-parameters/ARS",
+            json={
+                **_valid_payload(),
                 "margin_multiplier_wholesale": 3.50,
-                "margin_multiplier_retail": 4.50,
             },
             headers=auth_headers,
         )
@@ -171,9 +170,6 @@ class TestPutBudgetParameters:
         for payload in (
             _valid_payload(electricity_price_kwh=0),
             _valid_payload(electricity_price_kwh=-10),
-            _valid_payload(margin_multiplier_wholesale=0),
-            _valid_payload(margin_multiplier_retail=-1),
-            _valid_payload(margin_multiplier_keychain=0),
         ):
             resp = client.put(
                 "/api/budget-parameters/ARS",
@@ -187,9 +183,6 @@ class TestPutBudgetParameters:
             _valid_payload(electricity_price_kwh=10000.01),
             _valid_payload(error_margin_percent=100.01),
             _valid_payload(error_margin_percent=-0.01),
-            _valid_payload(margin_multiplier_wholesale=100.01),
-            _valid_payload(margin_multiplier_retail=100.01),
-            _valid_payload(margin_multiplier_keychain=100.01),
         ):
             resp = client.put(
                 "/api/budget-parameters/ARS",
@@ -256,7 +249,6 @@ class TestBudgetParametersBudgetIntegration:
             json=_valid_payload(
                 electricity_price_kwh=280.00,
                 error_margin_percent=10.00,
-                margin_multiplier_retail=5.00,
             ),
             headers=auth_headers,
         )
@@ -278,9 +270,9 @@ class TestBudgetParametersBudgetIntegration:
         assert float(data["electricity_cost"]) == pytest.approx(67.2, rel=0.01)
         assert float(data["amortization_cost"]) == pytest.approx(69.44, rel=0.01)
         assert data["error_margin_percent"] == 10.00
-        assert data["margin_multiplier"] == 5.00
+        assert data["margin_multiplier"] == 4.00
         assert float(data["final_price"]) == pytest.approx(
-            float(data["total_before_margin"]) * 5.0, rel=0.01
+            float(data["total_before_margin"]) * 4.0, rel=0.01
         )
 
         row = db_session.execute(
@@ -288,7 +280,7 @@ class TestBudgetParametersBudgetIntegration:
         ).scalar_one()
         assert float(row.electricity_price_kwh) == 280.00
         assert float(row.error_margin_percent) == 10.00
-        assert float(row.margin_multiplier) == 5.00
+        assert float(row.margin_multiplier) == 4.00
 
     def test_budget_uses_seeded_values_when_unconfigured(self, client, db_session, auth_headers, test_user):
         order = self._make_order(db_session, test_user.id)
@@ -327,7 +319,7 @@ class TestBudgetParametersBudgetIntegration:
 
         resp = client.put(
             "/api/budget-parameters/ARS",
-            json=_valid_payload(electricity_price_kwh=280.00, margin_multiplier_retail=7.00),
+            json=_valid_payload(electricity_price_kwh=280.00),
             headers=auth_headers,
         )
         assert resp.status_code == 200
